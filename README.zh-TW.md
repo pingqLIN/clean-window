@@ -87,7 +87,7 @@ npm run check
 | [版本紀錄](CHANGELOG.md) | 版本變更 |
 | [Issues](https://github.com/pingqLIN/clean-window/issues) | 可重現的錯誤及功能需求；請勿張貼敏感瀏覽資料 |
 
-GitHub Actions 在 Linux 與 Windows 執行相同測試與靜態檢查，徽章反映實際 workflow 結果。選用的 [Chromium GUI 測試](tests/browser-smoke.py) 以 Linux 為目標，使用隔離的暫存 Profile 且需要額外工具；執行前請先讀驗證紀錄。它不是安裝擴充的必要步驟。
+GitHub Actions 設定為在 Linux 與 Windows 執行相同測試與靜態檢查。**託管 CI 尚未執行：**首次嘗試在 runner 啟動前受阻，徽章反映 workflow 狀態，不是本機測試結果。選用的 [Chromium GUI 測試](tests/browser-smoke.py) 以 Linux 為目標，使用隔離的暫存 Profile 且需要額外工具；執行前請先讀驗證紀錄。它不是安裝擴充的必要步驟。
 
 ## AI 輔助開發
 

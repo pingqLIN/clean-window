@@ -87,7 +87,7 @@ npm run check
 | [Changelog](CHANGELOG.md) | Version history |
 | [Issues](https://github.com/pingqLIN/clean-window/issues) | Reproducible bugs and feature requests; do not post sensitive browser data |
 
-GitHub Actions runs the same tests and static checks on Linux and Windows. Its badge reports the actual workflow result. The optional [headed Chromium test](tests/browser-smoke.py) is Linux-oriented, uses an isolated temporary profile, and requires extra tools; see the verification record before running it. It is not part of extension installation.
+The GitHub Actions workflow is configured to run the same tests and static checks on Linux and Windows. **Hosted CI has not executed:** the first attempt was blocked before runner startup. Its badge reports workflow status, not the local-test results. The optional [headed Chromium test](tests/browser-smoke.py) is Linux-oriented, uses an isolated temporary profile, and requires extra tools; see the verification record before running it. It is not part of extension installation.
 
 ## AI-assisted development
 
