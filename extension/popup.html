@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clean Window｜乾淨視窗</title>
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <header><img src="icons/icon48.png" width="34" height="34" alt=""><div><h1>乾淨視窗</h1><p>CLEAN WINDOW</p></div><span class="version">0.1</span></header>
+  <main>
+    <div class="scope"><span class="dot"></span><span id="target-status">正在確認目標視窗…</span></div>
+    <button type="button" class="choice primary" data-action="toggle-clean" disabled>
+      <span class="button-title" id="clean-label">目前分頁 → 精簡視窗<span aria-hidden="true">↗</span></span>
+      <span class="description">隱藏網址、分頁與書籤列，保留拖曳與縮放。</span>
+      <kbd>Alt + Shift + W</kbd>
+    </button>
+    <button type="button" class="choice" data-action="toggle-fullscreen" disabled>
+      <span class="button-title" id="full-label">整個視窗 → 全螢幕<span aria-hidden="true">⛶</span></span>
+      <span class="description">保留此視窗全部分頁與群組，只隱藏介面。</span>
+      <kbd>Alt + Shift + F</kbd>
+    </button>
+    <button type="button" id="restore" data-action="restore" disabled><span>還原目前視窗</span><kbd>Alt + Shift + R</kbd></button>
+    <p id="feedback" role="status" aria-live="polite" hidden></p>
+    <p class="note">精簡模式只移出目前分頁。系統標題列與 Chrome 安全提示會保留；其他視窗的外觀設定不變。</p>
+  </main>
+  <footer><span>本機處理 · 不讀取網頁內容</span><span>右鍵也能還原</span></footer>
+</body>
+</html>

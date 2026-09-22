@@ -1,0 +1,14 @@
+node_modules/
+dist/
+evidence/
+local/
+ai-private/
+ai-discussion/
+.env
+.env.*
+*.log
+*.zip
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

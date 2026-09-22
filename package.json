@@ -1,0 +1,29 @@
+{
+  "name": "clean-window",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A cleaner Chrome window, without changing the others.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pingqLIN/clean-window.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pingqLIN/clean-window/issues"
+  },
+  "homepage": "https://github.com/pingqLIN/clean-window#readme",
+  "keywords": [
+    "chrome-extension",
+    "manifest-v3",
+    "popup-window",
+    "fullscreen",
+    "privacy"
+  ]
+}

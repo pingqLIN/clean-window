@@ -1,0 +1,5 @@
+<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><title>Clean Window test page</title>
+<style>body{font:18px system-ui,sans-serif;margin:54px;line-height:1.7;background:#f7faf9;color:#183a32}h1{font-size:32px;margin:0}p{color:#61766f}textarea{box-sizing:border-box;width:100%;height:140px;font:18px system-ui;border:1px solid #b7cfc3;border-radius:8px;padding:16px;background:white}small{display:block;margin-top:28px;color:#61766f}</style>
+<h1 id="heading">Clean Window</h1><p id="description">同一個頁面，只換成乾淨的視窗。</p><textarea aria-label="未儲存內容">這是尚未儲存的內容。</textarea><small id="foot">視窗模式 · 可拖曳、可縮放 · 不重新載入頁面</small>
+<script>window.sessionToken=crypto.randomUUID();if(new URLSearchParams(location.search).get('role')==='spectator'){document.querySelector('#heading').textContent='另一個 Chrome 視窗';document.querySelector('#description').textContent='這個視窗的分頁列、網址列與大小保持原狀。';document.querySelector('textarea').value='此視窗不受 Clean Window 操作影響。';document.querySelector('#foot').textContent='正常視窗 · 不受影響';}</script>
+</html>
