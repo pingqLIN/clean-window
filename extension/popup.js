@@ -6,6 +6,7 @@ const levelNumber = document.querySelector('#level-number');
 const levelTitle = document.querySelector('#level-title');
 const levelDetail = document.querySelector('#level-detail');
 const levelLimit = document.querySelector('#level-limit');
+const levelPreview = document.querySelector('.level-preview');
 const cleanLabel = document.querySelector('#clean-label');
 const cleanDescription = document.querySelector('#clean-description');
 const managed = document.querySelector('#managed-windows');
@@ -103,12 +104,28 @@ const describeLevel = () => {
   levelDetail.textContent = preset.detail;
   levelLimit.textContent = preset.limit;
   levelLimit.hidden = !preset.limit;
+  if (levelPreview && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+    levelPreview.classList.remove('changing');
+    void levelPreview.offsetWidth;
+    levelPreview.classList.add('changing');
+  }
   if (!isRestoring) {
     cleanLabel.textContent = '套用此簡化等級';
     cleanDescription.textContent = level === 1
       ? '精簡 Popup，搭配輕量瀏覽器雙列工具列。'
       : level === 2 ? '精簡 Popup，搭配自繪網址欄。'
         : '將目前分頁移至純精簡 Popup。';
+  }
+  if (levelPreview) {
+    const stage = document.querySelector?.('#morph-stage');
+    if (stage) {
+      stage.dataset.selectedLevel = String(level);
+      stage.dataset.previewLevel = String(level);
+      const badge = document.querySelector?.('#morph-badge-num');
+      if (badge) badge.textContent = `0${level}`;
+    }
+    const diagramTarget = document.querySelector?.('#diagram-target');
+    if (diagramTarget) diagramTarget.dataset.level = String(level);
   }
 };
 
@@ -192,3 +209,57 @@ for (const button of buttons) {
   });
 }
 void init();
+
+if (levelPreview) {
+  const stage = document.querySelector?.('#morph-stage');
+  if (stage) {
+    const zones = stage.querySelectorAll?.('.morph-zone');
+    const badge = stage.querySelector?.('#morph-badge-num');
+
+    zones?.forEach(zone => {
+      zone.addEventListener('mouseenter', () => {
+        const lvl = zone.dataset.level;
+        if (lvl) {
+          stage.dataset.previewLevel = lvl;
+          if (badge) badge.textContent = `0${lvl}`;
+        }
+      });
+
+      zone.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const lvl = zone.dataset.level;
+        if (lvl && levelInput && !levelInput.disabled) {
+          stage.dataset.selectedLevel = lvl;
+          stage.dataset.previewLevel = lvl;
+          if (badge) badge.textContent = `0${lvl}`;
+          levelInput.value = lvl;
+          describeLevel();
+          levelInput.dispatchEvent(new Event('change'));
+        }
+      });
+    });
+
+    stage.addEventListener('mouseleave', () => {
+      const current = stage.dataset.selectedLevel || '1';
+      stage.dataset.previewLevel = current;
+      if (badge) badge.textContent = `0${current}`;
+    });
+  }
+}
+
+const themeToggle = document.querySelector?.('#theme-toggle');
+if (themeToggle && typeof window !== 'undefined' && document?.documentElement) {
+  const applyTheme = (theme) => {
+    document.documentElement.dataset.theme = theme;
+    try { chrome.storage?.local?.set({ cwTheme: theme }); } catch {}
+  };
+  chrome.storage?.local?.get('cwTheme').then(data => {
+    if (data?.cwTheme) applyTheme(data.cwTheme);
+  }).catch(() => {});
+  themeToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.dataset.theme === 'dark' ||
+      (!document.documentElement.dataset.theme && window.matchMedia?.('(prefers-color-scheme: dark)')?.matches);
+    applyTheme(isDark ? 'light' : 'dark');
+  });
+}
+

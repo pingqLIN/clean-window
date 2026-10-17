@@ -27,10 +27,20 @@
     }
     return url.href;
   }
-  function stopBar() {
+  function stopBar(withFade = false) {
     if (updateTimer) clearInterval(updateTimer);
     updateTimer = null;
-    bar?.remove();
+    const oldBar = bar;
+    if (oldBar?.isConnected) {
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+      if (withFade && !reduced && typeof oldBar.animate === 'function') {
+        oldBar.id = BAR_ID + '-exiting';
+        oldBar.style.pointerEvents = 'none';
+        const exit = oldBar.animate([{ opacity: 1 }, { opacity: 0 }],
+          { duration: 120, easing: 'ease-in', fill: 'forwards' });
+        void exit.finished.then(() => oldBar.remove(), () => oldBar.remove());
+      } else oldBar.remove();
+    }
     bar = address = null;
     if (originalPadding) {
       const html = document.documentElement;
@@ -57,18 +67,23 @@
     const shadow = bar.attachShadow({mode:'closed'});
     const style = document.createElement('style');
     style.textContent = `
-      :host { color-scheme:light; }
+      :host { color-scheme:light; animation:cw-bar-enter .18s cubic-bezier(.16,1,.3,1) both; }
+      @keyframes cw-bar-enter {from {opacity:0;transform:translateY(-4px);} to {opacity:1;transform:none;}}
       :host([data-theme="dark"]) { color-scheme:dark; }
       *,*::before,*::after { box-sizing:border-box; }
       .strip { display:flex; align-items:center; gap:8px; height:48px; padding:0 12px;
+        transition:background-color .17s ease,color .17s ease,border-color .17s ease;
         background:#f5f6f8; color:#253042; border-bottom:1px solid #d8dce2;
         font:13px/1.3 system-ui,-apple-system,'Segoe UI',sans-serif; }
       button { border:0; border-radius:50%; width:32px; height:32px; flex:none;
         background:transparent; color:inherit; font:18px system-ui; cursor:pointer; }
       button:hover { background:#e2e6ec; }
+      button,select { transition:background-color .14s ease,color .14s ease,border-color .14s ease,opacity .14s ease; }
+      button:active { opacity:.62; }
       button:focus-visible,input:focus-visible { outline:2px solid #477fe5; outline-offset:1px; }
       .theme-toggle { border-radius:9px;font-size:18px; }
       .ribbon { height:38px;display:flex;align-items:center;gap:4px;padding:2px 10px;
+        transition:background-color .17s ease,color .17s ease,border-color .17s ease;
         border-bottom:1px solid #d8dce2;background:#eff3f5;color:#35434a; }
       .ribbon .identity { font-size:10px;letter-spacing:.02em;color:#537566;
         font-weight:700;margin-right:auto;white-space:nowrap; }
@@ -78,10 +93,14 @@
         max-height:min(360px,calc(100vh - 100px));overflow-y:auto;
         background:#fff;color:#27313c;border:1px solid #bfcbd2;border-radius:12px;
         padding:10px;box-shadow:0 12px 35px #0004;font:12px/1.4 system-ui; }
-      .menu[hidden] {display:none;}
+      .menu {opacity:1;transform:none;transition:opacity .15s ease,transform .17s ease,display .17s allow-discrete;}
+      .menu[hidden] {display:none;opacity:0;transform:translateY(-5px);}
+      @starting-style { .menu:not([hidden]) {opacity:0;transform:translateY(-5px);} }
       .menu-header { display:flex;align-items:center;justify-content:space-between;
         font-weight:650;margin-bottom:8px; }
       .menu-row { display:flex;align-items:center;gap:5px;border-top:1px solid #e3e7e9;padding:6px 0; }
+      .menu-row {animation:cw-list-enter .17s ease both;}
+      @keyframes cw-list-enter {from {opacity:0;transform:translateY(-3px)} to {opacity:1;transform:none}}
       .menu-row .name { flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
         font-size:12px;text-align:left;width:auto; }
       .menu-row button,.menu-row select,.menu-action {border:1px solid #d8dee7;
@@ -93,11 +112,14 @@
       .feedback { position:absolute;top:87px;right:10px;max-width:85%;
         padding:7px 11px;border-radius:8px;color:#fff;background:#8d3434;
         font:12px system-ui;box-shadow:0 2px 8px #0005; }
-      .feedback[hidden] { display:none; }
+      .feedback {transition:opacity .14s ease,display .14s allow-discrete;}
+      .feedback[hidden] { display:none;opacity:0; }
+      @starting-style {.feedback:not([hidden]) {opacity:0;}}
       form { margin:0; flex:1; min-width:0; }
       input { width:100%; height:34px; padding:0 14px; border:1px solid #d8dee7;
         border-radius:18px; background:#fff; color:#202124;
-        font:13px system-ui,-apple-system,'Segoe UI',sans-serif; }
+        font:13px system-ui,-apple-system,'Segoe UI',sans-serif;
+        transition:background-color .17s ease,color .17s ease,border-color .17s ease; }
       input:focus { border-color:#8aa9ec; }
       :host([data-theme="dark"]) .strip { background:#292b30; color:#e7e9ee; border-color:#45474d; }
       :host([data-theme="dark"]) button:hover { background:#3b3e44; }
@@ -113,6 +135,10 @@
       :host([data-theme="dark"]) .menu-action { border-color:#62717a; }
       :host([data-theme="dark"]) .menu-note {color:#b6c9ce; }
       @media(max-width:480px) { .strip { gap:3px; padding:0 6px; } }
+      @media(prefers-reduced-motion:reduce) {
+        :host {animation:none!important;}
+        button,select,input,.strip,.ribbon,.menu,.feedback,.menu-row {transition:none!important;animation:none!important;}
+      }
     `;
     const strip = document.createElement('div');
     strip.className = 'strip';
@@ -300,7 +326,7 @@
     },750);
   }
   function apply(mode) {
-    if (mode === 'off') {stopBar();return {ok:true,active:false};}
+    if (mode === 'off') {stopBar(true);return {ok:true,active:false};}
     if (mode === 'address') {startBar(false);return {ok:true,active:true};}
     if (mode === 'address-dock') {startBar(true);return {ok:true,active:true};}
     throw new Error('不支援的頁面顯示模式。');

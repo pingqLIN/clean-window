@@ -20,8 +20,10 @@
     host.dataset.side = preference.side;
     host.style.setProperty('left', preference.side === 'left' ? '0px' : 'auto', 'important');
     host.style.setProperty('right', preference.side === 'right' ? '0px' : 'auto', 'important');
-    host.style.setProperty('top', Math.round(clamp(preference.ratio, 0, 1) *
-      Math.max(0, window.innerHeight - 42)) + 'px', 'important');
+    const top = Math.round(clamp(preference.ratio, 0, 1) *
+      Math.max(0, window.innerHeight - 42));
+    host.style.setProperty('top', top + 'px', 'important');
+    host.dataset.tipPlacement = top < 62 ? 'below' : 'above';
   }
   function updateLevel(level) {
     if (!validLevel(level)) return;
@@ -80,23 +82,30 @@
       '.handle { position:relative;width:24px;height:42px;flex:none;border:1px solid #999da2;background:#b8bbbf;',
       ' color:#333;box-shadow:0 2px 10px #0002;cursor:grab;touch-action:none;',
       ' padding:0;border-radius:0 8px 8px 0; }',
-      '.handle::after { content:attr(data-tip);position:absolute;top:50%;right:calc(100% + 9px);',
-      ' transform:translateY(-50%);visibility:hidden;pointer-events:none;',
+      '.handle::after { content:attr(data-tip);position:absolute;right:0;bottom:calc(100% + 12px);',
+      ' transform:translateY(5px);opacity:0;visibility:hidden;pointer-events:none;',
       ' white-space:nowrap;background:#3e4044;color:#fff;border-radius:6px;padding:6px 9px;',
-      ' box-shadow:0 2px 8px #0003;font:11px/1.3 system-ui; }',
-      '.handle:hover::after,.handle:focus-visible::after {visibility:visible;}',
+      ' box-shadow:0 2px 8px #0003;font:11px/1.3 system-ui;',
+      ' transition:opacity .12s ease,transform .16s ease,visibility 0s linear .16s; }',
+      '.handle:hover::after,.handle:focus-visible::after {opacity:1;visibility:visible;transform:translateY(0);transition-delay:0s;}',
       ':host([data-side="right"]) .handle { border-radius:8px 0 0 8px; }',
-      ':host([data-side="left"]) .handle::after {left:calc(100% + 9px);right:auto;}',
+      ':host([data-side="left"]) .handle::after {left:0;right:auto;}',
+      ':host([data-tip-placement="below"]) .handle::after {bottom:auto;top:calc(100% + 12px);transform:translateY(-5px);}',
+      ':host([data-tip-placement="below"]) .handle:hover::after,',
+      ':host([data-tip-placement="below"]) .handle:focus-visible::after {transform:translateY(0);}',
       '.handle:active { cursor:grabbing; }',
-      '.rail { position:static;flex:none;display:none;flex-direction:column;gap:3px;padding:6px 5px;',
+      '.rail { position:static;flex:none;display:flex;opacity:0;visibility:hidden;pointer-events:none;flex-direction:column;gap:3px;padding:6px 5px;',
       ' border:1px solid #b6b9bf;border-radius:11px;background:#f5f5f6;',
-      ' box-shadow:0 4px 16px #0003; }',
+      ' box-shadow:0 4px 16px #0003;',
+      ' transition:opacity .17s ease,visibility 0s linear .17s; }',
 
-      ':host(:hover) .rail,:host(:focus-within) .rail { display:flex; }',
+      ':host(:hover) .rail,:host(:focus-within) .rail { opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s; }',
       '.stop { position:relative;display:grid;place-items:center;width:30px;height:32px;',
       ' border:0;border-radius:7px;background:transparent;cursor:pointer;color:#696d73; }',
       '.stop.selected { background:#dadddf;color:#34383d; }',
       '.stop:hover { background:#e4e6e8; }',
+      '.handle,.stop { transition:background-color .14s ease,border-color .14s ease,color .14s ease,box-shadow .14s ease; }',
+      '.stop:active { opacity:.68; }',
       '.stop:focus-visible,.handle:focus-visible { outline:2px solid #5e6876;outline-offset:2px; }',
       '.tick { width:13px;height:3px;background:currentColor;border-radius:2px; }',
       '.stop.selected .tick { width:20px;height:4px; }',
@@ -108,6 +117,12 @@
       '.stop:hover .hint,.stop:focus-visible .hint { visibility:visible; }',
       '.feedback { max-width:145px;padding:6px;color:#9e3535;font-size:11px;',
       ' overflow-wrap:anywhere; }',
+      '.feedback:not([hidden]) {animation:cw-edge-feedback .17s ease both;}',
+      '@keyframes cw-edge-feedback {from {opacity:0} to {opacity:1}}',
+      '@media(prefers-reduced-motion:reduce) {',
+      ' .handle,.handle::after,.stop,.rail {transition:none!important;animation:none!important;}',
+      ' .handle:hover::after,.handle:focus-visible::after {transform:none!important;}',
+      '}',
       '[hidden] { display:none!important; }',
       '@media(prefers-color-scheme:dark) {',
       ' .handle { background:#686c72;color:#f5f6f8;border-color:#555960; }',

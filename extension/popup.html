@@ -8,32 +8,181 @@
   <script type="module" src="popup.js"></script>
 </head>
 <body>
-  <header><img src="icons/icon48.png" width="34" height="34" alt=""><div><h1>乾淨視窗</h1><p>CLEAN WINDOW</p></div><span class="version">0.1</span></header>
-  <main>
-    <div class="scope"><span class="dot"></span><span id="target-status">正在確認目標視窗…</span></div>
-    <button type="button" class="choice primary" data-action="toggle-clean" disabled>
-      <span class="button-title" id="clean-label">套用此簡化等級</span>
-      <span class="description" id="clean-description">將目前分頁移至選擇的視窗模式。</span>
-      <kbd>Alt + Shift + W</kbd>
-    </button>
-    <section class="level-picker" aria-label="簡化等級">
-      <div class="level-heading"><label for="clean-level">簡化程度</label><output id="level-number" for="clean-level">1 / 3</output></div>
-      <input id="clean-level" type="range" min="1" max="3" step="1" value="1" disabled aria-describedby="level-title level-limit">
-      <div class="steps" aria-hidden="true"><span>1</span><span>2</span><span>3</span></div>
-      <div class="level-preview">
-        <strong id="level-title">1 · 自繪網址欄＋擴充欄</strong>
-        <p id="level-detail">精簡 Popup 加上自繪網址欄與 Clean Window 專屬擴充工具列。</p>
-        <p id="level-limit" class="limit"></p>
+  <header>
+    <div class="brand">
+      <div class="brand-glyph" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+          <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M1.5 5.5h13" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="4" cy="3.5" r="0.75" fill="currentColor"/>
+          <circle cx="6.5" cy="3.5" r="0.75" fill="currentColor"/>
+        </svg>
       </div>
-    </section>
-    <button type="button" id="restore" data-action="restore" disabled><span>還原目前視窗</span><kbd>Alt + Shift + R</kbd></button>
+      <span class="brand-title">CLEAN WINDOW</span>
+    </div>
+    <div class="header-tools">
+      <span class="version">0.1</span>
+      <button type="button" id="theme-toggle" class="icon-toggle" aria-label="切換主題" title="切換明暗主題">
+        <svg class="theme-icon sun" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="3.2"/>
+          <path d="M8 1.5v1.5M8 13v1.5M1.5 8h1.5M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/>
+        </svg>
+        <svg class="theme-icon moon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13.5 9.5a5.5 5.5 0 1 1-7-7 6.5 6.5 0 0 0 7 7z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Scope status indicator -->
+    <div class="scope">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="target-status">正在確認目標視窗…</span>
+    </div>
+
+    <!-- Unified Mode Controller Card (Merged Block) -->
+    <div class="unified-card">
+      <!-- Top Action: Visual Transformation & Apply -->
+      <button type="button" class="choice primary" data-action="toggle-clean" disabled title="套用 / 還原簡化模式">
+        <div class="transform-diagram" aria-hidden="true">
+          <div class="diagram-win source">
+            <div class="win-tabs"><span></span><span></span><span></span></div>
+            <div class="win-body"></div>
+          </div>
+          <div class="diagram-arrow" id="diagram-arrow">
+            <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 6h22M17 1l5 5-5 5"/>
+            </svg>
+          </div>
+          <div class="diagram-win target" id="diagram-target" data-level="1">
+            <div class="win-bar dual"><span class="bar-dock"></span><span class="bar-url"></span></div>
+            <div class="win-bar single"><span class="bar-url center"></span></div>
+            <div class="win-body"></div>
+          </div>
+        </div>
+        <div class="choice-kbd">
+          <kbd>Alt + Shift + W</kbd>
+        </div>
+        <!-- Required accessible elements -->
+        <div class="sr-only">
+          <span class="button-title" id="clean-label">套用此簡化等級</span>
+          <span class="description" id="clean-description">將目前分頁移至選擇的視窗模式。</span>
+        </div>
+      </button>
+
+      <!-- Bottom: Single Large Morphing Window Button with Left/Center/Right Hover Zones -->
+      <section class="level-picker" aria-label="簡化等級">
+        <div class="morph-stage" id="morph-stage" data-preview-level="1" data-selected-level="1">
+          <!-- 3 Interactive Zones (Left / Center / Right) -->
+          <div class="morph-zones" role="radiogroup" aria-label="模式選擇">
+            <button type="button" class="morph-zone" data-level="1" aria-label="模式 1: 輕量工具列" title="01 · 輕量工具列"></button>
+            <button type="button" class="morph-zone" data-level="2" aria-label="模式 2: 自繪網址欄" title="02 · 自繪網址欄"></button>
+            <button type="button" class="morph-zone" data-level="3" aria-label="模式 3: 純精簡內容" title="03 · 純精簡內容"></button>
+          </div>
+
+          <!-- Single Large Morphing Window Canvas -->
+          <div class="morph-window" aria-hidden="true">
+            <!-- Window Titlebar with Traffic Lights & Level Badge -->
+            <div class="morph-titlebar">
+              <div class="traffic-lights">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="morph-badge">
+                <span id="morph-badge-num">01</span>
+              </div>
+            </div>
+
+            <!-- Morphing Toolbar Area (Collapses/Morphs across Level 1, 2, 3) -->
+            <div class="morph-toolbar-area">
+              <div class="morph-row row-1">
+                <div class="morph-dock">
+                  <span class="dock-dot"></span>
+                  <span class="dock-dot"></span>
+                </div>
+                <div class="morph-omnibox">
+                  <span class="omni-pill"></span>
+                </div>
+              </div>
+              <div class="morph-row row-2">
+                <span class="tool-chip"></span>
+                <span class="tool-chip wide"></span>
+              </div>
+            </div>
+
+            <!-- Content Area Wireframe -->
+            <div class="morph-content-area">
+              <div class="wire-lines">
+                <span class="wire-line heading"></span>
+                <span class="wire-line body"></span>
+              </div>
+            </div>
+
+            <!-- 3-Segment Indicator Track at Bottom of Window -->
+            <div class="morph-track">
+              <div class="track-segment" data-seg="1"><span>01</span></div>
+              <div class="track-segment" data-seg="2"><span>02</span></div>
+              <div class="track-segment" data-seg="3"><span>03</span></div>
+              <div class="track-cursor"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Required accessible elements -->
+        <div class="sr-only">
+          <output id="level-number" for="clean-level">1 / 3</output>
+          <input id="clean-level" type="range" min="1" max="3" step="1" value="1" disabled aria-describedby="level-title level-limit">
+          <div class="level-preview">
+            <strong id="level-title">1 · 自繪網址欄＋擴充欄</strong>
+            <p id="level-detail">精簡 Popup 加上自繪網址欄與 Clean Window 專屬擴充工具列。</p>
+            <p id="level-limit" class="limit"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Secondary Action: Return / Restore Window with REVERT ICON -->
+    <button type="button" id="restore" data-action="restore" disabled title="還原目前視窗" aria-label="還原目前視窗">
+      <div class="restore-main">
+        <span class="revert-icon-wrap" aria-hidden="true">
+          <svg class="revert-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.5 7.5a5.5 5.5 0 1 1 1.6 3.9"/>
+            <path d="M2.5 3.5v4h4"/>
+          </svg>
+        </span>
+        <span class="sr-only">還原目前視窗</span>
+      </div>
+      <kbd>Alt + Shift + R</kbd>
+    </button>
+
+    <!-- Managed Windows Accordion (Text Removed) -->
     <details id="managed-windows">
-      <summary>已啟用乾淨視窗 <span id="managed-count"></span></summary>
+      <summary title="已啟用乾淨視窗" aria-label="已啟用乾淨視窗">
+        <div class="summary-left">
+          <span class="summary-glyph" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="12" height="10" rx="1"/>
+              <path d="M2 6.5h12"/>
+            </svg>
+          </span>
+          <span id="managed-count"></span>
+          <span class="sr-only">已啟用乾淨視窗</span>
+        </div>
+        <span class="summary-arrow" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6l4 4 4-4"/>
+          </svg>
+        </span>
+      </summary>
       <div id="managed-list" aria-live="polite"></div>
     </details>
+
     <p id="feedback" role="status" aria-live="polite" hidden></p>
-    <p class="note">第 1 級提供輕量瀏覽器工具列、乾淨視窗清單與選用書籤功能；第 2 級只有網址欄，第 3 級純內容。自繪網址欄不是 Chrome 原生安全介面。</p>
   </main>
-  <footer><span>本機處理 · 不傳送頁面內容</span><span>僅影響指定視窗</span></footer>
+
+  <footer>
+    <span class="footer-tag">LOCAL · PRIVATE</span>
+    <span class="footer-tag">ISOLATED SCOPE</span>
+  </footer>
 </body>
 </html>

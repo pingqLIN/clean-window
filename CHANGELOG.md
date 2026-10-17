@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — 2026-10-18 (UI micro-motion and tooltip placement)
+
+- Added measured, reduced-motion-aware fade/feedback transitions to the self-drawn address bar, edge controller, title editor and extension popup.
+- Repositioned the edge-handle help tooltip above or below the handle rather than over the level selector.
+- Kept the edge levels stationary during transitions to preserve reliable pointer targets; validated with real CDP pointer events.
+- Started a separate, unapproved public naming and original mascot direction document at `docs/brand-popup-vnext.zh-TW.md` without replacing published identity.
+
+
 ## Unreleased — 2026-10-18 (Theme switch, neutral edge handle, Emoji presets)
 
 - Added requested Emoji title presets, including keycap `1️⃣2️⃣3️⃣`, with single-grapheme validation.

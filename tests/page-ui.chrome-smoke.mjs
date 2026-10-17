@@ -131,6 +131,8 @@ try{
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".stop").length'),3);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").textContent'),'');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").dataset.tip.includes("點擊編輯標題")'),true);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").dataset.tipPlacement'),'above');
+ assert.notEqual(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle"),"::after").bottom'),'auto');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'1');
  assert.equal((await edgeCommand(3)).level,3);
  assert.equal(await run('(() => {const r=document.querySelector("#clean-window-edge-control").getBoundingClientRect();return Math.abs(r.right-window.innerWidth)<1;})()'),true,'edge control is pinned to the right viewport edge');
@@ -151,6 +153,10 @@ try{
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle"),"::after").visibility'),'visible');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".hint")).visibility'),'hidden');
  console.log('PASS: hover reveals vertical rail, labels stay hidden on the handle');
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).transitionDuration'),'0s');
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+ console.log('PASS: reduced-motion preference disables nonessential edge animation');
  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:grip.x,y:grip.y,button:'left',clickCount:1});
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:7,y:160,button:'left',buttons:1});
  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:7,y:160,button:'left',clickCount:1});
