@@ -3,7 +3,7 @@
   'use strict';
   if (globalThis.__cleanWindowTitleUI) return;
   const DEFAULT_SYMBOL = '◈';
-  const SYMBOLS = ['◈', '◆', '✦', '★', '●', '▣', '✳', '♫'];
+  const ICON_PRESETS = ['◈', '◆', '✦', '★', '🎨', '🎬', '🪟', '✨', '🌈', '📌', '💻', '🧭'];
   const MAX_TITLE = 160;
   let state = null;
   let observer = null;
@@ -15,6 +15,15 @@
   }
   function cleanText(value) {
     return String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().replace(/\s+/g, ' ').slice(0, MAX_TITLE);
+  }
+  // Emoji (including ZWJ families, skin tones and flags) are one grapheme,
+  // not necessarily one JavaScript code point.
+  function cleanIcon(value) {
+    const icon = String(value ?? '').trim().normalize('NFC');
+    if (!icon || icon.length > 32 || /[\u0000-\u001f\u007f-\u009f]/u.test(icon)) return null;
+    const segments = [...new Intl.Segmenter('zh-Hant', { granularity: 'grapheme' }).segment(icon)];
+    if (segments.length !== 1 || !/[\p{Extended_Pictographic}\p{S}\p{Regional_Indicator}]/u.test(icon)) return null;
+    return icon;
   }
   function titleText() {
     return state?.custom ?? state?.original ?? '';
@@ -76,11 +85,13 @@
       h2 { font-size:15px; margin:0 0 12px; font-weight:650; }
       .fields { display:flex; gap:10px; }
       label { display:flex; flex-direction:column; gap:5px; min-width:0; }
-      .symbol-field { width:78px; flex:none; }
+      .symbol-field { width:90px; flex:none; }
       .text-field { flex:1; }
       input,select { width:100%; height:36px; border:1px solid #c8d0d9; border-radius:8px;
         background:#fff; color:#202932; padding:0 9px; font:13px system-ui,'Segoe UI',sans-serif; }
-      select { font-size:20px; text-align:center; }
+      #cw-title-symbol { font-size:21px; text-align:center; }
+      .presets { display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 0; }
+      .preset { min-width:30px;height:29px;padding:2px 5px!important;font-size:17px!important; }
       .preview { margin:11px 0; padding:8px 10px; border:1px solid #e1e5ea; border-radius:8px;
         background:#f0f2f5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .buttons { display:flex; align-items:center; gap:7px; }
@@ -88,7 +99,7 @@
         font:12px system-ui,'Segoe UI',sans-serif; cursor:pointer; background:#fff; color:inherit; }
       button.primary { background:#176851; color:#fff; border-color:#176851; }
       button.reset { margin-right:auto; }
-      button:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid #477fe5; outline-offset:2px; }
+      button:focus-visible,input:focus-visible { outline:2px solid #477fe5; outline-offset:2px; }
       .hint { font-size:11px; color:#64717c; margin:9px 0 0; }
       @media (prefers-color-scheme:dark) {
         .panel { background:#282c32; color:#f1f3f5; border-color:#444c54; }
@@ -106,14 +117,11 @@
     const form = document.createElement('form');
     const fields = document.createElement('div'); fields.className='fields';
     const symbolLabel = document.createElement('label');
-    symbolLabel.className='symbol-field'; symbolLabel.textContent='Symbol 圖示';
-    const symbol = document.createElement('select');
-    symbol.id='cw-title-symbol'; symbol.setAttribute('aria-label','標準 Symbol 圖示');
-    for (const glyph of SYMBOLS) {
-      const option = document.createElement('option');
-      option.value = glyph; option.textContent = glyph;
-      symbol.append(option);
-    }
+    symbolLabel.className='symbol-field'; symbolLabel.textContent='Icon / Emoji';
+    const symbol = document.createElement('input');
+    symbol.type='text'; symbol.id='cw-title-symbol'; symbol.maxLength=32;
+    symbol.setAttribute('aria-label','輸入單一 Emoji 或 Symbol 圖示');
+    symbol.autocomplete='off'; symbol.spellcheck=false;
     symbol.value=state.symbol;
     symbolLabel.append(symbol);
     const titleLabel = document.createElement('label');
@@ -123,9 +131,27 @@
     text.autocomplete='off'; text.spellcheck=false; text.value=titleText();
     titleLabel.append(text);
     fields.append(symbolLabel,titleLabel);
+    const presets = document.createElement('div');
+    presets.className='presets';
+    presets.setAttribute('aria-label', '常用 Emoji 與符號');
+    for (const glyph of ICON_PRESETS) {
+      const pick = document.createElement('button');
+      pick.type='button'; pick.className='preset'; pick.textContent=glyph;
+      pick.setAttribute('aria-label', '選用圖示 ' + glyph);
+      pick.addEventListener('click', () => {
+        symbol.value=glyph;
+        updatePreview();
+        symbol.focus();
+      });
+      presets.append(pick);
+    }
     const preview = document.createElement('div');
     preview.className='preview'; preview.setAttribute('aria-live','polite');
-    const updatePreview = () => { preview.textContent=symbol.value+' '+(cleanText(text.value)||'未命名頁面'); };
+    const updatePreview = () => {
+      preview.textContent=(cleanIcon(symbol.value) || '□') + ' ' +
+        (cleanText(text.value) || '未命名頁面');
+    };
+    symbol.addEventListener('input',updatePreview);
     symbol.addEventListener('change',updatePreview);
     text.addEventListener('input',updatePreview);
     updatePreview();
@@ -146,17 +172,23 @@
       event.preventDefault();
       const newTitle=cleanText(text.value);
       if (!newTitle) { text.setCustomValidity('標題不可空白。'); text.reportValidity(); text.setCustomValidity(''); return; }
+      const icon=cleanIcon(symbol.value);
+      if (!icon) {
+        symbol.setCustomValidity('請輸入單一 Emoji 或符號（可含組合字元）。');
+        symbol.reportValidity(); symbol.setCustomValidity('');
+        symbol.focus(); return;
+      }
       state.custom=newTitle;
-      state.symbol=SYMBOLS.includes(symbol.value)?symbol.value:DEFAULT_SYMBOL;
+      state.symbol=icon;
       updateDocumentTitle();dismissEditor();
     });
     panel.addEventListener('keydown',event=>{
       if (event.key==='Escape') { event.preventDefault();dismissEditor(); }
     });
-    form.append(fields,preview,controls);
+    form.append(fields,presets,preview,controls);
     controls.append(reset,cancel,save);
     const hint=document.createElement('p'); hint.className='hint';
-    hint.textContent='只變更這個分頁的顯示標題；還原普通視窗時恢復原網頁標題。';
+    hint.textContent='支援貼上單一 Emoji（包含組合表情、國旗）或 Unicode 符號；只修改目前分頁標題。';
     panel.append(heading,form,hint);
     root.append(styles,panel);
     document.documentElement.append(host);

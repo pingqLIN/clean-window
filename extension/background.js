@@ -37,11 +37,14 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     task.then(respond, error => respond({ok: false, error: String(error)}));
     return true;
   }
-  if (message?.type === 'clean-window:edge-level') {
+  if (message?.type === 'clean-window:edge-level' ||
+      message?.type === 'clean-window:edge-title') {
     if (!Number.isInteger(sender.tab?.id) || !Number.isInteger(sender.tab?.windowId) ||
         sender.frameId !== 0) return false;
-    perform('set-level', {tabId:sender.tab.id,windowId:sender.tab.windowId},
-      {level:message.level}).then(respond, error => respond({ok:false,error:String(error)}));
+    const action = message.type === 'clean-window:edge-title' ? 'edit-title' : 'set-level';
+    perform(action, {tabId:sender.tab.id,windowId:sender.tab.windowId},
+      action === 'set-level' ? {level:message.level} : {}).then(respond,
+        error => respond({ok:false,error:String(error)}));
     return true;
   }
   if (sender.url !== chrome.runtime.getURL('popup.html')) return false;

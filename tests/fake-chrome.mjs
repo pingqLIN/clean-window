@@ -82,6 +82,9 @@ export function fakeChrome() {
     },
     scripting: { async executeScript({target,files}) {
       if (api.failInject) throw new Error('Injection blocked');
+      if (api.failInjectInPopup && get(wins,get(tabs,target.tabId).windowId).type==='popup') {
+        throw new Error('Injection blocked after moving tab');
+      }
       get(tabs,target.tabId);
       if (files[0]==='edge-ui.js') {
         if (!edgeModes.has(target.tabId)) edgeModes.set(target.tabId,'off');

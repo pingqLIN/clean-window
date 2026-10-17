@@ -11,16 +11,17 @@
   let host, root, handle, buttons = [], currentLevel = 1;
   let preference = { side: 'right', ratio: 0.48 };
   let drag = null;
+  let ignoreHandleClick = false;
 
   const validLevel = value => Number.isInteger(value) && value >= 1 && value <= 3;
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   function position() {
     if (!host) return;
     host.dataset.side = preference.side;
-    host.style.left = preference.side === 'left' ? '0px' : 'auto';
-    host.style.right = preference.side === 'right' ? '0px' : 'auto';
-    host.style.top = Math.round(clamp(preference.ratio, 0, 1) *
-      Math.max(0, window.innerHeight - 42)) + 'px';
+    host.style.setProperty('left', preference.side === 'left' ? '0px' : 'auto', 'important');
+    host.style.setProperty('right', preference.side === 'right' ? '0px' : 'auto', 'important');
+    host.style.setProperty('top', Math.round(clamp(preference.ratio, 0, 1) *
+      Math.max(0, window.innerHeight - 42)) + 'px', 'important');
   }
   function updateLevel(level) {
     if (!validLevel(level)) return;
@@ -55,7 +56,10 @@
     if (drag?.pointerId !== event.pointerId) return;
     const moved = drag.moved;
     drag = null;
-    if (moved) void savePlacement();
+    if (moved) {
+      ignoreHandleClick = true;
+      void savePlacement();
+    }
   }
   function start() {
     if (host?.isConnected) return;
@@ -70,16 +74,18 @@
     style.textContent = [
       ':host { color-scheme:light dark; font:12px system-ui,-apple-system,"Segoe UI",sans-serif; color:#20312a; }',
       '*,*::before,*::after { box-sizing:border-box; }',
-      '.edge { position:relative;display:block;width:24px;height:42px; }',
+      '.edge { display:flex;align-items:center;gap:2px;width:24px;height:42px; }',
+      ':host([data-side="right"]) .edge { flex-direction:row-reverse; }',
+      ':host(:hover) .edge,:host(:focus-within) .edge { width:70px; }',
       '.handle { width:24px;height:42px;flex:none;border:1px solid #b9c7c1;background:#e8f0ec;',
       ' color:#176851;box-shadow:0 2px 10px #0002;cursor:grab;touch-action:none;',
       ' font:18px system-ui;line-height:1;padding:0;border-radius:0 8px 8px 0; }',
       ':host([data-side="right"]) .handle { border-radius:8px 0 0 8px; }',
       '.handle:active { cursor:grabbing; }',
-      '.rail { position:absolute;top:-37px;right:100%;display:none;flex-direction:column;gap:3px;padding:6px 5px;',
+      '.rail { position:static;flex:none;display:none;flex-direction:column;gap:3px;padding:6px 5px;',
       ' border:1px solid #b9c7c1;border-radius:11px;background:#f8faf9;',
       ' box-shadow:0 4px 16px #0003; }',
-      ':host([data-side="left"]) .rail { left:100%;right:auto; }',
+
       ':host(:hover) .rail,:host(:focus-within) .rail { display:flex; }',
       '.stop { position:relative;display:grid;place-items:center;width:30px;height:32px;',
       ' border:0;border-radius:7px;background:transparent;cursor:pointer;color:#778980; }',
@@ -131,6 +137,7 @@
       hint.setAttribute('aria-hidden', 'true');
       button.append(tick, hint);
       button.addEventListener('click', async event => {
+        if (!event.isTrusted) return;
         event.preventDefault();
         event.stopPropagation();
         const level = index + 1;
@@ -161,8 +168,23 @@
     edge.append(handle, rail);
     root.append(style, edge);
 
+    handle.addEventListener('click', async event => {
+      event.stopPropagation();
+      if (ignoreHandleClick) { ignoreHandleClick = false; return; }
+      if (!event.isTrusted) return;
+      status('');
+      try {
+        const result = await chrome.runtime.sendMessage({ type: 'clean-window:edge-title' });
+        if (!result?.ok) throw new Error(result?.error || '無法開啟標題編輯器。');
+      } catch (error) {
+        status(error?.message || '無法開啟標題編輯器。');
+      }
+    });
+    handle.title = '點擊編輯標題 · 拖曳調整位置';
+    handle.setAttribute('aria-label', '點擊編輯乾淨模式標題，拖曳調整位置');
     handle.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
+      ignoreHandleClick = false;
       drag = {
         pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
         offsetY: event.clientY - host.getBoundingClientRect().top, moved: false

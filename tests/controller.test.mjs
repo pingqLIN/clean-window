@@ -285,3 +285,23 @@ test('navigation recovery restores edge rail and address mode only to matching p
  assert.equal(await f.ctl.refresh(21,2),false);
  assert.equal(f.edgeModes.get(21),undefined);
 });
+
+
+test('edge and title controllers are prepared before moving: post-move injection denied',async()=>{
+ const f=setup();f.preferences.cleanLevel=1;
+ f.api.failInjectInPopup=true;
+ const opened=await f.ctl.run('toggle-clean',target);
+ const detached={tabId:11,windowId:opened.windowId};
+ assert.equal(opened.warning,undefined);
+ assert.equal(f.edgeModes.get(11),1);
+ assert.equal(f.pageModes.get(11),'address-dock');
+ await f.ctl.run('set-level',detached,{level:2});
+ assert.equal(f.pageModes.get(11),'address');
+ assert.equal(f.edgeModes.get(11),2);
+ await f.ctl.run('set-level',detached,{level:1});
+ assert.equal(f.pageModes.get(11),'address-dock');
+ await f.ctl.run('edit-title',detached);
+ assert.equal(f.titleModes.get(11),'editing');
+ await f.ctl.run('restore',detached);
+ assert.equal(f.edgeModes.get(11),'off');
+});

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — 2026-10-18 (Emoji icon and edge-controller fixes)
+
+- Added single-grapheme Emoji icon input, presets and validation to the title editor.
+- Added one-click edit on the page-edge control handle, while retaining pointer drag to reposition.
+- Fixed edge placement styles and hover rail hit-testing; pre-installs edge controller before the popup tab move and reuses content scripts when possible.
+- Did not alter the native Chrome titlebar, extension permissions or website host access.
+
 ## Unreleased — 2026-10-17 (Popup and edge-level controls)
 
 - Moved the primary Apply button above the Popup level selector.

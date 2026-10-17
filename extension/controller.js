@@ -145,6 +145,12 @@ export function createController(api) {
 
   async function pageUI(tab, mode) {
     try {
+      // The injected script survives moving the tab into a popup, even if
+      // the post-move scripting permission is no longer available.
+      try {
+        const existing = await api.tabs.sendMessage(tab.id, { type: 'clean-window:page-ui', mode });
+        if (existing?.ok) return existing;
+      } catch { /* First use on this document: install below. */ }
       await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['page-ui.js'] });
       const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:page-ui', mode });
       if (!response?.ok) throw new Error(response?.error || '頁面控制項無法套用。');
@@ -159,8 +165,12 @@ export function createController(api) {
     catch { /* No active content script, restricted URL or page navigation. */ }
   }
 
-  async function edgeUI(tab, level) {
-    if (level !== 'off') {
+  async function edgeUI(tab, level, { prepared = false } = {}) {
+    if (level !== 'off' && !prepared) {
+      try {
+        const existing = await api.tabs.sendMessage(tab.id, { type: 'clean-window:edge-ui', level });
+        if (existing?.ok) return existing;
+      } catch { /* New document or controller not yet injected. */ }
       await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js'] });
     }
     const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:edge-ui', level });
@@ -175,6 +185,13 @@ export function createController(api) {
   async function titleUI(tab, action) {
     try {
       if (action !== 'off') {
+        // Reuse an already injected controller first. Moving a tab into a
+        // popup can make a second executeScript fail even though the script
+        // remains alive in the same document.
+        try {
+          const existing = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action });
+          if (existing?.ok) return existing;
+        } catch { /* New document: install the script below when permitted. */ }
         await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['title-ui.js'] });
       }
       const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action });
@@ -274,8 +291,16 @@ export function createController(api) {
           // Title customization is optional in level 3 (restricted pages still open as bare popups).
           try { await titleUI(tab, 'start'); }
           catch (error) { if (level !== 3) throw error; }
+          // Install before moving the tab: activeTab permission may not allow
+          // fresh scripting in the detached popup. The dormant script draws
+          // nothing until the move and recovery journal have succeeded.
+          let preparedEdge = false;
+          try {
+            await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js'] });
+            preparedEdge = true;
+          } catch { /* Restricted documents still permit bare level-3 popup. */ }
           const opened = await toCleanWindow(tab, win, level);
-          try { await edgeUI(tab, level); }
+          try { await edgeUI(tab, level, { prepared: preparedEdge }); }
           catch { opened.warning = '乾淨視窗已開啟；此頁無法顯示邊緣工具，請使用 Alt+Shift+R 還原。'; }
           return opened;
         } catch (error) {

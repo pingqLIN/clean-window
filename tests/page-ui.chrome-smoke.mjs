@@ -95,7 +95,7 @@ try{
 
  // The edge control has no text on the handle, but exposes an accessible
  // three-stop rail, hover-only explanations, instant switching, and edge drag.
- await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>({ok:true,level:message.level});globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
+ await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
  const edgeCommand=level=>run('new Promise(resolve=>globalThis.__cwEdgeListener({type:"clean-window:edge-ui",level:'+JSON.stringify(level)+'}, {},resolve))');
  const rail=await edgeCommand(1);
  assert.equal(rail.ok,true);
@@ -103,11 +103,19 @@ try{
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").textContent'),'◈');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'1');
  assert.equal((await edgeCommand(3)).level,3);
+ assert.equal(await run('(() => {const r=document.querySelector("#clean-window-edge-control").getBoundingClientRect();return Math.abs(r.right-window.innerWidth)<1;})()'),true,'edge control is pinned to the right viewport edge');
+ await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").click();true');
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'3','untrusted synthetic click must not invoke extension actions');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'3');
- await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").click(); true');
- assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'2');
- console.log('PASS: tiny edge handle and three in-page level selections');
  const grip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:grip.x,y:grip.y});
+ const stop=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:stop.x,y:stop.y});
+ await send('Input.dispatchMouseEvent',{type:'mousePressed',x:stop.x,y:stop.y,button:'left',clickCount:1});
+ await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:stop.x,y:stop.y,button:'left',clickCount:1});
+ await sleep(40);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'2');
+ console.log('PASS: real pointer click switches edge level; simulated page clicks are ignored');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:grip.x,y:grip.y});
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).display'),'flex');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".hint")).visibility'),'hidden');
@@ -116,8 +124,17 @@ try{
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:7,y:160,button:'left',buttons:1});
  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:7,y:160,button:'left',clickCount:1});
  assert.equal(await run('document.querySelector("#clean-window-edge-control").dataset.side'),'left');
+ assert.equal(await run('(() => {const r=document.querySelector("#clean-window-edge-control").getBoundingClientRect();return Math.abs(r.left)<1;})()'),true,'drag snaps to the left viewport edge');
  assert.equal(await run('globalThis.__edgeSaved.edgeControl.side'),'left');
  console.log('PASS: dragging moves and persists the rail at the opposite screen edge');
+ assert.equal(await run('globalThis.__edgeTitleRequests||0'),0,'drag must not open title editor');
+ const movedGrip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:movedGrip.x,y:movedGrip.y});
+ await send('Input.dispatchMouseEvent',{type:'mousePressed',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
+ await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
+ await sleep(30);
+ assert.equal(await run('globalThis.__edgeTitleRequests'),1);
+ console.log('PASS: one-click edge handle opens title editor and drag does not');
  await edgeCommand('off');
  assert.equal(await run('!document.querySelector("#clean-window-edge-control")'),true);
 
@@ -142,9 +159,41 @@ try{
  assert.equal(custom,'✦ 我的乾淨視窗');
  console.log('PASS: title editor applies chosen standard symbol and text');
 
+ await titleCommand('edit');
+ const emoji=await run(`(() => {
+   const root=document.querySelector('#clean-window-title-editor').shadowRoot;
+   root.querySelector('#cw-title-symbol').value='👩🏽‍💻';
+   root.querySelector('#cw-title-text').value='Emoji 測試';
+   root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+   return document.title;
+ })()`);
+ assert.equal(emoji,'👩🏽‍💻 Emoji 測試');
+ console.log('PASS: composite grapheme Emoji icon stored intact');
+
+ await titleCommand('edit');
+ const invalidIcon=await run(`(() => {
+   const root=document.querySelector('#clean-window-title-editor').shadowRoot;
+   root.querySelector('#cw-title-symbol').value='🎨🎬';
+   root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+   return {title:document.title,editor:!!document.querySelector('#clean-window-title-editor')};
+ })()`);
+ assert.deepEqual(invalidIcon,{title:'👩🏽‍💻 Emoji 測試',editor:true});
+ console.log('PASS: multiple Emoji are rejected without changing title');
+ await run("document.querySelector('#clean-window-title-editor').shadowRoot.querySelector('button.reset').click();true");
+ await titleCommand('edit');
+ await run(`(() => {
+   const root=document.querySelector('#clean-window-title-editor').shadowRoot;
+   root.querySelector('#cw-title-symbol').value='🇹🇼';
+   root.querySelector('#cw-title-text').value='我的乾淨視窗';
+   root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+   return true;
+ })()`);
+ assert.equal(await run('document.title'),'🇹🇼 我的乾淨視窗');
+ console.log('PASS: country-flag Emoji stays a single icon');
+
  await run('document.title="SPA Updated"; true');
  await sleep(150);
- assert.equal(await run('document.title'),'✦ 我的乾淨視窗');
+ assert.equal(await run('document.title'),'🇹🇼 我的乾淨視窗');
  await titleCommand('off');
  assert.equal(await run('document.title'),'SPA Updated');
  console.log('PASS: restore latest native title after SPA title changes');
@@ -161,7 +210,7 @@ try{
  await titleCommand('off');
  assert.equal(await run('document.title'),'SPA Updated');
  console.log('PASS: restore original title and remove editor override');
- console.log('SMOKE PASS: 10/10 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
+ console.log('SMOKE PASS: 14/14 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
 
 } finally {
  try{ws?.close();}catch{}

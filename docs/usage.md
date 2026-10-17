@@ -21,6 +21,10 @@ The drawn address field is not Chrome's trusted native omnibox. The dock cannot 
 
 Legacy DOM dimming is retired from the selector.
 
+## Emoji icon and quick editor
+
+Single-click the page-edge `◈` handle to open the title editor; drag the handle instead to reposition it. The icon field accepts one Unicode grapheme, including Emoji sequences and country flags, alongside Symbol icons. Native Chrome popup titlebar clicks are outside the extension API; shortcut `Alt + Shift + T` remains available. The side control requires an eligible HTTP(S) document and may be unavailable on restricted pages.
+
 ## Editable Symbol and title
 
 When a clean popup is created on an eligible HTTP(S) page, its document title initially becomes `◈ Original Page Title`. Press `Alt + Shift + T`, or use **Clean Window · 編輯乾淨模式標題** on the page context menu, to pick a built-in Unicode Symbol and edit the text. The editor has Cancel, Apply and Reset-to-original actions. Exiting clean mode restores the most recent native website title. Single-page apps that change their own title are tracked. The override exists only in page memory; it is not saved or transmitted.

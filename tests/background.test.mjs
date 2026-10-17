@@ -138,3 +138,32 @@ test('edge-level message ignores other extensions, missing sender tab and subfra
  assert.equal(count,0);
  assert.equal(f.calls.length,0);
 });
+
+
+test('single-tap edge title action opens editor for its own popup without moving tabs',async()=>{
+ const f=await setup();f.api.failInjectInPopup=true;
+ const opened=await new Promise(resolve=>f.listener(
+  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+  f.sender,resolve));
+ assert.equal(opened.ok,true);
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
+   tab:{id:11,windowId:opened.windowId}};
+ const result=await new Promise(resolve=>f.listener(
+   {type:'clean-window:edge-title'},sender,resolve));
+ assert.equal(result.ok,true);
+ assert.equal(result.mode,'title-editor');
+ assert.equal(f.titleModes.get(11),'editing');
+ assert.equal(f.tabs.get(21).windowId,2);
+});
+test('edge title command rejects untrusted frames and unrelated popup windows',async()=>{
+ const f=await setup();
+ const good={id:f.sender.id,url:'https://example.test/',frameId:0,
+   tab:{id:11,windowId:1}};
+ for(const bad of [{...good,id:'other-extension'}, {...good,frameId:1}, {...good,tab:undefined}]) {
+   assert.equal(f.listener({type:'clean-window:edge-title'},bad,()=>{}),false);
+ }
+ const result=await new Promise(resolve=>f.listener(
+  {type:'clean-window:edge-title'},good,resolve));
+ assert.equal(result.ok,false);
+ assert.match(result.error,/先進入/);
+});
