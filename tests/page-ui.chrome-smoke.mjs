@@ -10,6 +10,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const chrome = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome Dev\\Application\\chrome.exe';
 const source = await readFile(new URL('../extension/page-ui.js', import.meta.url),'utf8');
 const titleSource = await readFile(new URL('../extension/title-ui.js', import.meta.url),'utf8');
+const edgeSource = await readFile(new URL('../extension/edge-ui.js', import.meta.url),'utf8');
 const server=createServer((req,res)=>{
   res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
   res.end('<!doctype html><title>Clean Window Test</title><header>Outside main</header><main style="width:75vw;height:72vh;background:#e1e8f2;margin:20px"><h1>Main Content</h1><p>Smoke Fixture</p></main><footer>Outside main</footer>');
@@ -74,6 +75,12 @@ try{
  assert.equal(full.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
  console.log('PASS: custom address bar plus extension dock');
+ const switched=await invoke('address');
+ assert.equal(switched.ok,true);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
+ const returned=await invoke('address-dock');
+ assert.equal(returned.ok,true);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
  await invoke('off');
  assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
  const address=await invoke('address');
@@ -85,6 +92,34 @@ try{
  assert.equal(await run('document.documentElement.style.paddingTop'), '');
  console.log('PASS: bare popup mode removes content toolbar and restores padding');
  console.log('SMOKE PASS: 3/3 drawn-bar Chrome Headless DOM checks');
+
+ // The edge control has no text on the handle, but exposes an accessible
+ // three-stop rail, hover-only explanations, instant switching, and edge drag.
+ await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>({ok:true,level:message.level});globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
+ const edgeCommand=level=>run('new Promise(resolve=>globalThis.__cwEdgeListener({type:"clean-window:edge-ui",level:'+JSON.stringify(level)+'}, {},resolve))');
+ const rail=await edgeCommand(1);
+ assert.equal(rail.ok,true);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".stop").length'),3);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").textContent'),'◈');
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'1');
+ assert.equal((await edgeCommand(3)).level,3);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'3');
+ await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").click(); true');
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'2');
+ console.log('PASS: tiny edge handle and three in-page level selections');
+ const grip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:grip.x,y:grip.y});
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).display'),'flex');
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".hint")).visibility'),'hidden');
+ console.log('PASS: hover reveals vertical rail, labels stay hidden on the handle');
+ await send('Input.dispatchMouseEvent',{type:'mousePressed',x:grip.x,y:grip.y,button:'left',clickCount:1});
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:7,y:160,button:'left',buttons:1});
+ await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:7,y:160,button:'left',clickCount:1});
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").dataset.side'),'left');
+ assert.equal(await run('globalThis.__edgeSaved.edgeControl.side'),'left');
+ console.log('PASS: dragging moves and persists the rail at the opposite screen edge');
+ await edgeCommand('off');
+ assert.equal(await run('!document.querySelector("#clean-window-edge-control")'),true);
 
  // Title editor: default native title, symbol selection, custom text, SPA updates, restoration.
  await run('globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwTitleListener=fn;};'+titleSource);
@@ -126,7 +161,7 @@ try{
  await titleCommand('off');
  assert.equal(await run('document.title'),'SPA Updated');
  console.log('PASS: restore original title and remove editor override');
- console.log('SMOKE PASS: 7/7 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
+ console.log('SMOKE PASS: 10/10 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
 
 } finally {
  try{ws?.close();}catch{}

@@ -9,7 +9,7 @@ async function setup(){
  f.api.action={async setBadgeText(){},async setTitle(){}};
  f.api.commands={onCommand:event()};
  f.api.contextMenus={onClicked:event(),removeAll(fn){fn();},create(data,fn){fn();}};
- f.api.tabs.onRemoved=event();f.api.tabs.onReplaced=event();f.api.windows.onRemoved=event();
+ f.api.tabs.onRemoved=event();f.api.tabs.onReplaced=event();f.api.tabs.onUpdated=event();f.api.windows.onRemoved=event();
  globalThis.chrome=f.api;
  await import(`../extension/background.js?case=${Math.random()}`);
  return {...f,sender:{id:runtime.id,url:runtime.getURL('popup.html')},listener:runtime.onMessage.listeners[0]};
@@ -108,4 +108,33 @@ test('edit-title context menu respects original explicit target',async()=>{
  f.api.contextMenus.onClicked.listeners[0]({menuItemId:'edit-title'},{id:11,windowId:opened.windowId});
  await new Promise(resolve=>setTimeout(resolve,20));
  assert.equal(f.titleModes.get(11),'editing');
+});
+
+test('edge-level command changes only the managed popup originating from its top frame',async()=>{
+ const f=await setup();f.preferences.cleanLevel=1;
+ const opened=await new Promise(resolve=>f.listener(
+  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+  f.sender,resolve));
+ assert.equal(opened.ok,true);
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
+   tab:{id:11,windowId:opened.windowId}};
+ const reply=await new Promise(resolve=>f.listener(
+  {type:'clean-window:edge-level',level:3},sender,resolve));
+ assert.equal(reply.ok,true);
+ assert.equal(reply.level,3);
+ assert.equal(f.db['clean:11'].cleanLevel,3);
+ assert.equal(f.edgeModes.get(11),3);
+ assert.equal(f.tabs.get(21).windowId,2);
+});
+test('edge-level message ignores other extensions, missing sender tab and subframes',async()=>{
+ const f=await setup();
+ const good={id:f.sender.id,url:'https://example.test/',frameId:0,
+   tab:{id:11,windowId:1}};
+ const msg={type:'clean-window:edge-level',level:2};
+ let count=0;
+ for (const fake of [{...good,id:'other-extension'}, {...good,frameId:1}, {...good,tab:undefined}]) {
+   assert.equal(f.listener(msg,fake,()=>count++),false);
+ }
+ assert.equal(count,0);
+ assert.equal(f.calls.length,0);
 });

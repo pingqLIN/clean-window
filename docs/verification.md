@@ -12,6 +12,12 @@ A document-scoped title controller initializes the original webpage title with a
 
 Local verification: **52/52** Node API/popup tests, **7/7** isolated Chrome Dev Headless DOM checks, MV3 static checks and Git whitespace checks PASS.
 
+## Popup layout and edge-control update — 2026-10-17 (feature branch)
+
+The primary Apply action moved above the level picker. A draggable icon-only edge tab supplies three in-page levels without recreating the popup. Isolated Chrome Dev Headless DOM tests cover hover visibility, level selection, drag and local position persistence. Native Chrome popup rendering, real extension installation and cross-origin reattachment remain unverified.
+
+Windows local checks: **59/59** simulated API/popup tests PASS; `npm run check`, `npm run smoke:dom` and Git whitespace checks PASS before commit.
+
 ## Evidence levels
 
 | Check | Result | Scope |
@@ -27,13 +33,14 @@ The original extension runtime files were preserved for publication. Public docu
 
 ## Automated coverage
 
-The 52 current tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, and cleanup isolation.
+The 59 current tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, and cleanup isolation.
 
 ## Re-run the accepted checks
 
 ```sh
 npm test
 npm run check
+npm run smoke:dom
 ```
 
 No npm installation is required. Tests use Node's built-in test runner. Raw local logs belong in ignored `evidence/` or `local/` directories rather than public Git history.

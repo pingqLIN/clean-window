@@ -11,9 +11,9 @@ async function feedback(tabId, message = '') {
   ]);
 }
 
-async function perform(action, target) {
+async function perform(action, target, options = {}) {
   try {
-    const result = await controller.run(action, target);
+    const result = await controller.run(action, target, options);
     await feedback(target.tabId, result.warning);
     return { ok: true, ...result };
   } catch (error) {
@@ -35,6 +35,13 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       : chrome.windows.create({ url: 'chrome://extensions/', type: 'normal', focused: true })
           .then(win => ({ok: true, windowId: win?.id}));
     task.then(respond, error => respond({ok: false, error: String(error)}));
+    return true;
+  }
+  if (message?.type === 'clean-window:edge-level') {
+    if (!Number.isInteger(sender.tab?.id) || !Number.isInteger(sender.tab?.windowId) ||
+        sender.frameId !== 0) return false;
+    perform('set-level', {tabId:sender.tab.id,windowId:sender.tab.windowId},
+      {level:message.level}).then(respond, error => respond({ok:false,error:String(error)}));
     return true;
   }
   if (sender.url !== chrome.runtime.getURL('popup.html')) return false;
@@ -91,4 +98,11 @@ chrome.tabs.onReplaced.addListener((addedTabId, removedTabId) => {
     if (record) await chrome.storage.session.set({ [`clean:${addedTabId}`]: record });
     await chrome.storage.session.remove([oldKey, `feedback:${removedTabId}`]);
   })().catch(() => {});
+});
+
+/* Re-attach the per-page UI after same-origin navigations when activeTab still permits it.
+   Cross-origin/restricted pages remain unsupported; no broad host permission is requested. */
+chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+  if (change.status !== 'complete' || !Number.isInteger(tab?.windowId)) return;
+  void controller.refresh(tabId, tab.windowId).catch(() => {});
 });

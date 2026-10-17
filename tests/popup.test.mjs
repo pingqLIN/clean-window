@@ -91,3 +91,11 @@ test('existing detached popup keeps its restore action',async()=>{
  assert.equal(p.nodes.get('#clean-label').textContent,'從目前模式還原');
  assert.equal(p.nodes.get('#clean-level').value,'1');
 });
+
+test('primary Apply button is above the three-level selector in popup markup',async()=>{
+ const html=await readFile(new URL('../extension/popup.html', import.meta.url),'utf8');
+ const apply=html.indexOf('data-action="toggle-clean"');
+ const levels=html.indexOf('class="level-picker"');
+ assert.ok(apply>0 && levels>0 && apply<levels);
+ assert.equal((html.match(/data-action="toggle-clean"/g)||[]).length,1);
+});

@@ -41,7 +41,8 @@
   }
   function startBar(withDock = false) {
     if (!isWebPage()) throw new Error('自繪網址欄僅支援一般 HTTP(S) 網頁。');
-    if (bar?.isConnected) return;
+    if (bar?.isConnected && bar.dataset.cwDock === String(withDock)) return;
+    if (bar?.isConnected) stopBar();
     const html = document.documentElement;
     originalPadding = { value: html.style.getPropertyValue('padding-top') };
     originalPriority = html.style.getPropertyPriority('padding-top');

@@ -15,9 +15,11 @@ Load the repository's `extension/` folder through `chrome://extensions/` → Dev
 
 ## Three-level operation
 
-Level 1 draws an address bar plus the Clean Window extension dock, whose actions are Restore and opening the Chrome extensions-management page. Level 2 draws only an address bar. Level 3 opens a bare popup without a persistent drawn toolbar, though title-only injection may run on eligible HTTP(S) sites. All retain the OS titlebar.
+Level 1 draws an address bar plus the Clean Window extension dock, whose actions are Restore and opening the Chrome extensions-management page. Level 2 draws only an address bar. Level 3 opens a bare popup without an address or extension dock, but can still show the edge-level controller and title-only injection on eligible HTTP(S) pages. All retain the OS titlebar.
 
-The drawn address field is not Chrome's trusted native omnibox. The dock cannot activate third-party extension actions. It needs no extension-management permission. Levels 1 and 2 inject only when the user activates the extension on an eligible HTTP(S) page, and the bar may vanish on navigation. Legacy DOM dimming is retired from the selector.
+The drawn address field is not Chrome's trusted native omnibox. The dock cannot activate third-party extension actions. It needs no extension-management permission. Levels 1 and 2 inject only when the user activates the extension on an eligible HTTP(S) page, and the bar may vanish on navigation. The Popup Apply button is positioned above its slider. On eligible sites an icon-only edge tab expands into a vertical three-stop rail on hover or keyboard focus; labels show only when a stop is hovered or focused. Drag to snap it to either edge and set its height (saved locally). Level changes keep the existing popup and tab; restricted and cross-origin pages may lose the control. `Alt + Shift + R` remains available.
+
+Legacy DOM dimming is retired from the selector.
 
 ## Editable Symbol and title
 

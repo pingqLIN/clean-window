@@ -226,3 +226,62 @@ test('level 3 stays available without content-script permission',async()=>{
  await f.ctl.run('restore',{tabId:11,windowId:result.windowId});
  assert.equal(f.tabs.get(11).windowId,1);
 });
+
+test('edge rail is available at all three levels and switches in the same popup',async()=>{
+ const f=setup();f.preferences.cleanLevel=1;
+ const opened=await f.ctl.run('toggle-clean',target);
+ const detached={tabId:11,windowId:opened.windowId};
+ const createdCount=f.calls.filter(c=>c[0]==='create').length;
+ assert.equal(f.edgeModes.get(11),1);
+ assert.equal(f.pageModes.get(11),'address-dock');
+ const second=await f.ctl.run('set-level',detached,{level:2});
+ assert.equal(second.level,2);
+ assert.equal(f.pageModes.get(11),'address');
+ assert.equal(f.edgeModes.get(11),2);
+ assert.equal(f.db['clean:11'].cleanLevel,2);
+ assert.equal(f.preferences.cleanLevel,2);
+ const third=await f.ctl.run('set-level',detached,{level:3});
+ assert.equal(third.level,3);
+ assert.equal(f.pageModes.get(11),'off');
+ assert.equal(f.edgeModes.get(11),3);
+ const first=await f.ctl.run('set-level',detached,{level:1});
+ assert.equal(first.level,1);
+ assert.equal(f.pageModes.get(11),'address-dock');
+ assert.equal(f.edgeModes.get(11),1);
+ assert.equal(f.calls.filter(c=>c[0]==='create').length,createdCount);
+ assert.equal(f.tabs.get(11).windowId,opened.windowId);
+ await f.ctl.run('restore',detached);
+ assert.equal(f.edgeModes.get(11),'off');
+});
+test('level selection is limited to matching managed popup and valid integers',async()=>{
+ const f=setup();
+ await assert.rejects(f.ctl.run('set-level',target,{level:2}),/僅能調整/);
+ const opened=await f.ctl.run('toggle-clean',target);
+ const detached={tabId:11,windowId:opened.windowId};
+ for (const level of ['2',0,4,undefined,NaN]) {
+   await assert.rejects(f.ctl.run('set-level',detached,{level}),/簡化等級/);
+ }
+ assert.equal(f.db['clean:11'].cleanLevel,2);
+ assert.equal(f.tabs.get(21).windowId,2);
+});
+test('failed injected level upgrade retains old level and popup',async()=>{
+ const f=setup();f.preferences.cleanLevel=3;
+ const opened=await f.ctl.run('toggle-clean',target);
+ const detached={tabId:11,windowId:opened.windowId};
+ f.api.failInject=true;
+ await assert.rejects(f.ctl.run('set-level',detached,{level:1}),/Injection blocked/);
+ assert.equal(f.db['clean:11'].cleanLevel,3);
+ assert.equal(f.preferences.cleanLevel,3);
+ assert.equal(f.wins.get(opened.windowId).type,'popup');
+});
+test('navigation recovery restores edge rail and address mode only to matching popup',async()=>{
+ const f=setup();f.preferences.cleanLevel=2;
+ const opened=await f.ctl.run('toggle-clean',target);
+ f.edgeModes.delete(11);f.pageModes.delete(11);f.titleModes.delete(11);
+ assert.equal(await f.ctl.refresh(11,opened.windowId),true);
+ assert.equal(f.edgeModes.get(11),2);
+ assert.equal(f.pageModes.get(11),'address');
+ assert.equal(f.titleModes.get(11),'active');
+ assert.equal(await f.ctl.refresh(21,2),false);
+ assert.equal(f.edgeModes.get(21),undefined);
+});

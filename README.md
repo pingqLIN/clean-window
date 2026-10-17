@@ -10,7 +10,7 @@
 
 Choose one of three simplification levels: a self-drawn address bar and extension dock, an address bar only, or a bare popup. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
 
-**Status: source preview.** Fifty automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
+**Status: source preview.** 59 automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
 
 ## Quick Start
 
@@ -35,7 +35,9 @@ The single slider offers three modes, all implemented as a resizable Chrome popu
 | 2 | Address only | URL input and navigation, without the extension dock |
 | 3 | None | Bare popup with no injected toolbar |
 
-The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security indicator. The extension dock cannot invoke other extensions' action buttons. No management permission or broad host permission was introduced. Levels 1–2 only inject after the user activates the extension on an eligible HTTP(S) site, and the bar can disappear after cross-document navigation. Level 3 does not inject content UI.
+The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security indicator. The extension dock cannot invoke other extensions' action buttons. No management permission or broad host permission was introduced. Levels 1–2 only inject after the user activates the extension on an eligible HTTP(S) site, and the bar can disappear after cross-document navigation. Level 3 does not require injection to open, but keeps the edge control when eligible.
+
+**In-page control:** The primary Apply button now appears above the level picker. An icon-only `◈` tab attaches to the screen edge on eligible pages. Hover or keyboard focus expands the vertical three-stop rail, with labels shown only when a stop is hovered/focused. Dragging the tab snaps it left/right and changes height, saved locally. Switching levels updates the existing popup without moving the tab. Restricted or cross-origin pages may lose the control; use `Alt + Shift + R` to restore.
 
 The former DOM masking experiment and levels 4–6 are removed from the selector. Separate fullscreen and restore shortcuts remain for compatibility.
 
@@ -69,7 +71,7 @@ The public Windows API supports creating a popup and updating window state, but 
 
 | Permission | Purpose |
 | --- | --- |
-| `storage` | Session restoration records plus a persistent numeric simplification preset |
+| `storage` | Session restoration records plus a persistent level preset and edge position |
 | `activeTab` and `scripting` | On-demand injection for self-drawn URL navigation and optional extension-owned dock |
 | `contextMenus` | Page and extension-action menu entries for switching and restoration |
 
@@ -85,7 +87,7 @@ npm test
 npm run check
 ```
 
-`npm test` runs 50 tests against deterministic Chrome API simulations and popup interactions. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
+`npm test` runs 59 tests against deterministic Chrome API simulations and popup interactions. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
 
 | Resource | Purpose |
 | --- | --- |

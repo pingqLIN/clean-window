@@ -12,6 +12,8 @@ export function createController(api) {
       .map(key => [key, win[key]])
   );
   const isId = id => Number.isInteger(id) && id >= 0;
+  const validLevel = level => Number.isInteger(level) && level >= 1 && level <= 3;
+  const levelMode = level => level === 1 ? 'address-dock' : 'address';
   async function assertLocation(tabId, windowId) {
     const current = await api.tabs.get(tabId);
     if (current.windowId !== windowId) throw new Error('目標分頁已移至另一視窗；請重新開啟操作面板。');
@@ -157,6 +159,19 @@ export function createController(api) {
     catch { /* No active content script, restricted URL or page navigation. */ }
   }
 
+  async function edgeUI(tab, level) {
+    if (level !== 'off') {
+      await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js'] });
+    }
+    const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:edge-ui', level });
+    if (!response?.ok) throw new Error(response?.error || '頁面邊緣工具無法更新。');
+  }
+
+  async function clearEdgeUI(tab) {
+    try { await edgeUI(tab, 'off'); }
+    catch { /* Script may already be gone after a page navigation. */ }
+  }
+
   async function titleUI(tab, action) {
     try {
       if (action !== 'off') {
@@ -174,11 +189,11 @@ export function createController(api) {
   async function selectedLevel() {
     const prefs = await api.storage.local.get('cleanLevel');
     const level = prefs.cleanLevel;
-    return Number.isInteger(level) && level >= 1 && level <= 3 ? level : 1;
+    return validLevel(level) ? level : 1;
   }
 
-  async function run(action, target) {
-    if (!['toggle-clean', 'toggle-fullscreen', 'restore', 'edit-title'].includes(action)) throw new Error('不支援的操作。');
+  async function run(action, target, options = {}) {
+    if (!['toggle-clean', 'toggle-fullscreen', 'restore', 'edit-title', 'set-level'].includes(action)) throw new Error('不支援的操作。');
     if (!isId(target?.windowId) || !isId(target?.tabId)) throw new Error('找不到有效的目標視窗／分頁。');
     const locks = [`window:${target.windowId}`, `tab:${target.tabId}`];
     if (locks.some(key => busy.has(key))) throw new Error('此視窗正在切換，請勿重複操作。');
@@ -188,6 +203,33 @@ export function createController(api) {
       if (tab.windowId !== target.windowId) throw new Error('目標分頁已移至另一視窗；請重新開啟操作面板。');
       let win = await api.windows.get(target.windowId);
       if (!['normal', 'popup'].includes(win.type)) throw new Error('此類型視窗不支援；未做任何變更。');
+      if (action === 'set-level') {
+        const requested = options.level;
+        if (!validLevel(requested)) throw new Error('簡化等級必須是 1、2 或 3。');
+        const key = cleanKey(tab.id);
+        const record = await read(key);
+        if (win.type !== 'popup' || !record || record.popupWindowId !== win.id ||
+            record.phase !== 'open') {
+          throw new Error('僅能調整 Clean Window 建立的乾淨 Popup。');
+        }
+        const previous = validLevel(record.cleanLevel) ? record.cleanLevel : 1;
+        if (previous === requested) return {windowId:win.id,mode:'clean',level:requested};
+        if (requested === 3) await clearPageUI(tab);
+        else await pageUI(tab, levelMode(requested));
+        try {
+          await write(key, { ...record, cleanLevel: requested });
+          await api.storage.local.set({ cleanLevel: requested });
+        } catch (error) {
+          if (previous === 3) await clearPageUI(tab);
+          else await pageUI(tab, levelMode(previous)).catch(() => {});
+          await write(key, record).catch(() => {});
+          throw error;
+        }
+        let warning;
+        try { await edgeUI(tab, requested); }
+        catch { warning = '已切換等級；此頁面的邊緣工具無法更新，可使用快捷鍵還原。'; }
+        return {windowId:win.id,mode:'clean',level:requested,warning};
+      }
       if (action === 'edit-title') {
         const record = await read(cleanKey(tab.id));
         if (win.type !== 'popup' || !record ||
@@ -211,12 +253,14 @@ export function createController(api) {
         if (win.type === 'popup') {
           const result = await fromPopup(tab, win);
           await clearPageUI(tab);
+          await clearEdgeUI(tab);
           await titleUI(tab, 'off');
           return result;
         }
         if (detachedNormal) {
           const result = await fromDetachedNormal(tab, win, savedClean);
           await clearPageUI(tab);
+          await clearEdgeUI(tab);
           await titleUI(tab, 'off');
           return result;
         }
@@ -224,15 +268,19 @@ export function createController(api) {
         const level = await selectedLevel();
         await clearPageUI(tab);
         if (level !== 3) {
-          await pageUI(tab, level === 1 ? 'address-dock' : 'address');
+          await pageUI(tab, levelMode(level));
         }
         try {
           // Title customization is optional in level 3 (restricted pages still open as bare popups).
           try { await titleUI(tab, 'start'); }
           catch (error) { if (level !== 3) throw error; }
-          return await toCleanWindow(tab, win, level);
+          const opened = await toCleanWindow(tab, win, level);
+          try { await edgeUI(tab, level); }
+          catch { opened.warning = '乾淨視窗已開啟；此頁無法顯示邊緣工具，請使用 Alt+Shift+R 還原。'; }
+          return opened;
         } catch (error) {
           await clearPageUI(tab);
+          await clearEdgeUI(tab);
           await titleUI(tab, 'off');
           throw error;
         }
@@ -248,6 +296,7 @@ export function createController(api) {
       if (win.type === 'popup') {
         const result = await fromPopup(tab, win);
         await clearPageUI(tab);
+        await clearEdgeUI(tab);
         await titleUI(tab, 'off');
         return result;
       }
@@ -258,6 +307,7 @@ export function createController(api) {
         return result;
       }
       await clearPageUI(tab);
+      await clearEdgeUI(tab);
       await titleUI(tab, 'off');
       await forget(cleanKey(tab.id));
       return fullResult ?? { windowId: win.id, mode: win.state ?? 'normal' };
@@ -265,5 +315,19 @@ export function createController(api) {
       locks.forEach(key => busy.delete(key));
     }
   }
-  return { run };
+  async function refresh(tabId, windowId) {
+    if (busy.has(`tab:${tabId}`)) return false;
+    const tab = await api.tabs.get(tabId);
+    if (tab.windowId !== windowId) return false;
+    const win = await api.windows.get(windowId);
+    const record = await read(cleanKey(tabId));
+    if (win.type !== 'popup' || record?.popupWindowId !== windowId ||
+        record.phase !== 'open') return false;
+    const level = validLevel(record.cleanLevel) ? record.cleanLevel : 1;
+    if (level !== 3) await pageUI(tab, levelMode(level));
+    await edgeUI(tab, level);
+    await titleUI(tab, 'start').catch(() => {});
+    return true;
+  }
+  return { run, refresh };
 }

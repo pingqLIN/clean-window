@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — 2026-10-17 (Popup and edge-level controls)
+
+- Moved the primary Apply button above the Popup level selector.
+- Added draggable left/right page-edge tab and hover/focus-only three-level vertical rail, with locally saved positioning.
+- Added in-place switching without tab relocation, plus best-effort same-origin reattachment and no extra permissions.
+- Added regression and isolated Chrome Headless DOM tests; real extension GUI acceptance remains pending.
+
 ## Unreleased — 2026-10-17
 
 - Added editable clean-mode page titles from the original `document.title` with a built-in Unicode Symbol prefix (`◈` by default).
