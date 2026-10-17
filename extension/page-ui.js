@@ -57,7 +57,8 @@
     const shadow = bar.attachShadow({mode:'closed'});
     const style = document.createElement('style');
     style.textContent = `
-      :host { color-scheme:light dark; }
+      :host { color-scheme:light; }
+      :host([data-theme="dark"]) { color-scheme:dark; }
       *,*::before,*::after { box-sizing:border-box; }
       .strip { display:flex; align-items:center; gap:8px; height:48px; padding:0 12px;
         background:#f5f6f8; color:#253042; border-bottom:1px solid #d8dce2;
@@ -66,8 +67,7 @@
         background:transparent; color:inherit; font:18px system-ui; cursor:pointer; }
       button:hover { background:#e2e6ec; }
       button:focus-visible,input:focus-visible { outline:2px solid #477fe5; outline-offset:1px; }
-      .brand { flex:none; font-size:10px; letter-spacing:.02em; color:#566578;
-        padding:0 6px; white-space:nowrap; }
+      .theme-toggle { border-radius:9px;font-size:18px; }
       .ribbon { height:38px;display:flex;align-items:center;gap:4px;padding:2px 10px;
         border-bottom:1px solid #d8dce2;background:#eff3f5;color:#35434a; }
       .ribbon .identity { font-size:10px;letter-spacing:.02em;color:#537566;
@@ -99,20 +99,20 @@
         border-radius:18px; background:#fff; color:#202124;
         font:13px system-ui,-apple-system,'Segoe UI',sans-serif; }
       input:focus { border-color:#8aa9ec; }
-      @media(prefers-color-scheme:dark) {
-        .strip { background:#292b30; color:#e7e9ee; border-color:#45474d; }
-        button:hover { background:#3b3e44; }
-        .brand { color:#aab2bf; }
-        input { background:#3b3f46; color:#f0f2f5; border-color:#525761; }
-        .ribbon { background:#262e32;color:#e4ebee;border-color:#45474d; }
-        .ribbon .identity { color:#9cd4b7; }
-        .ribbon button[aria-pressed="true"] { color:#9cd4b7;background:#385347; }
-        .menu { background:#27333a;color:#f0f3f3;border-color:#53626a; }
-        .menu-row { border-color:#44515a; }
-        .menu-row button,.menu-row select,.menu-action { border-color:#62717a; }
-        .menu-note {color:#b6c9ce; }
-      }
-      @media(max-width:480px) { .strip { gap:3px; padding:0 6px; } .brand {font-size:9px;padding:0 2px;} }
+      :host([data-theme="dark"]) .strip { background:#292b30; color:#e7e9ee; border-color:#45474d; }
+      :host([data-theme="dark"]) button:hover { background:#3b3e44; }
+      :host([data-theme="dark"]) .theme-toggle { color:#f0f2f5; }
+      :host([data-theme="dark"]) input { background:#3b3f46; color:#f0f2f5; border-color:#525761; }
+      :host([data-theme="dark"]) .ribbon { background:#262e32;color:#e4ebee;border-color:#45474d; }
+      :host([data-theme="dark"]) .ribbon .identity { color:#9cd4b7; }
+      :host([data-theme="dark"]) .ribbon button[aria-pressed="true"] { color:#9cd4b7;background:#385347; }
+      :host([data-theme="dark"]) .menu { background:#27333a;color:#f0f3f3;border-color:#53626a; }
+      :host([data-theme="dark"]) .menu-row { border-color:#44515a; }
+      :host([data-theme="dark"]) .menu-row button,
+      :host([data-theme="dark"]) .menu-row select,
+      :host([data-theme="dark"]) .menu-action { border-color:#62717a; }
+      :host([data-theme="dark"]) .menu-note {color:#b6c9ce; }
+      @media(max-width:480px) { .strip { gap:3px; padding:0 6px; } }
     `;
     const strip = document.createElement('div');
     strip.className = 'strip';
@@ -126,8 +126,26 @@
     const back=makeButton('‹','上一頁',()=>history.back());
     const forward=makeButton('›','下一頁',()=>history.forward());
     const reload=makeButton('↻','重新整理',()=>location.reload());
-    const brand=document.createElement('span');
-    brand.className='brand'; brand.textContent='Clean Window · 自繪';
+    const themeButton=makeButton('☾','切換為深色工具列',()=>{});
+    themeButton.className='theme-toggle';
+    let manualTheme=false;
+    const applyTheme=theme=>{
+      if (!bar) return;
+      bar.dataset.theme=theme;
+      themeButton.textContent=theme==='dark'?'☀':'☾';
+      const label=theme==='dark'?'切換為淺色工具列':'切換為深色工具列';
+      themeButton.title=label;
+      themeButton.setAttribute('aria-label',label);
+      themeButton.setAttribute('aria-pressed',String(theme==='dark'));
+    };
+    applyTheme(window.matchMedia?.('(prefers-color-scheme: dark)')?.matches?'dark':'light');
+    themeButton.addEventListener('click',async()=>{
+      manualTheme=true;
+      const next=bar?.dataset.theme==='dark'?'light':'dark';
+      applyTheme(next);
+      try {await chrome.storage.local.set({cleanWindowUiTheme:next});}
+      catch(error){feedback.textContent='無法儲存工具列主題：'+(error?.message||String(error));feedback.hidden=false;}
+    });
     const form=document.createElement('form');
     address=document.createElement('input');
     address.type='text'; address.inputMode='url';address.autocomplete='off';
@@ -142,7 +160,7 @@
     });
     strip.addEventListener('pointerdown',event=>event.stopPropagation());
     strip.addEventListener('click',event=>event.stopPropagation());
-    strip.append(back,forward,reload,brand,form);
+    strip.append(back,forward,reload,form,themeButton);
     const feedback=document.createElement('div');
     feedback.className='feedback';feedback.hidden=true;feedback.setAttribute('role','status');
     let ribbon=null, menu=null;
@@ -269,6 +287,13 @@
     else shadow.append(style,strip,feedback);
 
     html.appendChild(bar);
+    const currentBar=bar;
+    void chrome.storage.local.get('cleanWindowUiTheme').then(saved=>{
+      if (bar!==currentBar || manualTheme) return;
+      if (saved.cleanWindowUiTheme==='light' || saved.cleanWindowUiTheme==='dark') {
+        applyTheme(saved.cleanWindowUiTheme);
+      }
+    }).catch(()=>{});
     updateTimer=setInterval(()=>{
       if (!bar?.isConnected) {stopBar(); return;}
       if (address && shadow.activeElement !== address && address.value !== location.href) address.value=location.href;

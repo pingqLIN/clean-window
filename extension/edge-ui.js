@@ -72,31 +72,37 @@
     root = host.attachShadow({mode:'open'});
     const style = document.createElement('style');
     style.textContent = [
-      ':host { color-scheme:light dark; font:12px system-ui,-apple-system,"Segoe UI",sans-serif; color:#20312a; }',
+      ':host { color-scheme:light dark; font:12px system-ui,-apple-system,"Segoe UI",sans-serif; color:#393b3e; }',
       '*,*::before,*::after { box-sizing:border-box; }',
       '.edge { display:flex;align-items:center;gap:2px;width:24px;height:42px; }',
       ':host([data-side="right"]) .edge { flex-direction:row-reverse; }',
       ':host(:hover) .edge,:host(:focus-within) .edge { width:70px; }',
-      '.handle { width:24px;height:42px;flex:none;border:1px solid #b9c7c1;background:#e8f0ec;',
-      ' color:#176851;box-shadow:0 2px 10px #0002;cursor:grab;touch-action:none;',
-      ' font:18px system-ui;line-height:1;padding:0;border-radius:0 8px 8px 0; }',
+      '.handle { position:relative;width:24px;height:42px;flex:none;border:1px solid #999da2;background:#b8bbbf;',
+      ' color:#333;box-shadow:0 2px 10px #0002;cursor:grab;touch-action:none;',
+      ' padding:0;border-radius:0 8px 8px 0; }',
+      '.handle::after { content:attr(data-tip);position:absolute;top:50%;right:calc(100% + 9px);',
+      ' transform:translateY(-50%);visibility:hidden;pointer-events:none;',
+      ' white-space:nowrap;background:#3e4044;color:#fff;border-radius:6px;padding:6px 9px;',
+      ' box-shadow:0 2px 8px #0003;font:11px/1.3 system-ui; }',
+      '.handle:hover::after,.handle:focus-visible::after {visibility:visible;}',
       ':host([data-side="right"]) .handle { border-radius:8px 0 0 8px; }',
+      ':host([data-side="left"]) .handle::after {left:calc(100% + 9px);right:auto;}',
       '.handle:active { cursor:grabbing; }',
       '.rail { position:static;flex:none;display:none;flex-direction:column;gap:3px;padding:6px 5px;',
-      ' border:1px solid #b9c7c1;border-radius:11px;background:#f8faf9;',
+      ' border:1px solid #b6b9bf;border-radius:11px;background:#f5f5f6;',
       ' box-shadow:0 4px 16px #0003; }',
 
       ':host(:hover) .rail,:host(:focus-within) .rail { display:flex; }',
       '.stop { position:relative;display:grid;place-items:center;width:30px;height:32px;',
-      ' border:0;border-radius:7px;background:transparent;cursor:pointer;color:#778980; }',
-      '.stop.selected { background:#d9ebe1;color:#176851; }',
-      '.stop:hover { background:#e4eee9; }',
-      '.stop:focus-visible,.handle:focus-visible { outline:2px solid #176851;outline-offset:2px; }',
+      ' border:0;border-radius:7px;background:transparent;cursor:pointer;color:#696d73; }',
+      '.stop.selected { background:#dadddf;color:#34383d; }',
+      '.stop:hover { background:#e4e6e8; }',
+      '.stop:focus-visible,.handle:focus-visible { outline:2px solid #5e6876;outline-offset:2px; }',
       '.tick { width:13px;height:3px;background:currentColor;border-radius:2px; }',
       '.stop.selected .tick { width:20px;height:4px; }',
       '.hint { pointer-events:none;position:absolute;right:calc(100% + 12px);top:50%;',
       ' transform:translateY(-50%);white-space:nowrap;visibility:hidden;',
-      ' color:#fff;background:#25332e;padding:6px 9px;border-radius:6px;',
+      ' color:#fff;background:#3e4044;padding:6px 9px;border-radius:6px;',
       ' box-shadow:0 2px 8px #0003;font-size:11px; }',
       ':host([data-side="left"]) .hint { left:calc(100% + 12px);right:auto; }',
       '.stop:hover .hint,.stop:focus-visible .hint { visibility:visible; }',
@@ -104,11 +110,11 @@
       ' overflow-wrap:anywhere; }',
       '[hidden] { display:none!important; }',
       '@media(prefers-color-scheme:dark) {',
-      ' .handle { background:#253a31;color:#91d5b0;border-color:#46574f; }',
-      ' .rail { background:#27332f;border-color:#46574f; }',
-      ' .stop { color:#9db3a8; }',
-      ' .stop.selected { background:#345a47;color:#a7efc6; }',
-      ' .stop:hover { background:#384b42; }',
+      ' .handle { background:#686c72;color:#f5f6f8;border-color:#555960; }',
+      ' .rail { background:#2d3035;border-color:#4d5259; }',
+      ' .stop { color:#aab0b8; }',
+      ' .stop.selected { background:#52565d;color:#f4f5f7; }',
+      ' .stop:hover { background:#3e4248; }',
       '}'
     ].join('');
     const edge = document.createElement('div');
@@ -116,7 +122,8 @@
     handle = document.createElement('button');
     handle.className = 'handle';
     handle.type = 'button';
-    handle.textContent = '◈';
+    handle.textContent = '';
+    handle.dataset.tip = '點擊編輯標題 · 拖曳移動 · 移入選擇簡化等級';
     handle.setAttribute('aria-label', '拖曳調整乾淨模式工具位置；滑鼠移入展開等級');
     const rail = document.createElement('div');
     rail.className = 'rail';

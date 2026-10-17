@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — 2026-10-18 (Theme switch, neutral edge handle, Emoji presets)
+
+- Added requested Emoji title presets, including keycap `1️⃣2️⃣3️⃣`, with single-grapheme validation.
+- Added persisted light/dark theme toggle to the drawn level-1 and level-2 address bars; this does not modify Chrome's native theme or web page.
+- Removed `Clean Window · 自繪` text from the address bar.
+- Made the draggable edge handle neutral gray and text/icon-free, with an accessible mouseover/focus instruction tooltip.
+- Expanded isolated Chrome Headless DOM smoke coverage for these behaviors.
+
+
 ## Unreleased — 2026-10-18 (Level-1 lightweight browser and managed windows)
 
 - Repositioned level 1 as an 86px two-row browser-style toolbar: URL controls, bookmark toggle/list, managed-window list, Chrome history/downloads and extension-management shortcuts, and Restore.

@@ -31,19 +31,21 @@ The single slider offers three modes, all implemented as a resizable Chrome popu
 
 | Level | Drawn toolbar | Behavior |
 | --- | --- | --- |
-| 1 (default) | **Lightweight browser toolbar** | Two rows (86px): URL/navigation, bookmark shortcut and star, managed-window list, history, downloads, extensions management and Restore |
-| 2 | Address only | URL input and navigation, without the extension dock |
+| 1 (default) | **Lightweight browser toolbar** | Two rows (86px): URL/navigation, light/dark toggle, bookmark shortcut and star, managed-window list, history, downloads, extensions management and Restore |
+| 2 | Address only | URL input, navigation and a light/dark toggle, without the extension dock |
 | 3 | None | Bare popup with no injected toolbar |
 
 The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security indicator. The drawn toolbar cannot invoke other extensions' action buttons. No `management` or broad host permission was introduced. Bookmarks use an **optional** `bookmarks` permission, requested only from a separate extension page after an explicit user click; they do not require a sensitive `tabs` permission. Levels 1–2 only inject after the user activates the extension on an eligible HTTP(S) site, and the bar can disappear after cross-document navigation. Level 3 does not require injection to open, but keeps the edge control when eligible.
 
 **Managed windows:** Open the expandable managed-window list in the extension popup (or the level-1 toolbar). Only live Clean Window popups from the current session are listed; focus, change L1/L2/L3, or restore individual windows. Edited Emoji titles are reflected in the session-scoped list.
 
-**In-page control:** The primary Apply button now appears above the level picker. An icon-only `◈` tab attaches to the screen edge on eligible pages. Hover or keyboard focus expands the vertical three-stop rail, with labels shown only when a stop is hovered/focused. Dragging the tab snaps it left/right and changes height, saved locally. Switching levels updates the existing popup without moving the tab. Restricted or cross-origin pages may lose the control; use `Alt + Shift + R` to restore.
+**Drawn UI theme:** Levels 1 and 2 have a `☾`/`☀` toggle in the drawn address bar. It follows system preference initially and remembers explicit selection locally. It does not change Chrome's native theme or website colors; the address bar no longer shows the `Clean Window · 自繪` brand text.
+
+**In-page control:** The primary Apply button now appears above the level picker. A blank neutral-gray tab attaches to the screen edge on eligible pages, with a hover/focus instruction tooltip. Hover or keyboard focus expands the vertical three-stop rail, with labels shown only when a stop is hovered/focused. Dragging the tab snaps it left/right and changes height, saved locally. Switching levels updates the existing popup without moving the tab. Restricted or cross-origin pages may lose the control; use `Alt + Shift + R` to restore.
 
 The former DOM masking experiment and levels 4–6 are removed from the selector. Separate fullscreen and restore shortcuts remain for compatibility.
 
-**Emoji icon and quick edit:** Single-click the page-edge `◈` tab to open the editor; drag the same tab to move it. The editor accepts a single Unicode grapheme, including composed Emoji or flags. The native Chrome titlebar is not interceptable by an extension.
+**Emoji icon and quick edit:** Single-click the blank gray edge tab to open the editor; drag it to move it. The editor accepts a single Unicode grapheme, including composed Emoji, keycap digits `1️⃣2️⃣3️⃣` and flags. Added presets: `🖋️🌍🚩🔥🔍💡🛠️🔏`. The native Chrome titlebar is not interceptable by an extension.
 
 **Editable clean-mode title:** A clean popup initially displays the standard Unicode symbol `◈` followed by the original webpage title. Press `Alt + Shift + T`, or use the page context menu, to select another built-in Symbol glyph, edit the text, or reset it. Normal-window restoration restores the native webpage title. This adjusts `document.title`, **not** Chrome's native favicon/security identity. It is limited to eligible HTTP(S) pages; the headless DOM behavior has passed, but actual Windows popup titlebar rendering needs GUI acceptance.
 

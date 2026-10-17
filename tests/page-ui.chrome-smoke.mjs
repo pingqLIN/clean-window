@@ -70,7 +70,7 @@ try{
   await sleep(100);
  }
  assert.equal(ready,true,'test page ready');
- await run('globalThis.chrome={runtime:{onMessage:{addListener(fn){globalThis.__cwListener=fn;}},async sendMessage(message){globalThis.__hubCalls=(globalThis.__hubCalls||[]).concat(message);if(message.action==="list")return {ok:true,items:[{tabId:11,windowId:5,title:"🎨 研究視窗",level:1}]};if(message.action==="bookmarks-recent")return{ok:true,granted:false,items:[]};if(message.action==="bookmarks-status")return {ok:true,granted:false};return{ok:true,level:message.level};}}};'+source);
+ await run('globalThis.chrome={storage:{local:{async get(key){return {[key]:globalThis.__cwTheme};},async set(value){globalThis.__cwTheme=value.cleanWindowUiTheme;}}},runtime:{onMessage:{addListener(fn){globalThis.__cwListener=fn;}},async sendMessage(message){globalThis.__hubCalls=(globalThis.__hubCalls||[]).concat(message);if(message.action==="list")return {ok:true,items:[{tabId:11,windowId:5,title:"🎨 研究視窗",level:1}]};if(message.action==="bookmarks-recent")return{ok:true,granted:false,items:[]};if(message.action==="bookmarks-status")return {ok:true,granted:false};return{ok:true,level:message.level};}}};'+source);
  const invoke=(mode)=>run('new Promise(resolve=>globalThis.__cwListener({type:"clean-window:page-ui",mode:"'+mode+'"}, {},resolve))');
 
  const full=await invoke('address-dock');
@@ -78,6 +78,13 @@ try{
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'86');
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelectorAll(".ribbon button").length'),7);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".brand")===null'),true);
+ const initialTheme=await run('document.getElementById("clean-window-address-ui").dataset.theme');
+ await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".theme-toggle").click();true');
+ await sleep(30);
+ const toggledTheme=await run('document.getElementById("clean-window-address-ui").dataset.theme');
+ assert.notEqual(toggledTheme,initialTheme);
+ assert.equal(await run('globalThis.__cwTheme'),toggledTheme);
  await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".ribbon button[title=\'管理乾淨視窗\']").click();true');
  await sleep(40);
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelectorAll(".menu-row").length'),1);
@@ -96,6 +103,9 @@ try{
  assert.equal(switched.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'48');
+ await sleep(30);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.theme'),toggledTheme,'theme persists to level 2');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".theme-toggle")!==null'),true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".ribbon")===null'),true);
  const returned=await invoke('address-dock');
  assert.equal(returned.ok,true);
@@ -119,7 +129,8 @@ try{
  const rail=await edgeCommand(1);
  assert.equal(rail.ok,true);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".stop").length'),3);
- assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").textContent'),'◈');
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").textContent'),'');
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").dataset.tip.includes("點擊編輯標題")'),true);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'1');
  assert.equal((await edgeCommand(3)).level,3);
  assert.equal(await run('(() => {const r=document.querySelector("#clean-window-edge-control").getBoundingClientRect();return Math.abs(r.right-window.innerWidth)<1;})()'),true,'edge control is pinned to the right viewport edge');
@@ -137,6 +148,7 @@ try{
  console.log('PASS: real pointer click switches edge level; simulated page clicks are ignored');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:grip.x,y:grip.y});
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).display'),'flex');
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle"),"::after").visibility'),'visible');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".hint")).visibility'),'hidden');
  console.log('PASS: hover reveals vertical rail, labels stay hidden on the handle');
  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:grip.x,y:grip.y,button:'left',clickCount:1});
@@ -177,6 +189,19 @@ try{
  })()`);
  assert.equal(custom,'✦ 我的乾淨視窗');
  console.log('PASS: title editor applies chosen standard symbol and text');
+ await titleCommand('edit');
+ const keycaps=await run(`(() => {
+   const root=document.querySelector('#clean-window-title-editor').shadowRoot;
+   const presets=[...root.querySelectorAll('.preset')].map(el=>el.textContent);
+   const expected=['1️⃣','2️⃣','3️⃣','🖋️','🌍','🚩','🔥','🔍','💡','🛠️','🔏'];
+   if(!expected.every(icon=>presets.includes(icon)))return 'missing presets';
+   root.querySelector('#cw-title-symbol').value='1️⃣';
+   root.querySelector('#cw-title-text').value='工作視窗';
+   root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+   return document.title;
+ })()`);
+ assert.equal(keycaps,'1️⃣ 工作視窗');
+ console.log('PASS: requested Emoji presets exist and keycap icon is accepted');
 
  await titleCommand('edit');
  const emoji=await run(`(() => {

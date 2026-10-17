@@ -3,7 +3,8 @@
   'use strict';
   if (globalThis.__cleanWindowTitleUI) return;
   const DEFAULT_SYMBOL = '◈';
-  const ICON_PRESETS = ['◈', '◆', '✦', '★', '🎨', '🎬', '🪟', '✨', '🌈', '📌', '💻', '🧭'];
+  const ICON_PRESETS = ['◈', '◆', '✦', '★', '🎨', '🎬', '🪟', '✨', '🌈', '📌', '💻', '🧭',
+    '1️⃣', '2️⃣', '3️⃣', '🖋️', '🌍', '🚩', '🔥', '🔍', '💡', '🛠️', '🔏'];
   const MAX_TITLE = 160;
   let state = null;
   let observer = null;
@@ -22,7 +23,8 @@
     const icon = String(value ?? '').trim().normalize('NFC');
     if (!icon || icon.length > 32 || /[\u0000-\u001f\u007f-\u009f]/u.test(icon)) return null;
     const segments = [...new Intl.Segmenter('zh-Hant', { granularity: 'grapheme' }).segment(icon)];
-    if (segments.length !== 1 || !/[\p{Extended_Pictographic}\p{S}\p{Regional_Indicator}]/u.test(icon)) return null;
+    const isKeycap = /^[0-9#*]\uFE0F?\u20E3$/u.test(icon);
+    if (segments.length !== 1 || (!isKeycap && !/[\p{Extended_Pictographic}\p{S}\p{Regional_Indicator}]/u.test(icon))) return null;
     return icon;
   }
   function titleText() {
