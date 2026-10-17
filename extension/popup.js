@@ -6,6 +6,7 @@ const levelNumber = document.querySelector('#level-number');
 const levelTitle = document.querySelector('#level-title');
 const levelDetail = document.querySelector('#level-detail');
 const levelLimit = document.querySelector('#level-limit');
+const levelPreview = document.querySelector('.level-preview');
 const cleanLabel = document.querySelector('#clean-label');
 const cleanDescription = document.querySelector('#clean-description');
 const managed = document.querySelector('#managed-windows');
@@ -103,6 +104,11 @@ const describeLevel = () => {
   levelDetail.textContent = preset.detail;
   levelLimit.textContent = preset.limit;
   levelLimit.hidden = !preset.limit;
+  if (levelPreview && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+    levelPreview.classList.remove('changing');
+    void levelPreview.offsetWidth;
+    levelPreview.classList.add('changing');
+  }
   if (!isRestoring) {
     cleanLabel.textContent = '套用此簡化等級';
     cleanDescription.textContent = level === 1

@@ -50,4 +50,26 @@ footer { border-top:1px solid var(--line); display:flex; justify-content:space-b
  .primary { background:#253e34; border-color:#426552; }
  #feedback { background:#3c301d; color:#f0cd97; }
 }
-@media (prefers-reduced-motion: no-preference) { button { transition:background-color .12s, border-color .12s; } }
+/* Quiet motion: transitions acknowledge actions without delaying functionality. */
+@media (prefers-reduced-motion: no-preference) {
+  body { animation:cw-popup-enter .2s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes cw-popup-enter { from {opacity:0;transform:translateY(3px)} to {opacity:1;transform:none} }
+  button,select,#clean-level,.choice,#restore,.level-picker,summary {
+    transition:background-color .14s ease,border-color .14s ease,color .14s ease,
+      box-shadow .14s ease,opacity .14s ease,transform .14s cubic-bezier(.16,1,.3,1);
+  }
+  button:active:not(:disabled) {opacity:.7;transform:scale(.992);}
+  .choice:hover:not(:disabled),#restore:hover:not(:disabled) {box-shadow:0 3px 12px #0000000d;}
+  #managed-windows::details-content { opacity:0;content-visibility:hidden;
+    transition:opacity .15s ease,content-visibility .15s allow-discrete; }
+  #managed-windows[open]::details-content {opacity:1;content-visibility:visible;}
+  @starting-style {#managed-windows[open]::details-content {opacity:0;}}
+  .managed-row {animation:cw-popup-row .17s ease both;}
+  @keyframes cw-popup-row {from {opacity:0;transform:translateY(-3px)} to {opacity:1;transform:none}}
+  #feedback:not([hidden]) {animation:cw-popup-row .17s ease both;}
+  .level-preview.changing {animation:cw-preview .17s ease both;}
+  @keyframes cw-preview {from {opacity:.52} to {opacity:1}}
+}
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after {animation:none!important;transition:none!important;scroll-behavior:auto!important;}
+}
