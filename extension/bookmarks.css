@@ -1,0 +1,9 @@
+:root{color-scheme:light dark;font:13px/1.7 system-ui,'Microsoft JhengHei',sans-serif}
+body{margin:0;padding:18px;color:#273b31;background:#f5f8f6}
+h1{font-size:18px;margin:0 0 10px}
+p{margin:0 0 14px}
+button{padding:9px 15px;border:0;border-radius:8px;background:#176851;color:white;font:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:2px solid #176851;outline-offset:3px}
+#status{font-size:12px;margin-top:13px}
+@media(prefers-color-scheme:dark){body{background:#202b25;color:#f0f3f1}}

@@ -305,3 +305,31 @@ test('edge and title controllers are prepared before moving: post-move injection
  await f.ctl.run('restore',detached);
  assert.equal(f.edgeModes.get(11),'off');
 });
+
+test('manager list includes only live clean popups, with original labels and current levels',async()=>{
+ const f=setup();f.preferences.cleanLevel=1;
+ assert.deepEqual(await f.ctl.listManaged(),[]);
+ const opened=await f.ctl.run('toggle-clean',target);
+ const list=await f.ctl.listManaged();
+ assert.equal(list.length,1);
+ assert.deepEqual(list[0],{tabId:11,windowId:opened.windowId,level:1,title:'示範網頁'});
+ await f.ctl.run('set-level',{tabId:11,windowId:opened.windowId},{level:3});
+ assert.equal((await f.ctl.listManaged())[0].level,3);
+ assert.equal(await f.ctl.renameManaged(11,opened.windowId,'🎨 自訂名稱'),true);
+ assert.equal((await f.ctl.listManaged())[0].title,'🎨 自訂名稱');
+ assert.equal(await f.ctl.renameManaged(11,2,'其他視窗'),false);
+ assert.equal(f.tabs.get(21).windowId,2);
+ await f.ctl.run('restore',{tabId:11,windowId:opened.windowId});
+ assert.deepEqual(await f.ctl.listManaged(),[]);
+});
+test('manager focus is scoped to live managed popup and ignores stale journals',async()=>{
+ const f=setup();
+ await assert.rejects(f.ctl.focusManaged(11,1),/非 Clean Window/);
+ const opened=await f.ctl.run('toggle-clean',target);
+ const result=await f.ctl.focusManaged(11,opened.windowId);
+ assert.equal(result.windowId,opened.windowId);
+ assert.deepEqual(f.calls.at(-1),['updateWindow',opened.windowId,{focused:true}]);
+ f.tabs.get(11).windowId=2;
+ await assert.rejects(f.ctl.focusManaged(11,opened.windowId),/非 Clean Window/);
+ assert.equal((await f.ctl.listManaged()).length,0);
+});

@@ -24,6 +24,12 @@ Fixed edge host positioning where `all:initial!important` took precedence over n
 
 Isolated Chrome Headless DOM checks cover pointer clicks, right/left viewport alignment, drag and click separation, and Emoji editing. These are not acceptance of a live MV3 extension on the user's active Chrome profile.
 
+## Level-1 lightweight toolbar and managed-window list — 2026-10-18
+
+Implementation adds an 86px two-row toolbar for level 1, while level 2 remains a 48px address bar and level 3 remains a bare popup. The level-1 toolbar provides authenticated session-scoped window management, Restore, bookmark permission entry, local recent bookmarks, and Chrome history/download/extension-management shortcuts. The extension popup has a collapsible managed-window list. Bookmark access is optional, explicitly granted on a separate extension page. No broad host, `tabs`, `management`, or downloads/history permissions were introduced. Session storage caches a display title only for managed popups and revalidates tab-window relationships.
+
+Current local checks: **68/67** simulated API/popup tests PASS; **15/15** isolated Chrome Dev Headless DOM checks PASS; `npm run check` PASS. Actual installed MV3 extension interaction, permission prompt, Chrome native popup appearance, and source-window recovery still require GUI acceptance.
+
 ## Evidence levels
 
 | Check | Result | Scope |
@@ -39,7 +45,7 @@ The original extension runtime files were preserved for publication. Public docu
 
 ## Automated coverage
 
-The 62 current tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, and cleanup isolation.
+The 68 current tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, and cleanup isolation.
 
 ## Re-run the accepted checks
 

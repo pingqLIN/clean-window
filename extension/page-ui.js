@@ -46,12 +46,14 @@
     const html = document.documentElement;
     originalPadding = { value: html.style.getPropertyValue('padding-top') };
     originalPriority = html.style.getPropertyPriority('padding-top');
+    const height = withDock ? 86 : BAR_HEIGHT;
     const currentPadding = getComputedStyle(html).paddingTop || '0px';
-    html.style.setProperty('padding-top', `calc(${currentPadding} + ${BAR_HEIGHT}px)`, 'important');
+    html.style.setProperty('padding-top', `calc(${currentPadding} + ${height}px)`, 'important');
     bar = document.createElement('div');
     bar.id = BAR_ID;
     bar.dataset.cwDock = withDock ? 'true' : 'false';
-    bar.style.cssText = 'all:initial!important;position:fixed!important;inset:0 0 auto 0!important;height:48px!important;z-index:2147483647!important;';
+    bar.dataset.cwHeight = String(height);
+    bar.style.cssText = 'all:initial!important;position:fixed!important;inset:0 0 auto 0!important;height:'+height+'px!important;z-index:2147483647!important;';
     const shadow = bar.attachShadow({mode:'closed'});
     const style = document.createElement('style');
     style.textContent = `
@@ -66,11 +68,29 @@
       button:focus-visible,input:focus-visible { outline:2px solid #477fe5; outline-offset:1px; }
       .brand { flex:none; font-size:10px; letter-spacing:.02em; color:#566578;
         padding:0 6px; white-space:nowrap; }
-      .dock { display:flex; align-items:center; gap:3px; flex:none; padding-left:7px;
-        border-left:1px solid #cfd5dd; }
-      .dock button { font-size:13px; border-radius:8px; width:31px; height:30px; }
-      .dock .mark { font-size:11px; font-weight:750; color:#176851; }
-      .feedback { position:absolute;top:49px;right:10px;max-width:85%;
+      .ribbon { height:38px;display:flex;align-items:center;gap:4px;padding:2px 10px;
+        border-bottom:1px solid #d8dce2;background:#eff3f5;color:#35434a; }
+      .ribbon .identity { font-size:10px;letter-spacing:.02em;color:#537566;
+        font-weight:700;margin-right:auto;white-space:nowrap; }
+      .ribbon button { width:29px;height:29px;font-size:15px;border-radius:7px; }
+      .ribbon button[aria-pressed="true"] { color:#176851;background:#dde9e1; }
+      .menu { position:absolute;top:86px;right:7px;width:min(340px,calc(100vw - 14px));
+        max-height:min(360px,calc(100vh - 100px));overflow-y:auto;
+        background:#fff;color:#27313c;border:1px solid #bfcbd2;border-radius:12px;
+        padding:10px;box-shadow:0 12px 35px #0004;font:12px/1.4 system-ui; }
+      .menu[hidden] {display:none;}
+      .menu-header { display:flex;align-items:center;justify-content:space-between;
+        font-weight:650;margin-bottom:8px; }
+      .menu-row { display:flex;align-items:center;gap:5px;border-top:1px solid #e3e7e9;padding:6px 0; }
+      .menu-row .name { flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+        font-size:12px;text-align:left;width:auto; }
+      .menu-row button,.menu-row select,.menu-action {border:1px solid #d8dee7;
+        border-radius:7px;background:transparent;color:inherit;font:12px system-ui;
+        height:30px;padding:0 6px; }
+      .menu-row select {width:52px;}
+      .menu-row .icon-button {width:29px;flex:none;}
+      .menu-note {line-height:1.6;color:#657581;margin:5px 0; }
+      .feedback { position:absolute;top:87px;right:10px;max-width:85%;
         padding:7px 11px;border-radius:8px;color:#fff;background:#8d3434;
         font:12px system-ui;box-shadow:0 2px 8px #0005; }
       .feedback[hidden] { display:none; }
@@ -84,8 +104,13 @@
         button:hover { background:#3b3e44; }
         .brand { color:#aab2bf; }
         input { background:#3b3f46; color:#f0f2f5; border-color:#525761; }
-        .dock { border-color:#555c66; }
-        .dock .mark { color:#85c9a9; }
+        .ribbon { background:#262e32;color:#e4ebee;border-color:#45474d; }
+        .ribbon .identity { color:#9cd4b7; }
+        .ribbon button[aria-pressed="true"] { color:#9cd4b7;background:#385347; }
+        .menu { background:#27333a;color:#f0f3f3;border-color:#53626a; }
+        .menu-row { border-color:#44515a; }
+        .menu-row button,.menu-row select,.menu-action { border-color:#62717a; }
+        .menu-note {color:#b6c9ce; }
       }
       @media(max-width:480px) { .strip { gap:3px; padding:0 6px; } .brand {font-size:9px;padding:0 2px;} }
     `;
@@ -120,30 +145,129 @@
     strip.append(back,forward,reload,brand,form);
     const feedback=document.createElement('div');
     feedback.className='feedback';feedback.hidden=true;feedback.setAttribute('role','status');
+    let ribbon=null, menu=null;
     if (withDock) {
-      const dock=document.createElement('div');
-      dock.className='dock';dock.setAttribute('aria-label','Clean Window 擴充工具列');
-      const action=(label,glyph,actionName)=>{
-        const button=makeButton(glyph,label,async()=>{
-          feedback.hidden=true;
-          button.disabled=true;
-          try {
-            const result=await chrome.runtime.sendMessage({type:'clean-window:dock',action:actionName});
-            if (!result?.ok) throw new Error(result?.error || '操作失敗');
-          } catch(error) {
-            feedback.textContent=error?.message || '操作失敗';
-            feedback.hidden=false;
-          } finally {button.disabled=false;}
-        });
-        return button;
+      ribbon=document.createElement('div');ribbon.className='ribbon';
+      ribbon.setAttribute('aria-label','第一級 · 輕量瀏覽器工具列');
+      const identity=document.createElement('span');
+      identity.className='identity';identity.textContent='CW · LITE';
+      ribbon.append(identity);
+      menu=document.createElement('div');menu.className='menu';
+      menu.hidden=true;menu.setAttribute('role','region');
+      menu.setAttribute('aria-label','乾淨視窗工具選單');
+      const hub=async(action,extras={})=>{
+        const result=await chrome.runtime.sendMessage({type:'clean-window:hub',action,...extras});
+        if (!result?.ok) throw new Error(result?.error || '操作失敗');
+        return result;
       };
-      const own=action('Clean Window：還原目前視窗','CW','restore');
-      own.classList.add('mark');
-      const manage=action('管理已安裝的擴充功能（不是啟動其他擴充）','⚙','manage');
-      dock.append(own,manage);
-      strip.append(dock);
+      const report=error=>{
+        feedback.textContent=error?.message || String(error);
+        feedback.hidden=false;
+      };
+      const clearMenu=()=>{menu.replaceChildren();menu.hidden=true;};
+      const openMenu=title=>{
+        const heading=document.createElement('div');heading.className='menu-header';
+        heading.textContent=title;
+        const close=makeButton('×','關閉工具選單',clearMenu);
+        heading.append(close);menu.replaceChildren(heading);
+        menu.hidden=false;
+      };
+      const note=message=>{
+        const n=document.createElement('p');n.className='menu-note';
+        n.textContent=message;menu.append(n);
+      };
+      const itemButton=(label,title,click)=>{
+        const el=document.createElement('button');el.type='button';
+        el.textContent=label;el.title=title;el.setAttribute('aria-label',title);
+        el.addEventListener('click',()=>{void Promise.resolve().then(click).catch(report);});
+        return el;
+      };
+      const row=()=>{
+        const el=document.createElement('div');el.className='menu-row';
+        menu.append(el);return el;
+      };
+      const windowsList=async()=>{
+        openMenu('已啟用乾淨模式');
+        const result=await hub('list');
+        if (!result.items.length) {note('目前沒有可管理的乾淨 Popup。');return;}
+        for (const item of result.items) {
+          const line=row();
+          const focus=itemButton(item.title,'切換至 '+item.title,async()=>{
+            await hub('focus',{target:{tabId:item.tabId,windowId:item.windowId}});
+            clearMenu();
+          });focus.className='name';line.append(focus);
+          const level=document.createElement('select');level.setAttribute('aria-label','簡化等級 · '+item.title);
+          for (const n of [1,2,3]) {
+            const option=document.createElement('option');
+            option.value=String(n);option.textContent='L'+n;level.append(option);
+          }
+          level.value=String(item.level);
+          level.addEventListener('change',()=>{void hub('set-level',{
+            target:{tabId:item.tabId,windowId:item.windowId},level:Number(level.value)
+          }).then(windowsList).catch(error=>{level.value=String(item.level);report(error);});});
+          line.append(level);
+          const restore=itemButton('↗','還原 '+item.title,async()=>{
+            await hub('restore',{target:{tabId:item.tabId,windowId:item.windowId}});
+            await windowsList();
+          });restore.className='icon-button';line.append(restore);
+        }
+      };
+      const bookmarksList=async()=>{
+        openMenu('常用書籤');
+        const result=await hub('bookmarks-recent');
+        if (!result.granted) {
+          note('書籤功能需要另外授權；不會自動讀取你的書籤。');
+          const grant=itemButton('啟用書籤功能','開啟書籤授權視窗',()=>{
+            return hub('bookmarks-grant');
+          });grant.className='menu-action';menu.append(grant);return;
+        }
+        if (!result.items.length){note('沒有可顯示的 HTTP(S) 書籤。');return;}
+        for (const item of result.items){
+          const line=row();const btn=itemButton(item.title,'前往書籤 '+item.title,()=>{
+            const url=new URL(item.url);
+            if (!['http:','https:'].includes(url.protocol)) throw new Error('不支援的書籤網址');
+            location.assign(url.href);
+          });btn.className='name';line.append(btn);
+        }
+      };
+      const command=(glyph,title,fn)=>{
+        const button=makeButton(glyph,title,()=>{feedback.hidden=true;
+          void Promise.resolve().then(fn).catch(report);});
+        ribbon.append(button);return button;
+      };
+      command('☆','加入或移除目前網頁書籤',async()=>{
+        const permission=await hub('bookmarks-status');
+        if (!permission.granted) {await hub('bookmarks-grant');return;}
+        const result=await hub('bookmarks-toggle',{title:document.title});
+        bookmark.textContent=result.bookmarked?'★':'☆';
+        bookmark.setAttribute('aria-pressed',String(result.bookmarked));
+      });
+      const bookmark=ribbon.lastElementChild;
+      bookmark.setAttribute('aria-pressed','false');
+      bookmark.addEventListener('pointerenter',()=>{
+        void hub('bookmarks-state').then(state=>{
+          if (state.granted) {
+            bookmark.textContent=state.bookmarked?'★':'☆';
+            bookmark.setAttribute('aria-pressed',String(state.bookmarked));
+          }
+        }).catch(()=>{});
+      });
+      command('▤','瀏覽書籤',bookmarksList);
+      command('☷','管理乾淨視窗',windowsList);
+      command('◷','在 Chrome 開啟瀏覽紀錄',()=>hub('history'));
+      command('↓','在 Chrome 開啟下載內容',()=>hub('downloads'));
+      command('⚙','管理 Chrome 擴充功能',async()=>{
+        const response=await chrome.runtime.sendMessage({type:'clean-window:dock',action:'manage'});
+        if (!response?.ok) throw new Error(response?.error||'無法開啟擴充管理');
+      });
+      command('↗','將目前頁面還原至完整 Chrome',async()=>{
+        const response=await chrome.runtime.sendMessage({type:'clean-window:dock',action:'restore'});
+        if (!response?.ok) throw new Error(response?.error||'無法還原視窗');
+      });
     }
-    shadow.append(style,strip,feedback);
+    if (ribbon) shadow.append(style,strip,ribbon,menu,feedback);
+    else shadow.append(style,strip,feedback);
+
     html.appendChild(bar);
     updateTimer=setInterval(()=>{
       if (!bar?.isConnected) {stopBar(); return;}

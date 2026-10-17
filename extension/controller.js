@@ -29,7 +29,8 @@ export function createController(api) {
       originState: win.state, incognito: win.incognito,
       phase: 'opening', popupWindowId: null, detachedWindowId: null,
       cleanLevel: level,
-      detachedType: 'popup'
+      detachedType: 'popup',
+      label: typeof tab.title === 'string' ? tab.title.slice(0,160) : ''
     };
     // Journal before moving. A storage failure must not alter any window.
     await write(key, record);
@@ -354,5 +355,46 @@ export function createController(api) {
     await titleUI(tab, 'start').catch(() => {});
     return true;
   }
-  return { run, refresh };
+  // Session journal is the only source of managed windows, never a browser-wide
+  // tab crawl. Ignore stale journal entries and unrelated/foreign popups.
+  async function listManaged() {
+    const saved = await api.storage.session.get(null);
+    const rows = await Promise.all(Object.entries(saved)
+      .filter(([key,record]) => /^clean:\d+$/.test(key) &&
+        record?.phase === 'open' && isId(record.popupWindowId))
+      .map(async ([key,record]) => {
+        const tabId = Number(key.slice(6));
+        try {
+          const [tab,win] = await Promise.all([
+            api.tabs.get(tabId), api.windows.get(record.popupWindowId)
+          ]);
+          if (tab.windowId !== win.id || win.type !== 'popup' ||
+              !!tab.incognito !== !!record.incognito && tab.incognito !== undefined ||
+              !!win.incognito !== !!record.incognito) return null;
+          return {tabId,windowId:win.id,level:validLevel(record.cleanLevel) ? record.cleanLevel : 1,
+            title:(record.label || '乾淨視窗').slice(0,160)};
+        } catch { return null; }
+      }));
+    return rows.filter(Boolean).sort((a,b) => a.windowId-b.windowId);
+  }
+  async function renameManaged(tabId,windowId,title) {
+    if (!isId(tabId) || !isId(windowId) || typeof title !== 'string') return false;
+    const key = cleanKey(tabId);
+    const record = await read(key);
+    if (!record || record.phase !== 'open' || record.popupWindowId !== windowId) return false;
+    await write(key,{...record,label:title.trim().slice(0,160)});
+    return true;
+  }
+  async function focusManaged(tabId,windowId) {
+    const [tab,win,record] = await Promise.all([
+      api.tabs.get(tabId),api.windows.get(windowId),read(cleanKey(tabId))
+    ]);
+    if (tab.windowId !== windowId || win.type !== 'popup' ||
+        record?.phase !== 'open' || record.popupWindowId !== windowId) {
+      throw new Error('目標已非 Clean Window 管理中的乾淨視窗。');
+    }
+    await api.windows.update(windowId,{focused:true});
+    return {windowId,mode:'focused'};
+  }
+  return { run, refresh, listManaged, focusManaged, renameManaged };
 }

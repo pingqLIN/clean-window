@@ -8,11 +8,13 @@ export function fakeChrome() {
     [2,{id:2,type:'normal',state:'normal',left:950,top:70,width:600,height:500,incognito:false}]
   ]);
   const tabs = new Map([
-    [11,{id:11,windowId:1,index:0,active:true,pinned:false,groupId:-1}],
+    [11,{id:11,windowId:1,index:0,active:true,pinned:false,groupId:-1,title:'示範網頁'}],
     [12,{id:12,windowId:1,index:1,active:false,pinned:false,groupId:-1}],
     [21,{id:21,windowId:2,index:0,active:true,pinned:false,groupId:-1}]
   ]);
   let nextWindow=3;
+  const bookmarks=new Map(),permissionState={bookmarks:false};
+  let nextBookmark=1;
   const clone=x=>structuredClone(x);
   const get=(map,id)=> { if(!map.has(id))throw new Error('Not found '+id); return map.get(id); };
   const retab=windowId=>[...tabs.values()].filter(t=>t.windowId===windowId).sort((a,b)=>a.index-b.index);
@@ -29,10 +31,12 @@ export function fakeChrome() {
       async create(data){
         calls.push(['create',clone(data)]);
         if(api.failCreate)throw new Error('Create denied');
-        get(tabs,data.tabId);
+        if (!Number.isInteger(data.tabId) && !data.url) throw new Error('Missing target');
+        if (Number.isInteger(data.tabId)) get(tabs,data.tabId);
         const id=nextWindow++;
         const win={id,type:data.type??'normal',state:data.state??'normal',left:0,top:0,width:800,height:600,incognito:false,...data};
-        delete win.tabId; wins.set(id,win); transfer(data.tabId,id);
+        delete win.tabId; wins.set(id,win);
+        if (Number.isInteger(data.tabId)) transfer(data.tabId,id);
         return clone(win);
       },
       async update(id,data){
@@ -80,6 +84,16 @@ export function fakeChrome() {
         return {ok:false,error:'Unsupported mode'};
       }
     },
+    permissions:{
+      async contains(query){return query.permissions.every(p=>!!permissionState[p]);},
+      async request(query){query.permissions.forEach(p=>{permissionState[p]=true;});return true;}
+    },
+    bookmarks:{
+      async getRecent(n){return [...bookmarks.values()].slice(-n).reverse().map(clone);},
+      async search({url}){return [...bookmarks.values()].filter(x=>x.url===url).map(clone);},
+      async create(data){const node={...data,id:String(nextBookmark++)};bookmarks.set(node.id,node);return clone(node);},
+      async remove(id){bookmarks.delete(id);}
+    },
     scripting: { async executeScript({target,files}) {
       if (api.failInject) throw new Error('Injection blocked');
       if (api.failInjectInPopup && get(wins,get(tabs,target.tabId).windowId).type==='popup') {
@@ -107,5 +121,5 @@ export function fakeChrome() {
       async remove(key){for(const item of Array.isArray(key)?key:[key])delete db[item];}
     }}
   };
-  return {api,wins,tabs,db,preferences,pageModes,titleModes,edgeModes,calls};
+  return {api,wins,tabs,db,preferences,pageModes,titleModes,edgeModes,calls,bookmarks,permissionState};
 }

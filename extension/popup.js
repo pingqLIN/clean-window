@@ -8,12 +8,75 @@ const levelDetail = document.querySelector('#level-detail');
 const levelLimit = document.querySelector('#level-limit');
 const cleanLabel = document.querySelector('#clean-label');
 const cleanDescription = document.querySelector('#clean-description');
+const managed = document.querySelector('#managed-windows');
+const managedList = document.querySelector('#managed-list');
+const managedCount = document.querySelector('#managed-count');
+
+const requestHub = async (action,extra={})=>{
+  const result=await chrome.runtime.sendMessage({type:'clean-window:hub',action,...extra});
+  if (!result?.ok) throw new Error(result?.error||'管理操作失敗');
+  return result;
+};
+const managedButton=(title,fn)=>{
+  const el=document.createElement('button');
+  el.type='button';el.textContent=title;
+  el.addEventListener('click',async()=>{
+    el.disabled=true;
+    try{await fn();}catch(error){show(error.message);}
+    finally{el.disabled=false;}
+  });
+  return el;
+};
+async function loadManaged(){
+  if (!managedList) return;
+  try {
+    const {items}=await requestHub('list');
+    managedCount.textContent=items.length ? String(items.length) : '';
+    managedList.replaceChildren();
+    if (!items.length){
+      const empty=document.createElement('p');empty.className='managed-empty';
+      empty.textContent='目前沒有已啟用的乾淨視窗。';managedList.append(empty);return;
+    }
+    for(const item of items){
+      const line=document.createElement('div');line.className='managed-row';
+      const text=managedButton(item.title,async()=>{
+        await requestHub('focus',{target:{tabId:item.tabId,windowId:item.windowId}});
+        window.close();
+      });
+      text.className='managed-name';text.title=item.title;
+      const selector=document.createElement('select');
+      selector.setAttribute('aria-label','調整 '+item.title+' 的簡化等級');
+      for(const level of [1,2,3]){
+        const opt=document.createElement('option');opt.value=String(level);
+        opt.textContent='L'+level;selector.append(opt);
+      }
+      selector.value=String(item.level);
+      selector.addEventListener('change',async()=>{
+        selector.disabled=true;
+        try{
+          await requestHub('set-level',{target:{tabId:item.tabId,windowId:item.windowId},level:Number(selector.value)});
+          await loadManaged();
+        }catch(error){selector.value=String(item.level);show(error.message);}
+        finally{selector.disabled=false;}
+      });
+      const restore=managedButton('↗',async()=>{
+        await requestHub('restore',{target:{tabId:item.tabId,windowId:item.windowId}});
+        await loadManaged();
+      });
+      restore.title='還原至普通視窗';
+      restore.setAttribute('aria-label','還原 '+item.title);
+      line.append(text,selector,restore);managedList.append(line);
+    }
+  } catch(error){show(error.message);}
+}
+if(managed) managed.addEventListener('toggle',()=>{if(managed.open) void loadManaged();});
+
 
 const levels = {
   1: {
-    name: '自繪網址欄＋擴充欄',
-    detail: '精簡 Popup 顯示自繪網址欄，右側包含 Clean Window 自身操作與擴充管理入口。',
-    limit: '非 Chrome 原生網址列；擴充欄不能直接啟動其他擴充的按鈕。僅支援可注入的 HTTP(S) 頁面。'
+    name: '輕量瀏覽器工具列',
+    detail: '雙列工具列包含網址導覽、書籤、乾淨視窗清單、歷史紀錄、下載與還原入口。',
+    limit: '這些是 Clean Window 自繪快捷功能，非 Chrome 原生網址欄或第三方擴充按鈕；書籤需另外授權。'
   },
   2: {
     name: '自繪網址欄',
@@ -43,7 +106,7 @@ const describeLevel = () => {
   if (!isRestoring) {
     cleanLabel.textContent = '套用此簡化等級';
     cleanDescription.textContent = level === 1
-      ? '精簡 Popup，搭配自繪網址欄與擴充工具列。'
+      ? '精簡 Popup，搭配輕量瀏覽器雙列工具列。'
       : level === 2 ? '精簡 Popup，搭配自繪網址欄。'
         : '將目前分頁移至純精簡 Popup。';
   }
@@ -79,6 +142,7 @@ async function init() {
       button.disabled = false;
     }
     show(saved[`feedback:${tab.id}`] || '');
+    if (managedList) void loadManaged();
   } catch (error) {
     status.textContent = '無法確認目標';
     show(error.message);

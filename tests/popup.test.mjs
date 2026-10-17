@@ -52,7 +52,7 @@ test('new popup initializes at level 1 of 3',async()=>{
  const p=panel();await flush();
  assert.equal(p.nodes.get('#clean-level').value,'1');
  assert.equal(p.nodes.get('#level-number').textContent,'1 / 3');
- assert.match(p.nodes.get('#level-title').textContent,/擴充欄/);
+ assert.match(p.nodes.get('#level-title').textContent,/輕量瀏覽器工具列/);
  assert.equal(p.nodes.get('#clean-level').disabled,false);
 });
 test('setting level 2 persists and advertises URL only',async()=>{
@@ -92,6 +92,16 @@ test('existing detached popup keeps its restore action',async()=>{
  assert.equal(p.nodes.get('#clean-level').value,'1');
 });
 
+test('level 1 advertises a lightweight toolbar and a collapsible managed list',async()=>{
+ const html=await readFile(new URL('../extension/popup.html',import.meta.url),'utf8');
+ const manifest=JSON.parse(await readFile(new URL('../extension/manifest.json',import.meta.url),'utf8'));
+ assert.match(html,/id="managed-windows"/);
+ assert.match(html,/id="managed-list"/);
+ assert.equal(manifest.optional_permissions.includes('bookmarks'),true);
+ assert.equal(manifest.permissions.includes('bookmarks'),false);
+ assert.equal(manifest.permissions.includes('tabs'),false);
+ assert.equal(manifest.permissions.includes('management'),false);
+});
 test('primary Apply button is above the three-level selector in popup markup',async()=>{
  const html=await readFile(new URL('../extension/popup.html', import.meta.url),'utf8');
  const apply=html.indexOf('data-action="toggle-clean"');

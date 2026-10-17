@@ -49,6 +49,10 @@
       {subtree: true, childList: true, characterData: true});
     updateDocumentTitle();
   }
+  function notifyManager() {
+    void chrome.runtime.sendMessage({type:'clean-window:title-updated',title:document.title})
+      .catch(() => {});
+  }
   function dismissEditor() {
     if (!editor) return;
     editor.remove();
@@ -165,7 +169,7 @@
     const save=button('套用','primary'); save.type='submit';
     reset.addEventListener('click',()=>{
       state.custom=null;state.symbol=DEFAULT_SYMBOL;
-      updateDocumentTitle(); dismissEditor();
+      updateDocumentTitle(); notifyManager(); dismissEditor();
     });
     cancel.addEventListener('click',dismissEditor);
     form.addEventListener('submit',event=>{
@@ -180,7 +184,7 @@
       }
       state.custom=newTitle;
       state.symbol=icon;
-      updateDocumentTitle();dismissEditor();
+      updateDocumentTitle();notifyManager();dismissEditor();
     });
     panel.addEventListener('keydown',event=>{
       if (event.key==='Escape') { event.preventDefault();dismissEditor(); }

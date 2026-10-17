@@ -8,7 +8,9 @@ import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const chrome = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome Dev\\Application\\chrome.exe';
-const source = await readFile(new URL('../extension/page-ui.js', import.meta.url),'utf8');
+// Expose the otherwise closed Shadow DOM only inside this isolated test profile.
+const source = (await readFile(new URL('../extension/page-ui.js', import.meta.url),'utf8'))
+ .replace("attachShadow({mode:'closed'})","attachShadow({mode:'open'})");
 const titleSource = await readFile(new URL('../extension/title-ui.js', import.meta.url),'utf8');
 const edgeSource = await readFile(new URL('../extension/edge-ui.js', import.meta.url),'utf8');
 const server=createServer((req,res)=>{
@@ -68,16 +70,33 @@ try{
   await sleep(100);
  }
  assert.equal(ready,true,'test page ready');
- await run('globalThis.chrome={runtime:{onMessage:{addListener(fn){globalThis.__cwListener=fn;}}}};'+source);
+ await run('globalThis.chrome={runtime:{onMessage:{addListener(fn){globalThis.__cwListener=fn;}},async sendMessage(message){globalThis.__hubCalls=(globalThis.__hubCalls||[]).concat(message);if(message.action==="list")return {ok:true,items:[{tabId:11,windowId:5,title:"🎨 研究視窗",level:1}]};if(message.action==="bookmarks-recent")return{ok:true,granted:false,items:[]};if(message.action==="bookmarks-status")return {ok:true,granted:false};return{ok:true,level:message.level};}}};'+source);
  const invoke=(mode)=>run('new Promise(resolve=>globalThis.__cwListener({type:"clean-window:page-ui",mode:"'+mode+'"}, {},resolve))');
 
  const full=await invoke('address-dock');
  assert.equal(full.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
- console.log('PASS: custom address bar plus extension dock');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'86');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelectorAll(".ribbon button").length'),7);
+ await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".ribbon button[title=\'管理乾淨視窗\']").click();true');
+ await sleep(40);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelectorAll(".menu-row").length'),1);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".menu-row .name").textContent'),'🎨 研究視窗');
+ await run('(() => {const r=document.getElementById("clean-window-address-ui").shadowRoot;const s=r.querySelector(".menu-row select");s.value="2";s.dispatchEvent(new Event("change"));return true;})()');
+ await sleep(40);
+ assert.equal(await run('globalThis.__hubCalls.some(m=>m.action==="set-level"&&m.level===2&&m.target.windowId===5)'),true);
+ await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".ribbon button[title=\'瀏覽書籤\']").click();true');
+ await sleep(40);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".menu").textContent.includes("需要另外授權")'),true);
+ await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".menu-action").click();true');
+ await sleep(40);
+ assert.equal(await run('globalThis.__hubCalls.some(m=>m.action==="bookmarks-grant")'),true);
+ console.log('PASS: level 1 draws two-row toolbar, manager list and optional bookmark permission entry');
  const switched=await invoke('address');
  assert.equal(switched.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'48');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".ribbon")===null'),true);
  const returned=await invoke('address-dock');
  assert.equal(returned.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
@@ -91,7 +110,7 @@ try{
  assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
  assert.equal(await run('document.documentElement.style.paddingTop'), '');
  console.log('PASS: bare popup mode removes content toolbar and restores padding');
- console.log('SMOKE PASS: 3/3 drawn-bar Chrome Headless DOM checks');
+ console.log('SMOKE PASS: 4/4 drawn-bar Chrome Headless DOM checks');
 
  // The edge control has no text on the handle, but exposes an accessible
  // three-stop rail, hover-only explanations, instant switching, and edge drag.
@@ -210,7 +229,7 @@ try{
  await titleCommand('off');
  assert.equal(await run('document.title'),'SPA Updated');
  console.log('PASS: restore original title and remove editor override');
- console.log('SMOKE PASS: 14/14 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
+ console.log('SMOKE PASS: 15/15 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
 
 } finally {
  try{ws?.close();}catch{}

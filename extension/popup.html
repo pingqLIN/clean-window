@@ -27,8 +27,12 @@
       </div>
     </section>
     <button type="button" id="restore" data-action="restore" disabled><span>還原目前視窗</span><kbd>Alt + Shift + R</kbd></button>
+    <details id="managed-windows">
+      <summary>已啟用乾淨視窗 <span id="managed-count"></span></summary>
+      <div id="managed-list" aria-live="polite"></div>
+    </details>
     <p id="feedback" role="status" aria-live="polite" hidden></p>
-    <p class="note">三級模式皆使用可縮放 Popup。標題預設為 ◈＋原始頁名；按 Alt+Shift+T 或使用頁面右鍵選單編輯 Symbol 與文字。自繪網址欄並非 Chrome 原生安全介面。</p>
+    <p class="note">第 1 級提供輕量瀏覽器工具列、乾淨視窗清單與選用書籤功能；第 2 級只有網址欄，第 3 級純內容。自繪網址欄不是 Chrome 原生安全介面。</p>
   </main>
   <footer><span>本機處理 · 不傳送頁面內容</span><span>僅影響指定視窗</span></footer>
 </body>

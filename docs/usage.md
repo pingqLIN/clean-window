@@ -7,7 +7,7 @@
 Load the repository's `extension/` folder through `chrome://extensions/` → Developer mode → Load unpacked. Do not load the repository root. No build is needed. Keep that folder in place. Save important work before trying window operations.
 
 1. Open test windows A and B, with two tabs in A. Record B's appearance, size, position, and tab contents.
-2. In A, select level 1 and use `Alt + Shift + W`. Confirm the URL bar and dock appear. Restore and select level 2 to confirm the URL bar remains but the dock is gone.
+2. In A, select level 1 and use `Alt + Shift + W`. Confirm the two-row toolbar and managed-window list appear. Restore and select level 2 to confirm the URL bar remains but the dock is gone.
 3. Select level 3 and confirm no custom toolbars appear. Use `Alt + Shift + T` to edit the title symbol/text, then restore with `Alt + Shift + R` and verify the site's original title returns. Test fullscreen separately with `Alt + Shift + F`.
 4. Grouped/Split View tabs should use the independent fullscreen shortcut rather than moving into popup mode. Resolve missing shortcuts at `chrome://extensions/shortcuts`.
 
@@ -15,9 +15,11 @@ Load the repository's `extension/` folder through `chrome://extensions/` → Dev
 
 ## Three-level operation
 
-Level 1 draws an address bar plus the Clean Window extension dock, whose actions are Restore and opening the Chrome extensions-management page. Level 2 draws only an address bar. Level 3 opens a bare popup without an address or extension dock, but can still show the edge-level controller and title-only injection on eligible HTTP(S) pages. All retain the OS titlebar.
+Level 1 draws a two-row (86px) browser-like toolbar with navigation, a bookmark star, recent bookmarks, a current-session managed-window list, Chrome history and downloads shortcuts, extension management, and Restore. Level 2 draws only an address bar. Level 3 opens a bare popup without an address or extension dock, but can still show the edge-level controller and title-only injection on eligible HTTP(S) pages. All retain the OS titlebar.
 
-The drawn address field is not Chrome's trusted native omnibox. The dock cannot activate third-party extension actions. It needs no extension-management permission. Levels 1 and 2 inject only when the user activates the extension on an eligible HTTP(S) page, and the bar may vanish on navigation. The Popup Apply button is positioned above its slider. On eligible sites an icon-only edge tab expands into a vertical three-stop rail on hover or keyboard focus; labels show only when a stop is hovered or focused. Drag to snap it to either edge and set its height (saved locally). Level changes keep the existing popup and tab; restricted and cross-origin pages may lose the control. `Alt + Shift + R` remains available.
+The drawn address field is not Chrome's trusted native omnibox. The toolbar cannot activate third-party extension actions. It needs no extension-management permission. Bookmarks need optional user approval via the extension's separate permission page, never automatically. Levels 1 and 2 inject only when the user activates the extension on an eligible HTTP(S) page, and the bar may vanish on navigation. The Popup Apply button is positioned above its slider. On eligible sites an icon-only edge tab expands into a vertical three-stop rail on hover or keyboard focus; labels show only when a stop is hovered or focused. Drag to snap it to either edge and set its height (saved locally). Level changes keep the existing popup and tab; restricted and cross-origin pages may lose the control. `Alt + Shift + R` remains available.
+
+The level-1 window manager and expandable list inside the normal extension popup identify only still-open Clean Window managed popups, with focus, L1–L3 change, and individual Restore. Titles/Emoji are cached in session storage for this list, not synchronized or uploaded. Permission for bookmarks can be declined without affecting other controls.
 
 Legacy DOM dimming is retired from the selector.
 

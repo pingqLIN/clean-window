@@ -8,9 +8,9 @@
 
 [Quick Start](#quick-start) · [Three clean-window levels](#three-clean-window-levels) · [Shortcuts](#shortcuts) · [Limits](#limits) · [Development](#development) · [繁體中文](README.zh-TW.md)
 
-Choose one of three simplification levels: a self-drawn address bar and extension dock, an address bar only, or a bare popup. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
+Choose one of three simplification levels: a lightweight two-row browser toolbar, a drawn address bar only, or a bare popup. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
 
-**Status: source preview.** 62 automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
+**Status: source preview.** 68 automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
 
 ## Quick Start
 
@@ -31,11 +31,13 @@ The single slider offers three modes, all implemented as a resizable Chrome popu
 
 | Level | Drawn toolbar | Behavior |
 | --- | --- | --- |
-| 1 (default) | Address + extension dock | URL input and navigation, a Clean Window Restore control, and a Chrome extension-management shortcut |
+| 1 (default) | **Lightweight browser toolbar** | Two rows (86px): URL/navigation, bookmark shortcut and star, managed-window list, history, downloads, extensions management and Restore |
 | 2 | Address only | URL input and navigation, without the extension dock |
 | 3 | None | Bare popup with no injected toolbar |
 
-The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security indicator. The extension dock cannot invoke other extensions' action buttons. No management permission or broad host permission was introduced. Levels 1–2 only inject after the user activates the extension on an eligible HTTP(S) site, and the bar can disappear after cross-document navigation. Level 3 does not require injection to open, but keeps the edge control when eligible.
+The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security indicator. The drawn toolbar cannot invoke other extensions' action buttons. No `management` or broad host permission was introduced. Bookmarks use an **optional** `bookmarks` permission, requested only from a separate extension page after an explicit user click; they do not require a sensitive `tabs` permission. Levels 1–2 only inject after the user activates the extension on an eligible HTTP(S) site, and the bar can disappear after cross-document navigation. Level 3 does not require injection to open, but keeps the edge control when eligible.
+
+**Managed windows:** Open the expandable managed-window list in the extension popup (or the level-1 toolbar). Only live Clean Window popups from the current session are listed; focus, change L1/L2/L3, or restore individual windows. Edited Emoji titles are reflected in the session-scoped list.
 
 **In-page control:** The primary Apply button now appears above the level picker. An icon-only `◈` tab attaches to the screen edge on eligible pages. Hover or keyboard focus expands the vertical three-stop rail, with labels shown only when a stop is hovered/focused. Dragging the tab snaps it left/right and changes height, saved locally. Switching levels updates the existing popup without moving the tab. Restricted or cross-origin pages may lose the control; use `Alt + Shift + R` to restore.
 
@@ -89,7 +91,7 @@ npm test
 npm run check
 ```
 
-`npm test` runs 59 tests against deterministic Chrome API simulations and popup interactions. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
+`npm test` runs 67 tests against deterministic Chrome API simulations and popup interactions. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
 
 | Resource | Purpose |
 | --- | --- |

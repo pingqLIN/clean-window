@@ -167,3 +167,57 @@ test('edge title command rejects untrusted frames and unrelated popup windows',a
  assert.equal(result.ok,false);
  assert.match(result.error,/先進入/);
 });
+
+test('popup can list, focus, switch and restore only verified clean windows',async()=>{
+ const f=await setup();f.preferences.cleanLevel=1;
+ const opened=await new Promise(resolve=>f.listener(
+  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},f.sender,resolve));
+ assert.equal(opened.ok,true);
+ const list=await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'list'},f.sender,resolve));
+ assert.equal(list.ok,true);assert.equal(list.items.length,1);
+ assert.equal(list.items[0].title,'示範網頁');
+ const selected={tabId:11,windowId:opened.windowId};
+ const focus=await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'focus',target:selected},f.sender,resolve));
+ assert.equal(focus.ok,true);
+ const level=await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'set-level',target:selected,level:2},f.sender,resolve));
+ assert.equal(level.ok,true);assert.equal(f.db['clean:11'].cleanLevel,2);
+ const bogus=await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'focus',target:{tabId:21,windowId:2}},f.sender,resolve));
+ assert.equal(bogus.ok,false);
+ const restored=await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'restore',target:selected},f.sender,resolve));
+ assert.equal(restored.ok,true);
+ assert.deepEqual((await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'list'},f.sender,resolve))).items,[]);
+});
+test('only managed level-one popup top-frame content scripts may use hub actions',async()=>{
+ const f=await setup();f.preferences.cleanLevel=1;
+ const opened=await new Promise(resolve=>f.listener(
+  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},f.sender,resolve));
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,tab:{id:11,windowId:opened.windowId}};
+ assert.equal((await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'list'},sender,resolve))).ok,true);
+ assert.equal((await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'list'},{
+   ...sender,tab:{id:21,windowId:2}
+ },resolve))).ok,false);
+ assert.equal(f.listener({type:'clean-window:hub',action:'list'},{...sender,frameId:1},()=>{}),false);
+ assert.equal(f.listener({type:'clean-window:hub',action:'list'},{...sender,id:'foreign'},()=>{}),false);
+ await new Promise(resolve=>f.listener({type:'clean-window:edge-level',level:2},sender,resolve));
+ assert.equal((await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'list'},sender,resolve))).ok,false);
+});
+test('bookmarks remain optional and current URL is sourced from authenticated sender',async()=>{
+ const f=await setup();f.preferences.cleanLevel=1;
+ const opened=await new Promise(resolve=>f.listener(
+  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},f.sender,resolve));
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,tab:{id:11,windowId:opened.windowId}};
+ const ask=(action,extra={})=>new Promise(resolve=>f.listener({type:'clean-window:hub',action,...extra},sender,resolve));
+ assert.equal((await ask('bookmarks-status')).granted,false);
+ assert.equal((await ask('bookmarks-toggle',{title:'測試',url:'https://evil.example/'})).ok,false);
+ assert.equal(f.bookmarks.size,0);
+ f.permissionState.bookmarks=true;
+ const made=await ask('bookmarks-toggle',{title:'🎨 頁面',url:'https://evil.example/'});
+ assert.equal(made.ok,true);assert.equal(made.bookmarked,true);
+ assert.equal([...f.bookmarks.values()][0].url,'https://example.test/');
+ assert.equal((await ask('bookmarks-state')).bookmarked,true);
+ const recent=await ask('bookmarks-recent');
+ assert.equal(recent.items.length,1);
+ assert.equal((await ask('bookmarks-toggle',{title:'🎨 頁面'})).bookmarked,false);
+ assert.equal((await ask('bookmarks-state')).bookmarked,false);
+ assert.equal(f.bookmarks.size,0);
+});

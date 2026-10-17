@@ -2,9 +2,10 @@
   "manifest_version": 3,
   "name": "Clean Window｜乾淨視窗",
   "version": "0.1.0",
-  "description": "三級視窗精簡：自繪網址欄＋擴充欄、自繪網址欄、純精簡 Popup，另支援全螢幕與還原。",
+  "description": "三級視窗精簡：輕量瀏覽器工具列、自繪網址欄、純內容 Popup；支援視窗清單與按需授權書籤。",
   "minimum_chrome_version": "102",
   "permissions": ["storage", "contextMenus", "activeTab", "scripting"],
+  "optional_permissions": ["bookmarks"],
   "incognito": "split",
   "background": {"service_worker": "background.js", "type": "module"},
   "action": {

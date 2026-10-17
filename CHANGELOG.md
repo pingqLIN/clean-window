@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — 2026-10-18 (Level-1 lightweight browser and managed windows)
+
+- Repositioned level 1 as an 86px two-row browser-style toolbar: URL controls, bookmark toggle/list, managed-window list, Chrome history/downloads and extension-management shortcuts, and Restore.
+- Added a collapsible managed-window list in the extension popup; entries are verified against session journals and actual tab/window IDs, with focus, level change and Restore.
+- Added an explicitly optional `bookmarks` permission, approved only through an extension-owned user-gesture permission window. No `tabs`, `management` or broad host permissions added.
+- Cache only session-scoped managed-window title/Emoji labels, not arbitrary browsing URLs or page bodies.
+- Left level 2 as a 48px URL-only bar and level 3 as a bare popup.
+
+
 ## Unreleased — 2026-10-18 (Emoji icon and edge-controller fixes)
 
 - Added single-grapheme Emoji icon input, presets and validation to the title editor.
