@@ -8,16 +8,22 @@ Load the repository's `extension/` folder through `chrome://extensions/` → Dev
 
 1. Open test windows A and B, with two tabs in A. Record B's appearance, size, position, and tab contents.
 2. In A, select level 1 and use `Alt + Shift + W`. Confirm the URL bar and dock appear. Restore and select level 2 to confirm the URL bar remains but the dock is gone.
-3. Select level 3 and confirm no custom toolbars appear. Restore with `Alt + Shift + R`. Test fullscreen separately with `Alt + Shift + F`.
+3. Select level 3 and confirm no custom toolbars appear. Use `Alt + Shift + T` to edit the title symbol/text, then restore with `Alt + Shift + R` and verify the site's original title returns. Test fullscreen separately with `Alt + Shift + F`.
 4. Grouped/Split View tabs should use the independent fullscreen shortcut rather than moving into popup mode. Resolve missing shortcuts at `chrome://extensions/shortcuts`.
 
 **These are acceptance steps, not claims that they have already passed on your computer.**
 
 ## Three-level operation
 
-Level 1 draws an address bar plus the Clean Window extension dock, whose actions are Restore and opening the Chrome extensions-management page. Level 2 draws only an address bar. Level 3 opens a bare popup without injecting page UI. All retain the OS titlebar.
+Level 1 draws an address bar plus the Clean Window extension dock, whose actions are Restore and opening the Chrome extensions-management page. Level 2 draws only an address bar. Level 3 opens a bare popup without a persistent drawn toolbar, though title-only injection may run on eligible HTTP(S) sites. All retain the OS titlebar.
 
 The drawn address field is not Chrome's trusted native omnibox. The dock cannot activate third-party extension actions. It needs no extension-management permission. Levels 1 and 2 inject only when the user activates the extension on an eligible HTTP(S) page, and the bar may vanish on navigation. Legacy DOM dimming is retired from the selector.
+
+## Editable Symbol and title
+
+When a clean popup is created on an eligible HTTP(S) page, its document title initially becomes `◈ Original Page Title`. Press `Alt + Shift + T`, or use **Clean Window · 編輯乾淨模式標題** on the page context menu, to pick a built-in Unicode Symbol and edit the text. The editor has Cancel, Apply and Reset-to-original actions. Exiting clean mode restores the most recent native website title. Single-page apps that change their own title are tracked. The override exists only in page memory; it is not saved or transmitted.
+
+This changes the webpage's `document.title`, not its native favicon or Chrome identity/security UI. Native Windows popup titlebar rendering is not yet GUI-verified. On restricted pages or after cross-origin navigation, the feature may be unavailable; bare popup mode still works.
 
 ## Recovering without the toolbar
 
@@ -31,7 +37,7 @@ Chrome's native fullscreen exit can also leave fullscreen. A later restore comma
 
 ## Keyboard and privacy boundaries
 
-The default commands are `Alt + Shift + W`, `Alt + Shift + F`, and `Alt + Shift + R`. OS language-switch shortcuts or other extensions may conflict; the popup displays what Chrome registered rather than promising that defaults are available.
+The default commands are `Alt + Shift + W`, `Alt + Shift + F`, `Alt + Shift + R`, and `Alt + Shift + T`. OS language-switch shortcuts or other extensions may conflict; the popup displays what Chrome registered rather than promising that defaults are available.
 
 Incognito operation requires Chrome's per-extension **Allow in incognito** setting. The manifest uses split mode, and restoration does not merge incognito and normal windows. This behavior is covered by simulated tests, not by an accepted Windows incognito browser run.
 

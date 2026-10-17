@@ -1,6 +1,6 @@
 import { createController } from './controller.js';
 const controller = createController(chrome);
-const actionIds = ['toggle-clean', 'toggle-fullscreen', 'restore'];
+const actionIds = ['toggle-clean', 'toggle-fullscreen', 'restore', 'edit-title'];
 
 async function feedback(tabId, message = '') {
   if (!Number.isInteger(tabId)) return;
@@ -62,7 +62,8 @@ chrome.runtime.onInstalled.addListener(() => {
     const entries = [
       ['toggle-clean', '套用簡化等級／還原'],
       ['toggle-fullscreen', '整個視窗：切換全螢幕'],
-      ['restore', '還原目前視窗']
+      ['restore', '還原目前視窗'],
+      ['edit-title', '編輯乾淨模式標題（Symbol＋文字）']
     ];
     for (const [id, title] of entries) {
       chrome.contextMenus.create({ id, title: `Clean Window · ${title}`, contexts: ['page', 'action'] }, () => {

@@ -10,7 +10,7 @@
 
 Choose one of three simplification levels: a self-drawn address bar and extension dock, an address bar only, or a bare popup. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
 
-**Status: source preview.** Forty-six automated API-simulation tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
+**Status: source preview.** Fifty automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
 
 ## Quick Start
 
@@ -39,6 +39,8 @@ The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security in
 
 The former DOM masking experiment and levels 4–6 are removed from the selector. Separate fullscreen and restore shortcuts remain for compatibility.
 
+**Editable clean-mode title:** A clean popup initially displays the standard Unicode symbol `◈` followed by the original webpage title. Press `Alt + Shift + T`, or use the page context menu, to select another built-in Symbol glyph, edit the text, or reset it. Normal-window restoration restores the native webpage title. This adjusts `document.title`, **not** Chrome's native favicon/security identity. It is limited to eligible HTTP(S) pages; the headless DOM behavior has passed, but actual Windows popup titlebar rendering needs GUI acceptance.
+
 ## Shortcuts
 
 | Action | Default shortcut |
@@ -46,6 +48,7 @@ The former DOM masking experiment and levels 4–6 are removed from the selector
 | Toggle active tab between clean and normal window | `Alt + Shift + W` |
 | Toggle fullscreen for the target window | `Alt + Shift + F` |
 | Restore the current window | **`Alt + Shift + R`** |
+| Edit clean-mode Symbol and title | `Alt + Shift + T` |
 
 The page context menu also provides these actions. Assign conflicting shortcuts at `chrome://extensions/shortcuts`; the panel shows the combinations Chrome actually registered. Some pages suppress the normal context menu.
 
@@ -82,7 +85,7 @@ npm test
 npm run check
 ```
 
-`npm test` runs 46 tests against deterministic Chrome API simulations and popup interactions. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
+`npm test` runs 50 tests against deterministic Chrome API simulations and popup interactions. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
 
 | Resource | Purpose |
 | --- | --- |

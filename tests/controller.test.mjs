@@ -189,3 +189,40 @@ test('fullscreen shortcut retains grouped and split-view compatibility',async()=
  assert.equal(f.tabs.get(11).windowId,1);
  assert.equal(f.wins.get(1).state,'fullscreen');
 });
+
+test('editable title starts for all three levels and restores on normal-window return', async()=>{
+ for (const level of [1,2,3]) {
+   const f=setup();f.preferences.cleanLevel=level;
+   const created=await f.ctl.run('toggle-clean',target);
+   assert.equal(f.titleModes.get(11),'active');
+   assert.equal(f.db['clean:11'].cleanLevel,level);
+   const edited=await f.ctl.run('edit-title',{tabId:11,windowId:created.windowId});
+   assert.equal(edited.mode,'title-editor');
+   assert.equal(f.titleModes.get(11),'editing');
+   await f.ctl.run('restore',{tabId:11,windowId:created.windowId});
+   assert.equal(f.titleModes.get(11),'off');
+   assert.equal(f.tabs.get(11).windowId,1);
+ }
+});
+test('title editor rejects unrelated normal and non-managed popup windows',async()=>{
+ const f=setup();
+ await assert.rejects(f.ctl.run('edit-title',target),/先進入/);
+ assert.equal(f.titleModes.size,0);
+ f.wins.get(1).type='popup';
+ await assert.rejects(f.ctl.run('edit-title',target),/先進入/);
+ assert.equal(f.titleModes.size,0);
+});
+test('recovery after clean mode window-create failure removes title override',async()=>{
+ const f=setup();f.api.failCreate=true;
+ await assert.rejects(f.ctl.run('toggle-clean',target),/Create denied/);
+ assert.equal(f.titleModes.get(11),'off');
+ assert.equal(f.tabs.get(11).windowId,1);
+});
+test('level 3 stays available without content-script permission',async()=>{
+ const f=setup();f.preferences.cleanLevel=3;f.api.failInject=true;
+ const result=await f.ctl.run('toggle-clean',target);
+ assert.equal(f.wins.get(result.windowId).type,'popup');
+ await assert.rejects(f.ctl.run('edit-title',{tabId:11,windowId:result.windowId}),/Injection blocked/);
+ await f.ctl.run('restore',{tabId:11,windowId:result.windowId});
+ assert.equal(f.tabs.get(11).windowId,1);
+});

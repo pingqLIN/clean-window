@@ -148,13 +148,27 @@ export function createController(api) {
       if (!response?.ok) throw new Error(response?.error || '頁面控制項無法套用。');
       return response;
     } catch (error) {
-      throw new Error('此頁面無法執行自繪介面／主內容遮蔽：' + (error?.message || String(error)));
+      throw new Error('此頁面無法執行自繪介面：' + (error?.message || String(error)));
     }
   }
 
   async function clearPageUI(tab) {
     try { await api.tabs.sendMessage(tab.id, { type: 'clean-window:page-ui', mode: 'off' }); }
     catch { /* No active content script, restricted URL or page navigation. */ }
+  }
+
+  async function titleUI(tab, action) {
+    try {
+      if (action !== 'off') {
+        await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['title-ui.js'] });
+      }
+      const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action });
+      if (!response?.ok) throw new Error(response?.error || '標題控制未回應。');
+      return response;
+    } catch (error) {
+      if (action === 'off') return; // Restricted/newly navigated pages have no active override.
+      throw new Error('無法存取此頁面的標題：' + (error?.message || String(error)));
+    }
   }
 
   async function selectedLevel() {
@@ -164,7 +178,7 @@ export function createController(api) {
   }
 
   async function run(action, target) {
-    if (!['toggle-clean', 'toggle-fullscreen', 'restore'].includes(action)) throw new Error('不支援的操作。');
+    if (!['toggle-clean', 'toggle-fullscreen', 'restore', 'edit-title'].includes(action)) throw new Error('不支援的操作。');
     if (!isId(target?.windowId) || !isId(target?.tabId)) throw new Error('找不到有效的目標視窗／分頁。');
     const locks = [`window:${target.windowId}`, `tab:${target.tabId}`];
     if (locks.some(key => busy.has(key))) throw new Error('此視窗正在切換，請勿重複操作。');
@@ -174,6 +188,16 @@ export function createController(api) {
       if (tab.windowId !== target.windowId) throw new Error('目標分頁已移至另一視窗；請重新開啟操作面板。');
       let win = await api.windows.get(target.windowId);
       if (!['normal', 'popup'].includes(win.type)) throw new Error('此類型視窗不支援；未做任何變更。');
+      if (action === 'edit-title') {
+        const record = await read(cleanKey(tab.id));
+        if (win.type !== 'popup' || !record ||
+            (record.popupWindowId !== win.id && record.phase !== 'opening')) {
+          throw new Error('請先進入本擴充建立的乾淨 Popup，再編輯頁面標題。');
+        }
+        await titleUI(tab, 'start');
+        await titleUI(tab, 'edit');
+        return { windowId: win.id, mode: 'title-editor' };
+      }
       if (action === 'toggle-fullscreen') return await toggleFullscreen(win);
       const savedClean = win.type === 'normal' ? await read(cleanKey(tab.id)) : null;
       const detachedNormal = savedClean?.detachedType === 'normal'
@@ -187,11 +211,13 @@ export function createController(api) {
         if (win.type === 'popup') {
           const result = await fromPopup(tab, win);
           await clearPageUI(tab);
+          await titleUI(tab, 'off');
           return result;
         }
         if (detachedNormal) {
           const result = await fromDetachedNormal(tab, win, savedClean);
           await clearPageUI(tab);
+          await titleUI(tab, 'off');
           return result;
         }
         if (win.state === 'fullscreen') return await leaveFullscreen(win);
@@ -200,8 +226,16 @@ export function createController(api) {
         if (level !== 3) {
           await pageUI(tab, level === 1 ? 'address-dock' : 'address');
         }
-        try { return await toCleanWindow(tab, win, level); }
-        catch (error) { await clearPageUI(tab); throw error; }
+        try {
+          // Title customization is optional in level 3 (restricted pages still open as bare popups).
+          try { await titleUI(tab, 'start'); }
+          catch (error) { if (level !== 3) throw error; }
+          return await toCleanWindow(tab, win, level);
+        } catch (error) {
+          await clearPageUI(tab);
+          await titleUI(tab, 'off');
+          throw error;
+        }
       }
       let fullResult;
       if (win.state === 'fullscreen') {
@@ -214,14 +248,17 @@ export function createController(api) {
       if (win.type === 'popup') {
         const result = await fromPopup(tab, win);
         await clearPageUI(tab);
+        await titleUI(tab, 'off');
         return result;
       }
       if (detachedNormal) {
         const result = await fromDetachedNormal(tab, win, savedClean);
         await clearPageUI(tab);
+        await titleUI(tab, 'off');
         return result;
       }
       await clearPageUI(tab);
+      await titleUI(tab, 'off');
       await forget(cleanKey(tab.id));
       return fullResult ?? { windowId: win.id, mode: win.state ?? 'normal' };
     } finally {

@@ -1,6 +1,7 @@
 export function fakeChrome() {
   const db = {}, preferences = {}, calls = [];
   const pageModes = new Map();
+  const titleModes = new Map();
   const wins = new Map([
     [1,{id:1,type:'normal',state:'normal',left:20,top:30,width:900,height:650,incognito:false}],
     [2,{id:2,type:'normal',state:'normal',left:950,top:70,width:600,height:500,incognito:false}]
@@ -50,6 +51,16 @@ export function fakeChrome() {
       },
       async update(id,data){calls.push(['updateTab',id,clone(data)]);return clone(Object.assign(get(tabs,id),data));},
       async sendMessage(id, message) {
+        if (message.type === 'clean-window:title') {
+          if (!titleModes.has(id)) throw new Error('No title script available');
+          if (message.action === 'start') { titleModes.set(id,'active'); return {ok:true,active:true}; }
+          if (message.action === 'edit') {
+            if (titleModes.get(id)!=='active') return {ok:false,error:'Title not active'};
+            titleModes.set(id,'editing'); return {ok:true,active:true};
+          }
+          if (message.action === 'off') { titleModes.set(id,'off'); return {ok:true,active:false}; }
+          return {ok:false,error:'Unknown title action'};
+        }
         if (!pageModes.has(id)) throw new Error('No content script available');
         if (message.mode === 'off') { pageModes.set(id,'off');return {ok:true,active:false}; }
         if (message.mode === 'address') { pageModes.set(id,'address');return {ok:true,active:true}; }
@@ -66,6 +77,10 @@ export function fakeChrome() {
     scripting: { async executeScript({target,files}) {
       if (api.failInject) throw new Error('Injection blocked');
       get(tabs,target.tabId);
+      if (files[0]==='title-ui.js') {
+        if (!titleModes.has(target.tabId)) titleModes.set(target.tabId,'off');
+        return [{result:undefined}];
+      }
       if (files[0]!=='page-ui.js') throw new Error('Unexpected content script');
       if (!pageModes.has(target.tabId)) pageModes.set(target.tabId,'off');
       return [{result:undefined}];
@@ -79,5 +94,5 @@ export function fakeChrome() {
       async remove(key){for(const item of Array.isArray(key)?key:[key])delete db[item];}
     }}
   };
-  return {api,wins,tabs,db,preferences,pageModes,calls};
+  return {api,wins,tabs,db,preferences,pageModes,titleModes,calls};
 }

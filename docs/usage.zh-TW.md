@@ -4,16 +4,18 @@
 
 只處理你指定的 Chrome 視窗或分頁，不更動 Chrome 全域外觀設定。
 
-**狀態：程式與 46 項自動化測試完成；尚未通過 Chrome GUI／使用者 Windows 實機驗收。**
+**狀態：程式與 50 項自動化測試完成；尚未通過 Chrome GUI／使用者 Windows 實機驗收。**
 本次雲端測試環境限制擴充載入與全螢幕，未修改或繞過其政策。
 
 ## 三級精簡操作
 
 設定滑桿：1 為自繪網址欄＋自繪擴充欄；2 只有自繪網址欄；3 純精簡 Popup。三種皆只搬移目前分頁，保留可拖曳縮放的視窗標題列。預設第 1 級。
 
-第 1 級的自繪擴充欄有兩個有效操作：還原此視窗、開啟 Chrome 擴充功能管理頁。這不是其他擴充的原生工具列，不能代替第三方操作。自繪網址欄不提供可信任網站來源／安全標誌；第一、二級需有使用者觸發的暫時性注入權限，跨頁導覽後可能消失。第三級不注入腳本。
+第 1 級的自繪擴充欄有兩個有效操作：還原此視窗、開啟 Chrome 擴充功能管理頁。這不是其他擴充的原生工具列，不能代替第三方操作。自繪網址欄不提供可信任網站來源／安全標誌；第一、二級需有使用者觸發的暫時性注入權限，跨頁導覽後可能消失。第三級沒有可見的自繪工具列，但一般 HTTP(S) 頁面仍可按需使用標題處理腳本。
 
 Alt + Shift + R 可還原；Alt + Shift + F 仍是獨立的全螢幕快捷鍵，不在三級滑桿中。
+
+**標題：** 乾淨 Popup 的頁面標題預設是 `◈ 原始網頁標題`；`Alt + Shift + T` 或在頁面按右鍵選「Clean Window · 編輯乾淨模式標題」可開啟 Symbol＋文字編輯器。可選擇標準 Unicode Symbol、編輯文字、取消或重設為原始標題。離開乾淨模式時恢復最近的網頁原始標題。只有可注入的 HTTP(S) 網頁支援編輯，SPA 網站自行更新標題時會追蹤更新；不變更真正的 favicon、Chrome 安全圖示或其他分頁。
 
 ## 安裝（不需要 Node、Python、伺服器或管理員權限）
 
@@ -31,6 +33,7 @@ Alt + Shift + R 可還原；Alt + Shift + F 仍是獨立的全螢幕快捷鍵，
 | 依照滑桿等級套用簡化模式／還原 | `Alt + Shift + W` |
 | 整個目標視窗切換全螢幕 | `Alt + Shift + F` |
 | 還原目前視窗 | `Alt + Shift + R` |
+| 編輯乾淨模式的 Symbol＋標題 | `Alt + Shift + T` |
 
 精簡後沒有工具列，**先記住 `Alt + Shift + R`**。也能在一般網頁空白處按右鍵，選 `Clean Window · 還原目前視窗`。網站禁止右鍵、自訂選單或 Chrome 內部頁面可能使右鍵入口無法使用，這時使用快捷鍵。
 
@@ -62,12 +65,12 @@ Alt + Shift + R 可還原；Alt + Shift + F 仍是獨立的全螢幕快捷鍵，
 
 1. 開兩個 Chrome 視窗 A、B，讓 A 有兩個分頁，B 保持一般模式。
 2. 測試第 1 級，確認同時顯示自繪網址欄與 CW／擴充管理按鈕；還原後測第 2 級，確認仍有網址欄但沒有擴充欄。
-3. 測試第 3 級，確認沒有任何自繪工具列。每次以 `Alt+Shift+R` 還原；全螢幕另由 `Alt+Shift+F` 測試。
+3. 測試第 3 級，確認沒有任何自繪工具列。使用 `Alt+Shift+T` 編輯 Symbol 與文字，確認標題會更改；再按 `Alt+Shift+R` 還原並確認原網頁標題恢復。全螢幕另由 `Alt+Shift+F` 測試。
 4. 若 A 使用群組／Split View，改以全螢幕測試；若快捷鍵未註冊，先在 shortcuts 頁面設定。
 
 ## 權限與資料
 
-權限為 `storage`、`contextMenus`、`activeTab` 與 `scripting`。所選等級存於 `chrome.storage.local`，還原資訊維持 `chrome.storage.session`；沒有常駐 content script、全站 host permissions、`tabs` 敏感資料權限、網路請求、遙測或 Native Messaging。只在 `chrome.storage.session` 存視窗識別碼、原位置／模式、分頁索引與操作訊息；不存頁面內容或瀏覽網址。
+權限為 `storage`、`contextMenus`、`activeTab` 與 `scripting`。所選等級存於 `chrome.storage.local`，還原資訊維持 `chrome.storage.session`；沒有常駐 content script、全站 host permissions、`tabs` 敏感資料權限、網路請求、遙測或 Native Messaging。只在 `chrome.storage.session` 存視窗識別碼、原位置／模式、分頁索引與操作訊息；不存頁面內容或瀏覽網址。標題自訂只存在目前頁面的執行記憶體，不上傳、不存入持久儲存。
 
 ## 開發與測試
 

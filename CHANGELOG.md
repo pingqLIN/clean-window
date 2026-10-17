@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — 2026-10-17
+
+- Added editable clean-mode page titles from the original `document.title` with a built-in Unicode Symbol prefix (`◈` by default).
+- Added `Alt+Shift+T` and a page context-menu entry for a transient Symbol + text editor, with original-title reset and restoration.
+- Kept edited title state document-local; no new permissions, host access, dependencies or title database.
+- Headless DOM and API-simulation checks cover title editing; native Windows popup titlebar GUI remains unverified.
+
 ## Unreleased — 2026-10-12
 
 - Replaced the six-level slider with three popup levels: drawn address + extension dock, drawn address only, bare popup.

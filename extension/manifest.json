@@ -16,7 +16,8 @@
   "commands": {
     "toggle-clean": {"suggested_key": {"default": "Alt+Shift+W"}, "description": "依目前簡化等級套用／還原"},
     "toggle-fullscreen": {"suggested_key": {"default": "Alt+Shift+F"}, "description": "整個目標視窗：切換全螢幕"},
-    "restore": {"suggested_key": {"default": "Alt+Shift+R"}, "description": "還原目前視窗"}
+    "restore": {"suggested_key": {"default": "Alt+Shift+R"}, "description": "還原目前視窗"},
+    "edit-title": {"suggested_key": {"default": "Alt+Shift+T"}, "description": "編輯乾淨模式標題"}
   },
   "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none'; base-uri 'none'"}
 }

@@ -88,3 +88,24 @@ test('extension dock management button opens native extension management window'
  assert.equal(result.windowId,91);
  assert.deepEqual(created,{url:'chrome://extensions/',type:'normal',focused:true});
 });
+
+test('title shortcut targets only the captured clean popup tab',async()=>{
+ const f=await setup();
+ const opened=await new Promise(resolve=>f.listener(
+  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+  f.sender,resolve));
+ assert.equal(opened.ok,true);
+ f.api.commands.onCommand.listeners[0]('edit-title',{id:11,windowId:opened.windowId});
+ await new Promise(resolve=>setTimeout(resolve,20));
+ assert.equal(f.titleModes.get(11),'editing');
+ assert.equal(f.tabs.get(21).windowId,2);
+});
+test('edit-title context menu respects original explicit target',async()=>{
+ const f=await setup();
+ const opened=await new Promise(resolve=>f.listener(
+  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+  f.sender,resolve));
+ f.api.contextMenus.onClicked.listeners[0]({menuItemId:'edit-title'},{id:11,windowId:opened.windowId});
+ await new Promise(resolve=>setTimeout(resolve,20));
+ assert.equal(f.titleModes.get(11),'editing');
+});

@@ -9,6 +9,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 
 const chrome = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome Dev\\Application\\chrome.exe';
 const source = await readFile(new URL('../extension/page-ui.js', import.meta.url),'utf8');
+const titleSource = await readFile(new URL('../extension/title-ui.js', import.meta.url),'utf8');
 const server=createServer((req,res)=>{
   res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
   res.end('<!doctype html><title>Clean Window Test</title><header>Outside main</header><main style="width:75vw;height:72vh;background:#e1e8f2;margin:20px"><h1>Main Content</h1><p>Smoke Fixture</p></main><footer>Outside main</footer>');
@@ -83,7 +84,49 @@ try{
  assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
  assert.equal(await run('document.documentElement.style.paddingTop'), '');
  console.log('PASS: bare popup mode removes content toolbar and restores padding');
- console.log('SMOKE PASS: 3/3 real Chrome Headless DOM checks; not full MV3 window/UI acceptance');
+ console.log('SMOKE PASS: 3/3 drawn-bar Chrome Headless DOM checks');
+
+ // Title editor: default native title, symbol selection, custom text, SPA updates, restoration.
+ await run('globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwTitleListener=fn;};'+titleSource);
+ const titleCommand=action=>run('new Promise(resolve=>globalThis.__cwTitleListener({type:"clean-window:title",action:"'+action+'"}, {},resolve))');
+ const started=await titleCommand('start');
+ assert.equal(started.ok,true);
+ assert.equal(await run('document.title'),'◈ Clean Window Test');
+ console.log('PASS: symbol + original page title without favicon spoofing');
+
+ const opened=await titleCommand('edit');
+ assert.equal(opened.ok,true);
+ const custom=await run(`(() => {
+   const root=document.querySelector('#clean-window-title-editor').shadowRoot;
+   const symbol=root.querySelector('#cw-title-symbol');
+   const title=root.querySelector('#cw-title-text');
+   symbol.value='✦'; title.value='我的乾淨視窗';
+   root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+   return document.title;
+ })()`);
+ assert.equal(custom,'✦ 我的乾淨視窗');
+ console.log('PASS: title editor applies chosen standard symbol and text');
+
+ await run('document.title="SPA Updated"; true');
+ await sleep(150);
+ assert.equal(await run('document.title'),'✦ 我的乾淨視窗');
+ await titleCommand('off');
+ assert.equal(await run('document.title'),'SPA Updated');
+ console.log('PASS: restore latest native title after SPA title changes');
+
+ await titleCommand('start');
+ assert.equal(await run('document.title'),'◈ SPA Updated');
+ await titleCommand('edit');
+ const reset=await run(`(() => {
+   const root=document.querySelector('#clean-window-title-editor').shadowRoot;
+   root.querySelector('button.reset').click();
+   return document.title;
+ })()`);
+ assert.equal(reset,'◈ SPA Updated');
+ await titleCommand('off');
+ assert.equal(await run('document.title'),'SPA Updated');
+ console.log('PASS: restore original title and remove editor override');
+ console.log('SMOKE PASS: 7/7 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
 
 } finally {
  try{ws?.close();}catch{}
