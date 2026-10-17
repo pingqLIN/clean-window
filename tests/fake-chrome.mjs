@@ -1,5 +1,6 @@
 export function fakeChrome() {
-  const db = {}, calls = [];
+  const db = {}, preferences = {}, calls = [];
+  const pageModes = new Map();
   const wins = new Map([
     [1,{id:1,type:'normal',state:'normal',left:20,top:30,width:900,height:650,incognito:false}],
     [2,{id:2,type:'normal',state:'normal',left:950,top:70,width:600,height:500,incognito:false}]
@@ -47,13 +48,36 @@ export function fakeChrome() {
         if(get(wins,get(tabs,id).windowId).type!=='normal'||get(wins,data.windowId).type!=='normal')throw new Error('Normal windows only');
         return transfer(id,data.windowId,data.index);
       },
-      async update(id,data){calls.push(['updateTab',id,clone(data)]);return clone(Object.assign(get(tabs,id),data));}
+      async update(id,data){calls.push(['updateTab',id,clone(data)]);return clone(Object.assign(get(tabs,id),data));},
+      async sendMessage(id, message) {
+        if (!pageModes.has(id)) throw new Error('No content script available');
+        if (message.mode === 'off') { pageModes.set(id,'off');return {ok:true,active:false}; }
+        if (message.mode === 'address') { pageModes.set(id,'address');return {ok:true,active:true}; }
+        if (message.mode === 'address-dock') {pageModes.set(id,'address-dock');return {ok:true,active:true};}
+        if (message.mode === 'focus-toggle') {
+          if (api.noMain) return {ok:false,error:'找不到主內容'};
+          const active=pageModes.get(id)!=='focus';
+          pageModes.set(id,active?'focus':'off');
+          return {ok:true,active};
+        }
+        return {ok:false,error:'Unsupported mode'};
+      }
     },
-    storage:{session:{
+    scripting: { async executeScript({target,files}) {
+      if (api.failInject) throw new Error('Injection blocked');
+      get(tabs,target.tabId);
+      if (files[0]!=='page-ui.js') throw new Error('Unexpected content script');
+      if (!pageModes.has(target.tabId)) pageModes.set(target.tabId,'off');
+      return [{result:undefined}];
+    }},
+    storage:{local:{
+      async get(key){return Object.fromEntries((Array.isArray(key)?key:[key]).map(k=>[k,clone(preferences[k])]));},
+      async set(values){Object.assign(preferences,clone(values));}
+    },session:{
       async get(key){if(key===null)return clone(db);return {[key]:clone(db[key])};},
       async set(values){if(api.failStorage)throw new Error('Storage denied');Object.assign(db,clone(values));},
       async remove(key){for(const item of Array.isArray(key)?key:[key])delete db[item];}
     }}
   };
-  return {api,wins,tabs,db,calls};
+  return {api,wins,tabs,db,preferences,pageModes,calls};
 }

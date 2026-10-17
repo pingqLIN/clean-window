@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {fakeChrome} from './fake-chrome.mjs';
 const event=()=>({listeners:[],addListener(fn){this.listeners.push(fn);}});
 async function setup(){
- const f=fakeChrome();
+ const f=fakeChrome();f.preferences.cleanLevel=2;
  const runtime={id:'abcdefghijklmnopabcdefghijklmnop',getURL:p=>`chrome-extension://abcdefghijklmnopabcdefghijklmnop/${p}`,onMessage:event(),onInstalled:event()};
  f.api.runtime=runtime;
  f.api.action={async setBadgeText(){},async setTitle(){}};
@@ -42,4 +42,49 @@ test('tab removal only clears this tabs own journal and feedback',async()=>{
 });
 test('installation only sets own context menus, never opens new pages',async()=>{
  const f=await setup();f.api.runtime.onInstalled.listeners[0]({reason:'install'});assert.equal(f.calls.length,0);
+});
+
+test('self-drawn extension dock restores only its actual top-frame tab',async()=>{
+ const f=await setup();
+ const detached=await new Promise(resolve=>f.listener(
+  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+  f.sender,resolve
+ ));
+ assert.equal(detached.ok,true);
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
+  tab:{id:11,windowId:detached.windowId}};
+ const restored=await new Promise(resolve=>f.listener(
+  {type:'clean-window:dock',action:'restore'},sender,resolve
+ ));
+ assert.equal(restored.ok,true);
+ assert.equal(f.tabs.get(11).windowId,1);
+});
+
+test('extension dock rejects non-extension senders, subframes, and unknown actions',async()=>{
+ const f=await setup();
+ const valid={id:f.sender.id,url:'https://example.test/',frameId:0,
+  tab:{id:11,windowId:1}};
+ const message={type:'clean-window:dock',action:'manage'};
+ let calls=0;
+ for(const fake of [{...valid,id:'another-extension'},
+   {...valid,frameId:1}, {...valid,tab:undefined}]){
+  assert.equal(f.listener(message,fake,()=>calls++),false);
+ }
+ assert.equal(f.listener({...message,action:'remove-other-extension'},valid,()=>calls++),false);
+ assert.equal(f.calls.length,0);
+ assert.equal(calls,0);
+});
+
+test('extension dock management button opens native extension management window',async()=>{
+ const f=await setup();
+ let created;
+ f.api.windows.create=async options=>{created=options;return {id:91,type:'normal'};};
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
+  tab:{id:11,windowId:1}};
+ const result=await new Promise(resolve=>f.listener(
+  {type:'clean-window:dock',action:'manage'},sender,resolve
+ ));
+ assert.equal(result.ok,true);
+ assert.equal(result.windowId,91);
+ assert.deepEqual(created,{url:'chrome://extensions/',type:'normal',focused:true});
 });

@@ -2,9 +2,9 @@
   "manifest_version": 3,
   "name": "Clean Window｜乾淨視窗",
   "version": "0.1.0",
-  "description": "只處理指定視窗：目前分頁轉精簡視窗，或整個視窗全螢幕。支援還原，不更動其他視窗的設定。",
+  "description": "三級視窗精簡：自繪網址欄＋擴充欄、自繪網址欄、純精簡 Popup，另支援全螢幕與還原。",
   "minimum_chrome_version": "102",
-  "permissions": ["storage", "contextMenus"],
+  "permissions": ["storage", "contextMenus", "activeTab", "scripting"],
   "incognito": "split",
   "background": {"service_worker": "background.js", "type": "module"},
   "action": {
@@ -14,7 +14,7 @@
   },
   "icons": {"16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png"},
   "commands": {
-    "toggle-clean": {"suggested_key": {"default": "Alt+Shift+W"}, "description": "目前分頁：精簡視窗／還原"},
+    "toggle-clean": {"suggested_key": {"default": "Alt+Shift+W"}, "description": "依目前簡化等級套用／還原"},
     "toggle-fullscreen": {"suggested_key": {"default": "Alt+Shift+F"}, "description": "整個目標視窗：切換全螢幕"},
     "restore": {"suggested_key": {"default": "Alt+Shift+R"}, "description": "還原目前視窗"}
   },

@@ -4,7 +4,7 @@ Clean Window 0.1.0 is an unpacked, local Chrome extension. This statement descri
 
 ## Extension runtime
 
-The manifest requests only `storage` and `contextMenus`. No host permissions, `activeTab`, sensitive `tabs` permission, content scripts, native messaging, remotely hosted code, analytics, or external requests are implemented. The extension-page CSP sets `connect-src 'none'`.
+The manifest requests `storage`, `contextMenus`, `activeTab`, and `scripting`. No broad host permissions, sensitive `tabs` permission, always-on content scripts, native messaging, remotely hosted code, analytics, or external requests are implemented. The extension-page CSP sets `connect-src 'none'`.
 
 `chrome.tabs` can still be used for non-sensitive identifiers and tab operations without requesting the sensitive `tabs` permission. Clean Window uses those identifiers to manipulate the explicitly selected tab and window; it does not scrape page content.
 
@@ -15,8 +15,9 @@ The manifest requests only `storage` and `contextMenus`. No host permissions, `a
 | Tab/window IDs, original index, pinned state, incognito flag | Return a tab to an appropriate original window | `chrome.storage.session` |
 | Previous window state and bounds | Leave fullscreen without intentionally changing unrelated windows | `chrome.storage.session` |
 | Operation feedback and recovery warnings | Explain failed or partially completed actions | `chrome.storage.session` |
+| Simplification level (integer 1–3) | Select plain Popup, drawn URL toolbar, or drawn URL plus extension dock | `chrome.storage.local` |
 
-There is no application backend, sync-storage use, account login, or cookie collection. Browser restart or extension reload may clear session metadata. The source includes event-specific cleanup when tabs and windows close.
+The on-demand toolbar uses the current page URL for its local display and provides extension-owned navigation and recovery controls. It does not inspect page content or other installed extensions and does not upload or persist visited URLs. The custom URL bar is explicitly marked as extension-drawn and is not a Chrome security identity indicator. There is no application backend, sync-storage use, account login, or cookie collection. The preset level is stored locally across browser sessions; the older boolean address-bar preference may remain for compatibility. Neither contains a URL or page content. Browser restart or extension reload may clear session metadata. The source includes event-specific cleanup when tabs and windows close.
 
 ## Documentation versus runtime
 

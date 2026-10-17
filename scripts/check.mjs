@@ -6,7 +6,7 @@ const manifest=JSON.parse(await readFile(new URL('../extension/manifest.json',im
 const pkg=JSON.parse(await readFile(new URL('../package.json',import.meta.url)));
 assert.equal(manifest.version,pkg.version);
 assert.equal(manifest.manifest_version,3);
-assert.deepEqual([...manifest.permissions].sort(),['contextMenus','storage']);
+assert.deepEqual([...manifest.permissions].sort(),['activeTab','contextMenus','scripting','storage']);
 for(const key of ['host_permissions','content_scripts','externally_connectable','web_accessible_resources']) assert.equal(manifest[key],undefined,`${key} not needed`);
 for(const file of await readdir(new URL('../extension/',import.meta.url))){
  if(file.endsWith('.js'))execFileSync(process.execPath,['--check',fileURLToPath(new URL(`../extension/${file}`,import.meta.url))],{stdio:'inherit'});

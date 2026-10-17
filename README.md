@@ -6,11 +6,11 @@
 
 ![Source preview 0.1.0](https://img.shields.io/badge/source_preview-0.1.0-176851) ![Manifest V3](https://img.shields.io/badge/Chrome-Manifest_V3-52636b) [![CI](https://github.com/pingqLIN/clean-window/actions/workflows/ci.yml/badge.svg)](https://github.com/pingqLIN/clean-window/actions/workflows/ci.yml)
 
-[Quick Start](#quick-start) · [Modes](#modes) · [Shortcuts](#shortcuts) · [Limits](#limits) · [Development](#development) · [繁體中文](README.zh-TW.md)
+[Quick Start](#quick-start) · [Three clean-window levels](#three-clean-window-levels) · [Shortcuts](#shortcuts) · [Limits](#limits) · [Development](#development) · [繁體中文](README.zh-TW.md)
 
-Move the active tab into a resizable popup, or make its entire window fullscreen. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
+Choose one of three simplification levels: a self-drawn address bar and extension dock, an address bar only, or a bare popup. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
 
-**Status: source preview.** Thirty automated API-simulation tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
+**Status: source preview.** Forty-six automated API-simulation tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
 
 ## Quick Start
 
@@ -25,15 +25,19 @@ No Node.js, Python, server, or administrator privileges are needed to load the e
 
 Keep the extracted extension folder in place. Full instructions: [Usage and recovery](docs/usage.md) · [繁體中文操作說明](docs/usage.zh-TW.md).
 
-## Modes
+## Three clean-window levels
 
-| Mode | What changes | What stays intact |
+The single slider offers three modes, all implemented as a resizable Chrome popup that retains the native titlebar.
+
+| Level | Drawn toolbar | Behavior |
 | --- | --- | --- |
-| **Clean popup** | Moves the active tab into a new resizable popup, without the normal address, tab, and bookmarks bars | Existing tab identity; native titlebar and Chrome safety UI remain. Other tabs stay in their source window. |
-| **Window fullscreen** | Toggles fullscreen on the selected window | That window's tabs, groups, and identity; other windows are not resized or restyled. |
-| **Restore** | Leaves fullscreen or returns a popup tab to its original window when available | Falls back to a new normal window when the origin is gone; never borrows an unrelated window. |
+| 1 (default) | Address + extension dock | URL input and navigation, a Clean Window Restore control, and a Chrome extension-management shortcut |
+| 2 | Address only | URL input and navigation, without the extension dock |
+| 3 | None | Bare popup with no injected toolbar |
 
-Switching can change keyboard focus. “Other windows unchanged” refers to their geometry, mode, appearance settings, and tab contents—not to a guarantee that focus never moves. See [the controller](extension/controller.js) and [its tests](tests/controller.test.mjs).
+The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security indicator. The extension dock cannot invoke other extensions' action buttons. No management permission or broad host permission was introduced. Levels 1–2 only inject after the user activates the extension on an eligible HTTP(S) site, and the bar can disappear after cross-document navigation. Level 3 does not inject content UI.
+
+The former DOM masking experiment and levels 4–6 are removed from the selector. Separate fullscreen and restore shortcuts remain for compatibility.
 
 ## Shortcuts
 
@@ -49,11 +53,11 @@ The page context menu also provides these actions. Assign conflicting shortcuts 
 
 | Boundary | What to expect |
 | --- | --- |
-| One tab versus a whole window | Popup mode moves only the active tab. Use fullscreen to retain the entire original window and its tabs. |
+| One tab versus a whole window | All three levels move only the active tab into a popup; an independent fullscreen shortcut keeps all tabs in place. |
 | Groups and Split View | Popup mode declines grouped or split-view tabs to avoid dismantling their structure. Use fullscreen instead. |
 | Last tab and restoration | Moving the last tab can close its empty source window. A restarted browser or reloaded extension may lose session restoration metadata. |
 | Page state | The extension moves the existing tab and does not intentionally navigate or reload it. Real-site forms, media, and resize behavior have not been acceptance-tested. |
-| Browser UI | This is not a frameless native window. OS frames and browser-origin/security/permission UI are not hidden or spoofed. |
+| Browser UI | All three levels use Chrome Popup frames, with a native OS titlebar. Drawn bars do not claim Chrome origin/security verification. |
 | Compatibility | The manifest declares Chrome **102+** and Manifest V3. This is an API floor, not a tested browser-version matrix. Other browsers and operating systems have not been accepted. |
 
 The public Windows API supports creating a popup and updating window state, but does not expose changing an existing window's type in place. See [official Windows API documentation](https://developer.chrome.com/docs/extensions/reference/api/windows).
@@ -62,10 +66,11 @@ The public Windows API supports creating a popup and updating window state, but 
 
 | Permission | Purpose |
 | --- | --- |
-| `storage` | Session-only restoration records and operation feedback |
+| `storage` | Session restoration records plus a persistent numeric simplification preset |
+| `activeTab` and `scripting` | On-demand injection for self-drawn URL navigation and optional extension-owned dock |
 | `contextMenus` | Page and extension-action menu entries for switching and restoration |
 
-No host permissions, content scripts, native host, analytics, or external network requests are implemented. The extension does not request the sensitive `tabs` permission; it uses tab IDs and window metadata, not page content. The README's remote badges are separate from extension runtime behavior. See [PRIVACY.md](PRIVACY.md) and the [manifest](extension/manifest.json).
+No broad host permissions, persistent content scripts, native host, analytics, or external network requests are implemented. The extension does not request the sensitive `tabs` permission; it uses tab IDs and window metadata, not page content. The README's remote badges are separate from extension runtime behavior. See [PRIVACY.md](PRIVACY.md) and the [manifest](extension/manifest.json).
 
 ## Development
 
@@ -77,7 +82,7 @@ npm test
 npm run check
 ```
 
-`npm test` runs 30 tests against a deterministic Chrome API simulator. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
+`npm test` runs 46 tests against deterministic Chrome API simulations and popup interactions. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
 
 | Resource | Purpose |
 | --- | --- |

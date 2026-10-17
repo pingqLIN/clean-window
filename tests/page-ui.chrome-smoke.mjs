@@ -1,0 +1,94 @@
+/** On-demand browser DOM smoke: isolated Chrome profile, loopback fixture, no package dependencies. */
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:http';
+import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
+
+const chrome = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome Dev\\Application\\chrome.exe';
+const source = await readFile(new URL('../extension/page-ui.js', import.meta.url),'utf8');
+const server=createServer((req,res)=>{
+  res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
+  res.end('<!doctype html><title>Clean Window Test</title><header>Outside main</header><main style="width:75vw;height:72vh;background:#e1e8f2;margin:20px"><h1>Main Content</h1><p>Smoke Fixture</p></main><footer>Outside main</footer>');
+});
+const profile=await mkdtemp(join(tmpdir(),'cw-page-ui-'));
+let processHandle, ws;
+const pending=new Map();
+let sequence=0;
+const send=(method,params={})=>new Promise((resolve,reject)=>{
+ const id=++sequence;
+ pending.set(id,{resolve,reject});
+ ws.send(JSON.stringify({id,method,params}));
+});
+const run=async(expression)=>{
+ const result=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
+ if(result.exceptionDetails)throw Error(result.exceptionDetails.text);
+ return result.result.value;
+};
+try{
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const port=server.address().port;
+ processHandle=spawn(chrome,[
+  '--headless=new','--no-first-run','--no-default-browser-check','--disable-gpu',
+  '--remote-debugging-port=0', '--user-data-dir='+profile,'about:blank'
+ ],{windowsHide:true,stdio:'ignore'});
+ let debugPort;
+ for(let i=0;i<100;i++){
+  if(processHandle.exitCode!==null)break;
+  try{
+    debugPort=Number((await readFile(join(profile,'DevToolsActivePort'),'utf8')).split(/\r?\n/)[0]);
+    if(debugPort)break;
+  }catch{}
+  await sleep(100);
+ }
+ if(!debugPort)throw Error('BLOCKED: Chrome Dev remote-debugging port unavailable in isolated headless session');
+ const url='http://127.0.0.1:'+port+'/';
+ const target=await (await fetch('http://127.0.0.1:'+debugPort+'/json/new?'+encodeURIComponent(url),{method:'PUT'})).json();
+ ws=new WebSocket(target.webSocketDebuggerUrl);
+ ws.addEventListener('message',event=>{
+  let msg;try{msg=JSON.parse(event.data);}catch{return;}
+  if(!msg.id)return;
+  const p=pending.get(msg.id);
+  if(p){pending.delete(msg.id);msg.error?p.reject(Error(msg.error.message)):p.resolve(msg.result);}
+ });
+ await new Promise((resolve,reject)=>{
+  ws.addEventListener('open',resolve,{once:true});
+  ws.addEventListener('error',reject,{once:true});
+ });
+ await send('Runtime.enable');
+ await send('Page.enable');
+ let ready=false;
+ for(let i=0;i<60;i++){
+  try {ready=await run('document.readyState === "complete" && !!document.querySelector("main")');}catch{}
+  if(ready)break;
+  await sleep(100);
+ }
+ assert.equal(ready,true,'test page ready');
+ await run('globalThis.chrome={runtime:{onMessage:{addListener(fn){globalThis.__cwListener=fn;}}}};'+source);
+ const invoke=(mode)=>run('new Promise(resolve=>globalThis.__cwListener({type:"clean-window:page-ui",mode:"'+mode+'"}, {},resolve))');
+
+ const full=await invoke('address-dock');
+ assert.equal(full.ok,true);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
+ console.log('PASS: custom address bar plus extension dock');
+ await invoke('off');
+ assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
+ const address=await invoke('address');
+ assert.equal(address.ok,true);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
+ console.log('PASS: URL-only mode without extension dock');
+ await invoke('off');
+ assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
+ assert.equal(await run('document.documentElement.style.paddingTop'), '');
+ console.log('PASS: bare popup mode removes content toolbar and restores padding');
+ console.log('SMOKE PASS: 3/3 real Chrome Headless DOM checks; not full MV3 window/UI acceptance');
+
+} finally {
+ try{ws?.close();}catch{}
+ try{processHandle?.kill();}catch{}
+ await new Promise(resolve=>server.close(resolve));
+ await sleep(450);
+ await rm(profile,{recursive:true,force:true,maxRetries:3,retryDelay:150}).catch(()=>{});
+}

@@ -71,6 +71,8 @@ try:
     control=ctx.pages[0]
     control.goto(f'chrome-extension://{extension_id}/popup.html')
     control.wait_for_selector('button:not([disabled])')
+    # Exercise legacy popup geometry without relying on synthetic activeTab user grants.
+    control.evaluate('chrome.storage.local.set({cleanLevel:3})')
     control.locator('body').screenshot(path=str(EVIDENCE/'extension-panel.png'))
     passed('MV3 service worker and action panel loaded', {'browser': sw.evaluate('navigator.userAgent'), 'extensionId': extension_id})
     shortcuts=control.evaluate('chrome.commands.getAll()')

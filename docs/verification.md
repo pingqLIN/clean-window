@@ -2,6 +2,10 @@
 
 Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source preview**.
 
+## Three-level update — developed 2026-10-12, committed 2026-10-17
+
+The three selectable popup modes are drawn address+extension dock, address only and bare popup. The extension dock offers only Clean Window Restore and Chrome extension-management shortcuts. Previous DOM focus-masking experiment is retired. Verified on the local Windows device: 46/46 simulated-API and popup interaction tests PASS; JavaScript/MV3 static checks PASS; 3/3 isolated Chrome Dev Headless DOM checks PASS; Git diff whitespace checks PASS. Live Chrome extension installation, native popup visual appearance, and extension-dock actions remain NOT YET GUI-VERIFIED.
+
 ## Evidence levels
 
 | Check | Result | Scope |
@@ -17,7 +21,7 @@ The original extension runtime files were preserved for publication. Public docu
 
 ## Automated coverage
 
-The 30 tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, and cleanup isolation.
+The 46 tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, and cleanup isolation.
 
 ## Re-run the accepted checks
 

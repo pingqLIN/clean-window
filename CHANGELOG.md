@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — 2026-10-12
+
+- Replaced the six-level slider with three popup levels: drawn address + extension dock, drawn address only, bare popup.
+- Added a lightweight Clean Window extension dock with Restore and extensions-management actions; does not access other extension action popups.
+- Kept on-demand activeTab and scripting; no extra management or broad website permissions.
+- Removed the obsolete DOM dimming experiment and levels 4–6 from the selector, leaving independent fullscreen shortcut compatibility.
+- Native Chrome GUI and window operations acceptance remains pending.
+
 ## 0.1.0 — 2026-09-23
 
 Initial public source preview.

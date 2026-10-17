@@ -7,17 +7,17 @@
 Load the repository's `extension/` folder through `chrome://extensions/` → Developer mode → Load unpacked. Do not load the repository root. No build is needed. Keep that folder in place. Save important work before trying window operations.
 
 1. Open test windows A and B, with two tabs in A. Record B's appearance, size, position, and tab contents.
-2. From A's active tab, use `Alt + Shift + W`. Confirm that the new popup is resizable and that B is unchanged.
-3. Use `Alt + Shift + R`. Confirm that the tab returns to A. Test fullscreen with `Alt + Shift + F`, then restore again.
-4. Test grouped or Split View tabs using fullscreen rather than popup mode. Resolve missing shortcuts at `chrome://extensions/shortcuts` before relying on keyboard recovery.
+2. In A, select level 1 and use `Alt + Shift + W`. Confirm the URL bar and dock appear. Restore and select level 2 to confirm the URL bar remains but the dock is gone.
+3. Select level 3 and confirm no custom toolbars appear. Restore with `Alt + Shift + R`. Test fullscreen separately with `Alt + Shift + F`.
+4. Grouped/Split View tabs should use the independent fullscreen shortcut rather than moving into popup mode. Resolve missing shortcuts at `chrome://extensions/shortcuts`.
 
 **These are acceptance steps, not claims that they have already passed on your computer.**
 
-## Choosing a mode
+## Three-level operation
 
-Popup mode moves only the active tab into a newly created window. It keeps the existing tab ID; it does not open a URL copy. Other tabs remain in the source window. Its goal is a clean, resizable view without the usual browser toolbar rows. Native OS frames and Chrome security UI remain browser-controlled.
+Level 1 draws an address bar plus the Clean Window extension dock, whose actions are Restore and opening the Chrome extensions-management page. Level 2 draws only an address bar. Level 3 opens a bare popup without injecting page UI. All retain the OS titlebar.
 
-Fullscreen changes the target window's state without moving its tabs. Prefer it when you need every tab, group, and the original window ID to remain intact.
+The drawn address field is not Chrome's trusted native omnibox. The dock cannot activate third-party extension actions. It needs no extension-management permission. Levels 1 and 2 inject only when the user activates the extension on an eligible HTTP(S) page, and the bar may vanish on navigation. Legacy DOM dimming is retired from the selector.
 
 ## Recovering without the toolbar
 

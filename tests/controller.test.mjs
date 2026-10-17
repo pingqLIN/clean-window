@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {fakeChrome} from './fake-chrome.mjs';
 let createController;
 try { ({createController}=await import('../extension/controller.js')); } catch {}
-const setup=()=>{ assert.equal(typeof createController,'function','controller has not been implemented');const f=fakeChrome();return {...f,ctl:createController(f.api)}; };
+const setup=()=>{ assert.equal(typeof createController,'function','controller has not been implemented');const f=fakeChrome();f.preferences.cleanLevel=2;return {...f,ctl:createController(f.api)}; };
 const target={windowId:1,tabId:11};
 
 test('clean mode moves the existing tab, without URL/reload and without touching window 2',async()=>{
@@ -122,4 +122,70 @@ test('toggle clean on fullscreen popup exits fullscreen before restoring',async(
  await f.ctl.run('toggle-clean',popupTarget);
  assert.equal(f.calls[start][0],'updateWindow');assert.equal(f.calls[start][1],id);assert.equal(f.calls[start][2].state,'normal');
  assert.equal(f.tabs.get(11).windowId,1);
+});
+
+
+test('level 1 shows the URL and Clean Window extension dock',async()=>{
+ const f=setup();f.preferences.cleanLevel=1;
+ const result=await f.ctl.run('toggle-clean',target);
+ assert.equal(result.level,1);
+ assert.equal(result.mode,'clean');
+ assert.equal(f.wins.get(result.windowId).type,'popup');
+ assert.equal(f.tabs.get(11).windowId,result.windowId);
+ assert.equal(f.pageModes.get(11),'address-dock');
+ assert.equal(f.db['clean:11'].cleanLevel,1);
+ await f.ctl.run('restore',{tabId:11,windowId:result.windowId});
+ assert.equal(f.tabs.get(11).windowId,1);
+ assert.equal(f.pageModes.get(11),'off');
+});
+test('level 2 shows the URL bar without extension dock',async()=>{
+ const f=setup();f.preferences.cleanLevel=2;
+ const result=await f.ctl.run('toggle-clean',target);
+ assert.equal(result.level,2);
+ assert.equal(f.wins.get(result.windowId).type,'popup');
+ assert.equal(f.pageModes.get(11),'address');
+});
+test('level 3 opens a plain popup without injected toolbar',async()=>{
+ const f=setup();f.preferences.cleanLevel=3;
+ const other=structuredClone(f.wins.get(2));
+ const result=await f.ctl.run('toggle-clean',target);
+ assert.equal(result.level,3);
+ assert.equal(result.mode,'clean');
+ assert.equal(f.wins.get(result.windowId).type,'popup');
+ assert.notEqual(f.pageModes.get(11),'address');
+ assert.notEqual(f.pageModes.get(11),'address-dock');
+ assert.deepEqual(f.wins.get(2),other);
+});
+test('injection denial is fail closed for level 1 and 2, level 3 still works',async()=>{
+ for(const level of [1,2]){
+  const f=setup();f.preferences.cleanLevel=level;f.api.failInject=true;
+  await assert.rejects(f.ctl.run('toggle-clean',target),/Injection blocked/);
+  assert.equal(f.tabs.get(11).windowId,1);
+  assert.equal(f.calls.filter(c=>c[0]==='create').length,0);
+ }
+ const f=setup();f.preferences.cleanLevel=3;f.api.failInject=true;
+ const result=await f.ctl.run('toggle-clean',target);
+ assert.equal(f.wins.get(result.windowId).type,'popup');
+});
+test('legacy detached normal window journal remains restorable',async()=>{
+ const f=setup();
+ f.wins.set(4,{id:4,type:'normal',state:'normal',left:20,top:30,width:900,height:650,incognito:false});
+ f.tabs.get(11).windowId=4;
+ f.db['clean:11']={originWindowId:1,originIndex:0,pinned:false,detachedType:'normal',detachedWindowId:4,phase:'open'};
+ const result=await f.ctl.run('restore',{tabId:11,windowId:4});
+ assert.equal(result.windowId,1);assert.equal(f.tabs.get(11).windowId,1);
+});
+test('saved levels outside 1..3 default safely to level 1',async()=>{
+ for (const value of [4,5,6,88,'3',-1]){
+  const f=setup();f.preferences.cleanLevel=value;
+  const result=await f.ctl.run('toggle-clean',target);
+  assert.equal(result.level,1);
+  assert.equal(f.pageModes.get(11),'address-dock');
+ }
+});
+test('fullscreen shortcut retains grouped and split-view compatibility',async()=>{
+ const f=setup();f.tabs.get(11).groupId=77;f.tabs.get(11).splitViewId=33;
+ await f.ctl.run('toggle-fullscreen',target);
+ assert.equal(f.tabs.get(11).windowId,1);
+ assert.equal(f.wins.get(1).state,'fullscreen');
 });

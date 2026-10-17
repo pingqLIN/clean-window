@@ -24,7 +24,20 @@ async function perform(action, target) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
-  if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) return false;
+  if (sender.id !== chrome.runtime.id) return false;
+  // Only the page's own top-frame content script can use the tiny extension dock.
+  // A web page and another extension cannot invoke these internal actions.
+  if (message?.type === 'clean-window:dock') {
+    if (!Number.isInteger(sender.tab?.id) || !Number.isInteger(sender.tab?.windowId)
+        || sender.frameId !== 0 || !['restore', 'manage'].includes(message.action)) return false;
+    const task = message.action === 'restore'
+      ? perform('restore', { tabId: sender.tab.id, windowId: sender.tab.windowId })
+      : chrome.windows.create({ url: 'chrome://extensions/', type: 'normal', focused: true })
+          .then(win => ({ok: true, windowId: win?.id}));
+    task.then(respond, error => respond({ok: false, error: String(error)}));
+    return true;
+  }
+  if (sender.url !== chrome.runtime.getURL('popup.html')) return false;
   if (message?.type !== 'clean-window:run' || !actionIds.includes(message.action)) return false;
   perform(message.action, message.target).then(respond, error => respond({ ok: false, error: String(error) }));
   return true;
@@ -47,7 +60,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     if (chrome.runtime.lastError) return;
     const entries = [
-      ['toggle-clean', '目前分頁：精簡視窗／還原'],
+      ['toggle-clean', '套用簡化等級／還原'],
       ['toggle-fullscreen', '整個視窗：切換全螢幕'],
       ['restore', '還原目前視窗']
     ];
