@@ -75,17 +75,18 @@
       ':host { color-scheme:light dark; font:12px system-ui,-apple-system,"Segoe UI",sans-serif; color:#393b3e; }',
       '*,*::before,*::after { box-sizing:border-box; }',
       '.edge { position:relative;display:flex;align-items:center;gap:2px;width:24px;height:42px; }',
-      '.close {position:absolute;top:50%;left:3px;transform:translateY(-50%);width:18px;height:16px;z-index:3;border:0;border-radius:5px;',
+      '.handle-anchor {position:relative;flex:none;width:24px;height:42px;}',
+      '.close {position:absolute;top:6px;left:3px;width:18px;height:16px;z-index:3;border:0;border-radius:5px;',
       ' display:grid;place-items:center;padding:0;background:#c73030;color:white;font:700 19px/1 system-ui;',
       ' opacity:0;visibility:hidden;pointer-events:none;cursor:pointer;',
       ' transition:opacity .17s ease,visibility 0s linear .17s,background-color .17s ease;}',
-      ':host([data-side="right"]) .close {left:auto;right:3px;}',
+      /* X is anchored to the handle rather than the expanding flex rail. */
       ':host(:hover) .close,:host(:focus-within) .close {opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s;}',
       '.close:hover {background:#aa1818;}',
       '.close:focus-visible {outline:2px solid white;outline-offset:1px;}',
       ':host([data-side="right"]) .edge { flex-direction:row-reverse; }',
       ':host(:hover) .edge,:host(:focus-within) .edge { width:70px; }',
-      '.handle { position:relative;width:24px;height:42px;flex:none;border:1px solid #999da2;background:#b8bbbf;',
+      '.handle { position:relative;width:100%;height:100%;border:1px solid #999da2;background:#b8bbbf;',
       ' color:#333;box-shadow:0 2px 10px #0002;cursor:grab;touch-action:none;',
       ' padding:0;border-radius:0 8px 8px 0; }',
       '.handle::after { content:attr(data-tip);position:absolute;right:0;bottom:calc(100% + 12px);',
@@ -213,9 +214,13 @@
         status(error?.message || '無法還原視窗');
       } finally { close.disabled = false; }
     });
-    // Restore is on the edge tab itself, not in the mode rail.
-    // The bottom portion of the handle remains available for dragging.
-    edge.append(handle, rail, close);
+    // Dedicated 24×42 anchor keeps the X positioned relative to the grey tab,
+    // never relative to the expanding 70px flex rail. Top inset is optically
+    // raised so the icon matches the selected rail line in the real UI.
+    const anchor = document.createElement('div');
+    anchor.className = 'handle-anchor';
+    anchor.append(handle, close);
+    edge.append(anchor, rail);
     root.append(style, edge);
 
     handle.title = '拖曳調整位置；滑鼠移入顯示關閉 X 與模式選擇';

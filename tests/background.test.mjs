@@ -152,11 +152,18 @@ test('managed-list EDIT opens the editor only for the explicitly targeted window
    f.sender,resolve));
  assert.equal(opened.ok,true);
  const target={tabId:11,windowId:opened.windowId};
+ const sent=[];
+ const send=f.api.tabs.sendMessage.bind(f.api.tabs);
+ f.api.tabs.sendMessage=async(id,message)=>{sent.push({id,message});return send(id,message);};
+ const anchor={screenX:940,screenY:350};
  const result=await new Promise(resolve=>f.listener(
-   {type:'clean-window:hub',action:'edit-title',target},f.sender,resolve));
+   {type:'clean-window:hub',action:'edit-title',target,anchor},f.sender,resolve));
  assert.equal(result.ok,true);
  assert.equal(result.mode,'title-editor');
  assert.equal(f.titleModes.get(11),'editing');
+ assert.ok(sent.some(item=>item.id===11 && item.message.action==='edit' &&
+   item.message.anchor?.screenX===940 && item.message.anchor?.screenY===350),
+   'the already-injected title controller must receive the popup EDIT anchor');
  assert.equal(f.tabs.get(21).windowId,2);
  const wrong=await new Promise(resolve=>f.listener(
    {type:'clean-window:hub',action:'edit-title',target:{tabId:21,windowId:2}},

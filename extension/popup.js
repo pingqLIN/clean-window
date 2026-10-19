@@ -212,9 +212,16 @@ async function loadManaged() {
         viewport.style.setProperty('--marquee-duration', Math.max(6, (width + 20) / 28).toFixed(2) + 's');
       });
       const edit = managedButton(async () => {
-        // Bring the intended managed window forward before opening its editor.
+        const rect = edit.getBoundingClientRect();
+        // Screen-space hint only: content-script editor clamps to the target
+        // page viewport, since a toolbar popup cannot host out-of-window UI.
+        const anchor = {
+          screenX: Math.round(window.screenX + rect.left),
+          screenY: Math.round(window.screenY + rect.top + rect.height / 2)
+        };
+        // Open while the action popup still exists, then reveal the target.
+        await requestHub('edit-title', { target: targetOf, anchor });
         await requestHub('focus', { target: targetOf });
-        await requestHub('edit-title', { target: targetOf });
         window.close();
       });
       edit.className = 'managed-edit';

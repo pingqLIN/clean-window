@@ -162,7 +162,8 @@ test('managed-list EDIT uses an explicit target and clipped titles scroll only o
   await flush();
   await p.handle.click();
   assert.equal(p.messages.length, 0, 'the decorative tab cannot edit titles');
-  assert.match(script, /requestHub\('edit-title', \{ target: targetOf \}\)/);
+  assert.match(script, /requestHub\('edit-title', \{ target: targetOf, anchor \}\)/);
+  assert.match(script, /screenX: Math\.round\(window\.screenX \+ rect\.left\)/);
   assert.match(script, /title\.textContent = item\.title/);
   assert.match(script, /viewport\.dataset\.overflow = String\(overflow\)/);
   const css = await readFile(new URL('../extension/popup.css', import.meta.url), 'utf8');

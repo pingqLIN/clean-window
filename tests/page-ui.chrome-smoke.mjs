@@ -129,7 +129,7 @@ try{
  // three-stop rail, hover-only explanations, instant switching, and edge drag.
  await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}if(message.type==="clean-window:edge-restore"){globalThis.__edgeRestoreRequests=(globalThis.__edgeRestoreRequests||0)+1;return{ok:true};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
  const edgeCommand=level=>run('new Promise(resolve=>globalThis.__cwEdgeListener({type:"clean-window:edge-ui",level:'+JSON.stringify(level)+'}, {},resolve))');
- const edgeCloseAlignment=()=>run('(() => {const root=document.querySelector("#clean-window-edge-control").shadowRoot;const a=root.querySelector(".handle").getBoundingClientRect();const b=root.querySelector(".close").getBoundingClientRect();return {dx:Math.abs(a.left+a.width/2-b.left-b.width/2),dy:Math.abs(a.top+a.height/2-b.top-b.height/2)};})()');
+ const edgeCloseAlignment=()=>run('(() => {const root=document.querySelector("#clean-window-edge-control").shadowRoot;const a=root.querySelector(".handle").getBoundingClientRect();const b=root.querySelector(".close").getBoundingClientRect();return {dx:Math.abs(a.left+a.width/2-b.left-b.width/2),dy:(b.top+b.height/2)-(a.top+a.height/2),inside:root.querySelector(".handle-anchor")?.contains(root.querySelector(".close"))};})()');
  const rail=await edgeCommand(1);
  assert.equal(rail.ok,true);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".edge .close").length'),1);
@@ -145,7 +145,7 @@ try{
  await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").click();true');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'3','untrusted synthetic click must not invoke extension actions');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'3');
- const grip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+5};})()');
+ const grip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+34};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:grip.x,y:grip.y});
  const stop=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:stop.x,y:stop.y});
@@ -160,7 +160,7 @@ try{
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".hint")).visibility'),'hidden');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close")).visibility'),'visible');
  const rightClose=await edgeCloseAlignment();
- assert.ok(rightClose.dx <= 1 && rightClose.dy <= 1,'right-side X must be centered over the grey handle');
+ assert.ok(rightClose.inside && rightClose.dx <= 1 && Math.abs(rightClose.dy + 7) <= 1,'right-side X must sit 7px above handle center');
  console.log('PASS: hover reveals vertical rail with an X centered on the right tab');
  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).transitionDuration'),'0s');
@@ -173,10 +173,10 @@ try{
  assert.equal(await run('(() => {const r=document.querySelector("#clean-window-edge-control").getBoundingClientRect();return Math.abs(r.left)<1;})()'),true,'drag snaps to the left viewport edge');
  assert.equal(await run('globalThis.__edgeSaved.edgeControl.side'),'left');
  const leftClose=await edgeCloseAlignment();
- assert.ok(leftClose.dx <= 1 && leftClose.dy <= 1,'left-side X must be centered over the grey handle');
+ assert.ok(leftClose.inside && leftClose.dx <= 1 && Math.abs(leftClose.dy + 7) <= 1,'left-side X must sit 7px above handle center');
  console.log('PASS: dragging persists opposite edge placement; X stays centered on either side');
  assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0,'drag must not restore the window');
- const movedGrip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+5};})()');
+ const movedGrip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+34};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:movedGrip.x,y:movedGrip.y});
  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
@@ -198,17 +198,19 @@ try{
 
  // Title editor: default native title, symbol selection, custom text, SPA updates, restoration.
  await run('globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwTitleListener=fn;};'+titleSource);
- const titleCommand=action=>run('new Promise(resolve=>globalThis.__cwTitleListener({type:"clean-window:title",action:"'+action+'"}, {},resolve))');
+ const titleCommand=(action,anchor)=>run('new Promise(resolve=>globalThis.__cwTitleListener('+JSON.stringify({type:'clean-window:title',action,...(anchor?{anchor}:{})})+', {},resolve))');
  const started=await titleCommand('start');
  assert.equal(started.ok,true);
  assert.equal(await run('document.title'),'◈ Clean Window Test');
  console.log('PASS: symbol + original page title without favicon spoofing');
 
- const opened=await titleCommand('edit');
+ const opened=await titleCommand('edit',{screenX:900,screenY:350});
  assert.equal(opened.ok,true);
  const editorVisual=await run('(() => {const r=document.querySelector("#clean-window-title-editor").shadowRoot;return {corner:getComputedStyle(r.querySelector(".panel")).borderTopLeftRadius,applyCorner:getComputedStyle(r.querySelector("button.primary")).borderTopLeftRadius}})()');
  assert.equal(editorVisual.corner,'16px');
  assert.equal(editorVisual.applyCorner,'999px');
+ assert.equal(await run('document.querySelector("#clean-window-title-editor").dataset.sidecar'),'true');
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-title-editor").shadowRoot.querySelector(".panel")).animationName'),'cw-title-sidecar-enter');
  console.log('PASS: title editor follows the popup rounded-panel and pill-action styling');
  const custom=await run(`(() => {
    const root=document.querySelector('#clean-window-title-editor').shadowRoot;
@@ -333,8 +335,9 @@ try{
  await sleep(20);
  assert.equal(await run('globalThis.__cwPopupMsgs.some(m=>m.action==="edit-title"&&m.target.tabId===91&&m.target.windowId===81)'),true);
  const sequence=await run('globalThis.__cwPopupMsgs.filter(m=>m.action==="focus"||m.action==="edit-title").map(m=>m.action)');
- assert.deepEqual(sequence,['focus','edit-title']);
- console.log('PASS: popup EDIT focuses the selected window then opens its title editor');
+ assert.deepEqual(sequence,['edit-title','focus']);
+ assert.equal(await run('globalThis.__cwPopupMsgs.find(m=>m.action==="edit-title")?.anchor?.screenY>0'),true);
+ console.log('PASS: popup EDIT opens anchored sidecar before focusing its managed window');
  console.log('SMOKE PASS: popup managed-list title, marquee and edit actions; real MV3 reload remains unverified');
 
 } finally {

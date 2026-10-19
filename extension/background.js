@@ -31,7 +31,8 @@ async function hub(message,sender) {
   if (operation === 'list') return {ok:true,items:await controller.listManaged()};
   if (operation === 'focus') return {ok:true,...await controller.focusManaged(message.target?.tabId,message.target?.windowId)};
   if (operation === 'restore' || operation === 'set-level' || operation === 'edit-title') {
-    return perform(operation,message.target,operation === 'set-level' ? {level:message.level} : {});
+    return perform(operation,message.target,operation === 'set-level' ? {level:message.level}
+      : operation === 'edit-title' ? {anchor:message.anchor} : {});
   }
   if (operation === 'bookmarks-status') {
     return {ok:true,granted:await chrome.permissions.contains({permissions:['bookmarks']})};

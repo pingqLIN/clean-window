@@ -183,19 +183,21 @@ export function createController(api) {
     catch { /* Script may already be gone after a page navigation. */ }
   }
 
-  async function titleUI(tab, action) {
+  async function titleUI(tab, action, anchor) {
     try {
       if (action !== 'off') {
         // Reuse an already injected controller first. Moving a tab into a
         // popup can make a second executeScript fail even though the script
         // remains alive in the same document.
         try {
-          const existing = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action });
+          const existing = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action,
+            ...(action === 'edit' && anchor ? {anchor} : {}) });
           if (existing?.ok) return existing;
         } catch { /* New document: install the script below when permitted. */ }
         await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['title-ui.js'] });
       }
-      const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action });
+      const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action,
+        ...(action === 'edit' && anchor ? {anchor} : {}) });
       if (!response?.ok) throw new Error(response?.error || '標題控制未回應。');
       return response;
     } catch (error) {
@@ -255,7 +257,7 @@ export function createController(api) {
           throw new Error('請先進入本擴充建立的乾淨 Popup，再編輯頁面標題。');
         }
         await titleUI(tab, 'start');
-        await titleUI(tab, 'edit');
+        await titleUI(tab, 'edit', options.anchor);
         return { windowId: win.id, mode: 'title-editor' };
       }
       if (action === 'toggle-fullscreen') return await toggleFullscreen(win);

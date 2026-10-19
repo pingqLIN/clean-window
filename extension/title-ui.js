@@ -60,15 +60,16 @@
     const previous = editor;
     editor = null;
     const panel = previous.shadowRoot?.querySelector('.panel');
+    const sidecar = previous.dataset.sidecar === 'true';
     if (panel && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
         && typeof panel.animate === 'function') {
       previous.id = 'clean-window-title-editor-exiting';
       previous.style.pointerEvents = 'none';
       panel.style.pointerEvents = 'none';
       const exit = panel.animate(
-        [{ opacity: 1, transform: 'translateX(-50%)' },
-         { opacity: 0, transform: 'translate(-50%, -5px)' }],
-        { duration: 120, easing: 'ease-in', fill: 'forwards' });
+        [{ opacity: 1, transform: sidecar ? 'translateX(0)' : 'translateX(-50%)' },
+         { opacity: 0, transform: sidecar ? 'translateX(-10px)' : 'translate(-50%, -5px)' }],
+        { duration: 95, easing: 'ease-in', fill: 'forwards' });
       void exit.finished.then(() => previous.remove(), () => previous.remove());
     } else previous.remove();
     try { returnFocus?.focus(); } catch {}
@@ -83,13 +84,28 @@
     state = null;
     if (document.title !== original) document.title = original;
   }
-  function openEditor() {
+  function openEditor(anchor) {
     if (!state) throw new Error('請先啟用乾淨模式，才可編輯標題。');
     if (editor) { editor.shadowRoot?.querySelector('#cw-title-text')?.focus(); return; }
     returnFocus = document.activeElement;
     const host = document.createElement('div');
     host.id = 'clean-window-title-editor';
     host.style.cssText = 'all:initial!important;position:fixed!important;inset:0!important;z-index:2147483647!important;pointer-events:none!important;';
+    const sx = anchor?.screenX, sy = anchor?.screenY;
+    if (Number.isFinite(sx) && Number.isFinite(sy) && Math.abs(sx) < 100000 && Math.abs(sy) < 100000) {
+      const width = Math.min(396, Math.max(0, window.innerWidth - 24));
+      const chromeTop = Math.max(0, window.outerHeight - window.innerHeight);
+      const viewportLeft = window.screenX + Math.max(0, window.outerWidth - window.innerWidth) / 2;
+      const desiredLeft = sx - viewportLeft - width - 12;
+      const maxLeft = Math.max(12, window.innerWidth - width - 12);
+      const desiredTop = sy - (window.screenY + chromeTop) - 40;
+      const maxTop = Math.max(12, window.innerHeight - 160);
+      const x = Math.max(12, Math.min(maxLeft, desiredLeft));
+      const y = Math.max(12, Math.min(maxTop, desiredTop));
+      host.dataset.sidecar = 'true';
+      host.style.setProperty('--cw-editor-left', Math.round(x) + 'px');
+      host.style.setProperty('--cw-editor-top', Math.round(y) + 'px');
+    }
     const root = host.attachShadow({mode:'open'});
     // Follow the same explicit theme preference as the extension popup.
     void chrome.storage?.local?.get('cwTheme').then(prefs => {
@@ -128,6 +144,11 @@
         box-shadow:0 14px 45px #0004,0 1px 2px #0001;
         background:var(--cw-bg); color:var(--cw-ink); font:inherit; }
       @keyframes cw-title-enter {from{opacity:0;transform:translate(-50%,-7px)}to{opacity:1;transform:translateX(-50%)}}
+      :host([data-sidecar="true"]) .panel {
+        top:var(--cw-editor-top,18px);left:var(--cw-editor-left,12px);right:auto;
+        transform:none;animation:cw-title-sidecar-enter .22s cubic-bezier(.16,1,.3,1) both;
+      }
+      @keyframes cw-title-sidecar-enter {from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
       h2 {font-size:14px;letter-spacing:.01em;margin:0 0 16px;font-weight:650;}
       .fields {display:flex;gap:8px;}
       label {display:flex;flex-direction:column;gap:6px;min-width:0;color:var(--cw-muted);font-size:11px;}
@@ -249,7 +270,7 @@
     try {
       if (message.action==='start') start();
       else if (message.action==='off') stop();
-      else if (message.action==='edit') openEditor();
+      else if (message.action==='edit') openEditor(message.anchor);
       else throw new Error('不支援的標題操作。');
       respond({ok:true,active:!!state});
     } catch(error) { respond({ok:false,error:error?.message||String(error)}); }
