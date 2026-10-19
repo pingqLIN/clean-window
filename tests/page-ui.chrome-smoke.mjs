@@ -317,11 +317,42 @@ try{
  await run(popupStub+popupSource);
  await sleep(95);
  const headerLayout=await run('(() => {const h=document.querySelector("header");return {height:getComputedStyle(h).height,headerGap:document.querySelector("main").getBoundingClientRect().top-h.getBoundingClientRect().bottom,decorative:document.querySelectorAll(".mark,.lock,.scope-win,.scope-pips").length,restore:!!h.querySelector("#restore"),theme:!!h.querySelector("#theme-toggle"),status:!!h.querySelector("#target-status"),feedback:!!h.querySelector("#feedback-icon")}})()');
- assert.equal(headerLayout.height,'42px');
- assert.ok(headerLayout.headerGap >= 0 && headerLayout.headerGap <= 8,'compact header may keep only a small visual breathing gap');
+ assert.equal(headerLayout.height,'68px');
+ assert.ok(headerLayout.headerGap >= 8 && headerLayout.headerGap <= 18,'allow one small intentional breathing gap below the taller header');
  assert.equal(headerLayout.decorative,0,'nonfunctional top decoration must be removed');
  assert.ok(headerLayout.restore && headerLayout.theme && headerLayout.status && headerLayout.feedback);
- console.log('PASS: single compact popup header retains functional actions and accessible status');
+ console.log('PASS: balanced one-row popup header retains actions with restored breathing room');
+ const demoHandle=await run('(() => {const r=document.querySelector(".edge-tab .et-handle").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:demoHandle.x,y:demoHandle.y});
+ let tooltipVisible=false;
+ for(let i=0;i<12 && !tooltipVisible;i++) {
+   await sleep(25);
+   tooltipVisible=await run('getComputedStyle(document.querySelector(".et-tooltip")).visibility==="visible"');
+ }
+ assert.ok(tooltipVisible,'preview-tab hover must reveal its help text');
+ const popupSpacing=await run(`(() => {
+   const box=s=>document.querySelector(s).getBoundingClientRect();
+   const tip=box(".et-tooltip"),shots=box(".shots"),rail=box(".et-rail");
+   const pill=box(".morph-wrap"),tools=box(".hdr-tools");
+   const hint=getComputedStyle(document.querySelector(".et-tooltip"));
+   return {
+     tip:{top:tip.top,right:tip.right,bottom:tip.bottom},
+     shots:{top:shots.top},
+     rail:{left:rail.left,top:rail.top,bottom:rail.bottom},
+     pill:{top:pill.top,right:pill.right},
+     tools:{left:tools.left},
+     hintVisible:hint.visibility,
+     tipPosition:hint.position,
+     tipAboveIllustration:shots.top-tip.bottom,
+     railAbovePill:pill.top-rail.bottom
+   };
+ })()`);
+ assert.equal(popupSpacing.hintVisible,'visible','preview-tab hover should reveal help');
+ assert.equal(popupSpacing.tipPosition,'fixed');
+ assert.ok(popupSpacing.tipAboveIllustration>=4,'help text must stay in its own upper lane');
+ assert.ok(popupSpacing.tip.right+8 < popupSpacing.tools.left,'help text must not cover header controls');
+ assert.ok(popupSpacing.railAbovePill>=5,'preview mode rail must maintain a visible gap above the black mode button');
+ console.log('PASS: hover tooltip stays clear of toolbar and illustration; mode rail avoids the black button');
  await run('document.documentElement.dataset.theme="dark";true');
  assert.equal(await run('getComputedStyle(document.body).backgroundColor'),'rgb(32, 33, 36)');
  await run('document.querySelector("#theme-toggle").click();true');

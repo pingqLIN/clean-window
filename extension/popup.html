@@ -124,7 +124,8 @@
   </main>
   <!-- Decorative edge-tab preview; the real page tab supports hover-to-restore and level switching. -->
   <div class="edge-tab" id="edge-tab">
-    <button type="button" class="et-handle" aria-label="預覽乾淨視窗側邊標籤" data-tip="啟動後可透過側邊標籤切換模式或關閉乾淨視窗。"></button>
+    <button type="button" class="et-handle" aria-label="預覽乾淨視窗側邊標籤" aria-describedby="edge-tooltip"></button>
+    <span class="et-tooltip" id="edge-tooltip" aria-hidden="true">側邊標籤：切換模式或關閉乾淨視窗</span>
     <div class="et-rail" aria-hidden="true"><span class="et-stop" data-level="1"><span class="et-tick"></span></span><span class="et-stop" data-level="2"><span class="et-tick"></span></span><span class="et-stop" data-level="3"><span class="et-tick"></span></span></div>
   </div>
 

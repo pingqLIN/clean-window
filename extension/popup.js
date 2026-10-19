@@ -300,11 +300,6 @@ async function init() {
     storedLevel = managedPopup && validLevel(record.cleanLevel)
       ? record.cleanLevel
       : validLevel(preference.cleanLevel) ? preference.cleanLevel : 1;
-    const edgeHandle = document.querySelector?.('#edge-tab .et-handle');
-    if (edgeHandle) {
-      edgeHandle.setAttribute('aria-label', '預覽乾淨視窗側邊標籤');
-      edgeHandle.dataset.tip = '啟動後可透過側邊標籤切換模式或關閉乾淨視窗。';
-    }
     levelInput.value = String(storedLevel);
     levelInput.disabled = false;
     describeLevel();

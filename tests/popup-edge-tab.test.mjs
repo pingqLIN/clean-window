@@ -90,7 +90,8 @@ test('popup edge tab replaces decorative hint with three accessible controls', a
   assert.match(css, /\.edge-tab:hover \.et-rail/);
   assert.match(css, /\.edge-tab:focus-within \.et-rail/);
   assert.match(css, /prefers-reduced-motion: reduce/);
-  assert.match(html, /data-tip="啟動後可透過側邊標籤切換模式或關閉乾淨視窗。"/);
+  assert.match(html, /id="edge-tooltip"[^>]*>側邊標籤：切換模式或關閉乾淨視窗/);
+  assert.match(css, /\.edge-tab:hover \.et-tooltip/);
   assert.match(css, /\.et-handle\s*\{[^}]*z-index:\s*2/s);
   assert.match(css, /\.et-rail\s*\{[^}]*z-index:\s*1/s);
 });
