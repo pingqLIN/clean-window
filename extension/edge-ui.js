@@ -20,7 +20,7 @@
     host.style.setProperty('left', preference.side === 'left' ? '0px' : 'auto', 'important');
     host.style.setProperty('right', preference.side === 'right' ? '0px' : 'auto', 'important');
     const top = Math.round(clamp(preference.ratio, 0, 1) *
-      Math.max(0, window.innerHeight - 42));
+      Math.max(0, window.innerHeight - 50));
     host.style.setProperty('top', top + 'px', 'important');
     host.dataset.tipPlacement = top < 62 ? 'below' : 'above';
   }
@@ -50,7 +50,7 @@
     if (!drag.moved) return;
     preference.side = event.clientX < window.innerWidth / 2 ? 'left' : 'right';
     preference.ratio = clamp((event.clientY - drag.offsetY) /
-      Math.max(1, window.innerHeight - 42), 0, 1);
+      Math.max(1, window.innerHeight - 50), 0, 1);
     position();
   }
   function finishDrag(event) {
@@ -74,9 +74,9 @@
     style.textContent = [
       ':host { color-scheme:light dark; font:12px system-ui,-apple-system,"Segoe UI",sans-serif; color:#393b3e; }',
       '*,*::before,*::after { box-sizing:border-box; }',
-      '.edge { position:relative;display:flex;align-items:center;gap:2px;width:24px;height:42px; }',
-      '.handle-anchor {position:relative;flex:none;width:24px;height:42px;}',
-      '.close {position:absolute;top:6px;left:3px;width:18px;height:16px;z-index:3;border:0;border-radius:5px;',
+      '.edge { position:relative;display:flex;align-items:center;gap:8px;width:30px;height:50px; }',
+      '.handle-anchor {position:relative;flex:none;width:30px;height:50px;}',
+      '.close {position:absolute;top:10px;left:6px;width:18px;height:16px;z-index:3;border:0;border-radius:5px;',
       ' display:grid;place-items:center;padding:0;background:#c73030;color:white;font:700 19px/1 system-ui;',
       ' opacity:0;visibility:hidden;pointer-events:none;cursor:pointer;',
       ' transition:opacity .17s ease,visibility 0s linear .17s,background-color .17s ease;}',
@@ -85,7 +85,7 @@
       '.close:hover {background:#aa1818;}',
       '.close:focus-visible {outline:2px solid white;outline-offset:1px;}',
       ':host([data-side="right"]) .edge { flex-direction:row-reverse; }',
-      ':host(:hover) .edge,:host(:focus-within) .edge { width:70px; }',
+      ':host(:hover) .edge,:host(:focus-within) .edge { width:80px; }',
       '.handle { position:relative;width:100%;height:100%;border:1px solid #999da2;background:#b8bbbf;',
       ' color:#333;box-shadow:0 2px 10px #0002;cursor:grab;touch-action:none;',
       ' padding:0;border-radius:0 8px 8px 0; }',
@@ -214,7 +214,7 @@
         status(error?.message || '無法還原視窗');
       } finally { close.disabled = false; }
     });
-    // Dedicated 24×42 anchor keeps the X positioned relative to the grey tab,
+    // Dedicated 30×50 anchor keeps the X positioned relative to the enlarged grey tab,
     // never relative to the expanding 70px flex rail. Top inset is optically
     // raised so the icon matches the selected rail line in the real UI.
     const anchor = document.createElement('div');

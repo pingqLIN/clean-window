@@ -130,6 +130,7 @@ try{
  await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}if(message.type==="clean-window:edge-restore"){globalThis.__edgeRestoreRequests=(globalThis.__edgeRestoreRequests||0)+1;return{ok:true};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
  const edgeCommand=level=>run('new Promise(resolve=>globalThis.__cwEdgeListener({type:"clean-window:edge-ui",level:'+JSON.stringify(level)+'}, {},resolve))');
  const edgeCloseAlignment=()=>run('(() => {const root=document.querySelector("#clean-window-edge-control").shadowRoot;const a=root.querySelector(".handle").getBoundingClientRect();const b=root.querySelector(".close").getBoundingClientRect();return {dx:Math.abs(a.left+a.width/2-b.left-b.width/2),dy:(b.top+b.height/2)-(a.top+a.height/2),inside:root.querySelector(".handle-anchor")?.contains(root.querySelector(".close"))};})()');
+ const edgeLayout=()=>run('(() => {const root=document.querySelector("#clean-window-edge-control").shadowRoot;const a=root.querySelector(".handle-anchor").getBoundingClientRect();const b=root.querySelector(".rail").getBoundingClientRect();return {width:a.width,height:a.height,gap:root.host.dataset.side==="right"?a.left-b.right:b.left-a.right};})()');
  const rail=await edgeCommand(1);
  assert.equal(rail.ok,true);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".edge .close").length'),1);
@@ -161,6 +162,10 @@ try{
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close")).visibility'),'visible');
  const rightClose=await edgeCloseAlignment();
  assert.ok(rightClose.inside && rightClose.dx <= 1 && Math.abs(rightClose.dy + 7) <= 1,'right-side X must sit 7px above handle center');
+ const rightSpacing=await edgeLayout();
+ assert.equal(rightSpacing.width,30);
+ assert.equal(rightSpacing.height,50);
+ assert.ok(Math.abs(rightSpacing.gap-8)<1,'right rail must stand 8px clear of enlarged tab');
  console.log('PASS: hover reveals vertical rail with an X centered on the right tab');
  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).transitionDuration'),'0s');
@@ -174,6 +179,8 @@ try{
  assert.equal(await run('globalThis.__edgeSaved.edgeControl.side'),'left');
  const leftClose=await edgeCloseAlignment();
  assert.ok(leftClose.inside && leftClose.dx <= 1 && Math.abs(leftClose.dy + 7) <= 1,'left-side X must sit 7px above handle center');
+ const leftSpacing=await edgeLayout();
+ assert.ok(Math.abs(leftSpacing.gap-8)<1,'left rail must stand 8px clear of enlarged tab');
  console.log('PASS: dragging persists opposite edge placement; X stays centered on either side');
  assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0,'drag must not restore the window');
  const movedGrip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+34};})()');
@@ -309,6 +316,17 @@ try{
  ].join('');
  await run(popupStub+popupSource);
  await sleep(95);
+ const headerLayout=await run('(() => {const h=document.querySelector("header");return {height:getComputedStyle(h).height,headerGap:document.querySelector("main").getBoundingClientRect().top-h.getBoundingClientRect().bottom,decorative:document.querySelectorAll(".mark,.lock,.scope-win,.scope-pips").length,restore:!!h.querySelector("#restore"),theme:!!h.querySelector("#theme-toggle"),status:!!h.querySelector("#target-status"),feedback:!!h.querySelector("#feedback-icon")}})()');
+ assert.equal(headerLayout.height,'42px');
+ assert.ok(headerLayout.headerGap >= 0 && headerLayout.headerGap <= 8,'compact header may keep only a small visual breathing gap');
+ assert.equal(headerLayout.decorative,0,'nonfunctional top decoration must be removed');
+ assert.ok(headerLayout.restore && headerLayout.theme && headerLayout.status && headerLayout.feedback);
+ console.log('PASS: single compact popup header retains functional actions and accessible status');
+ await run('document.documentElement.dataset.theme="dark";true');
+ assert.equal(await run('getComputedStyle(document.body).backgroundColor'),'rgb(32, 33, 36)');
+ await run('document.querySelector("#theme-toggle").click();true');
+ assert.equal(await run('getComputedStyle(document.body).backgroundColor'),'rgb(246, 245, 241)');
+ console.log('PASS: dark popup uses elevated deep-grey background while theme switch stays active');
  const popupRows=await run('(() => [...document.querySelectorAll("#managed-list .managed-row")].map(row=>({title:row.querySelector(".managed-name-text")?.textContent,overflow:row.querySelector(".managed-name-viewport")?.dataset.overflow,edit:!!row.querySelector(".managed-edit"),visibleWidth:row.querySelector(".managed-name-viewport")?.clientWidth})))()');
  assert.equal(popupRows.length,2);
  assert.equal(popupRows[0].title.startsWith('🖋️ 已編輯'),true);

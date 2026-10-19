@@ -3,7 +3,6 @@ const status = document.querySelector('#target-status');
 const feedback = document.querySelector('#feedback');
 const feedbackIcon = document.querySelector('#feedback-icon');
 const scope = document.querySelector('#scope');
-const scopePips = document.querySelector('#scope-pips');
 const root = document.querySelector('main');
 const levelInput = document.querySelector('#clean-level');
 const levelNumber = document.querySelector('#level-number');
@@ -287,7 +286,6 @@ async function init() {
       chrome.storage.local.get('cleanLevel')
     ]);
     status.textContent = `只處理此視窗 · ${tabs.length} 個分頁`;
-    renderPips(scopePips, tabs.length, 5);
     setScopeState('ok');
     const record = saved[`clean:${tab.id}`];
     managedPopup = win.type === 'popup' && record?.phase === 'open'
