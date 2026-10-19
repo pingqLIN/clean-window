@@ -219,6 +219,9 @@ const describeLevel = () => {
   if (stage) {
     stage.dataset.selectedLevel = String(level);
     stage.dataset.previewLevel = String(level);
+    stage.querySelectorAll?.('.morph-zone').forEach(zone => {
+      zone.setAttribute('aria-checked', String(zone.dataset.level === String(level)));
+    });
     stage.querySelectorAll?.('.pip').forEach(pip => {
       pip.setAttribute('aria-checked', String(pip.dataset.level === String(level)));
     });
@@ -328,35 +331,39 @@ for (const button of buttons) {
 }
 void init();
 
-// Dots select a local preview; only the black button applies a mode.
+// Morphing window: hover/focus previews a level, click selects it.
 const stage = document.querySelector?.('#morph-stage');
 if (stage) {
   const selected = () => stage.dataset.selectedLevel || '1';
-  let applying = false;
-  stage.querySelector?.('.morph-action')?.addEventListener('click', async event => {
-    event.stopPropagation();
-    const level = Number(selected());
-    if (!validLevel(level) || levelInput.disabled || !target || applying) return;
-    applying = true;
-    const previous = storedLevel;
-    try {
-      await chrome.storage.local.set({ cleanLevel: level });
-      storedLevel = level;
-      show('');
-      let result;
-      if (managedPopup) result = await requestHub('set-level', { target, level });
-      else {
-        result = await chrome.runtime.sendMessage({ type: 'clean-window:run', action: 'toggle-clean', target });
-        if (!result?.ok) throw new Error(result?.error || '套用簡化模式失敗');
-      }
-      if (result.warning) show(result.warning, 'warn');
-      else window.close();
-    } catch (error) {
-      storedLevel = previous;
-      levelInput.value = String(previous);
+  stage.querySelectorAll?.('.morph-zone').forEach(zone => {
+    const preview = () => { if (zone.dataset.level) stage.dataset.previewLevel = zone.dataset.level; };
+    zone.addEventListener('mouseenter', preview);
+    zone.addEventListener('focus', preview);
+    zone.addEventListener('blur', () => { stage.dataset.previewLevel = selected(); });
+    zone.addEventListener('click', async event => {
+      event.stopPropagation();
+      const level = Number(zone.dataset.level);
+      if (!validLevel(level) || levelInput.disabled || !target) return;
+      const previous = storedLevel;
+      levelInput.value = String(level);
       describeLevel();
-      show('無法套用簡化等級：' + (error?.message || String(error)));
-    } finally { applying = false; }
+      try {
+        await chrome.storage.local.set({ cleanLevel: level });
+        storedLevel = level;
+        show('');
+        if (isRestoring) {
+          await requestHub('set-level', { target, level });
+          window.close();
+        } else {
+          document.querySelector('.choice.primary')?.click();
+        }
+      } catch (error) {
+        levelInput.value = String(previous);
+        storedLevel = previous;
+        describeLevel();
+        show(`無法套用簡化等級：${error.message}`);
+      }
+    });
   });
   stage.addEventListener('mouseleave', () => { stage.dataset.previewLevel = selected(); });
 
@@ -430,8 +437,7 @@ if (stage) {
     let tgt = 0, cur = 0, raf = 0;
     const tick = () => {
       cur += (tgt - cur) * 0.18;
-      pill.style.setProperty('--cw-hover-y', (cur * 4).toFixed(2) + 'deg');
-      pill.style.setProperty('--cw-hover-z', (cur * 0.8).toFixed(2) + 'deg');
+      pill.style.transform = `rotateY(${(cur * 14).toFixed(2)}deg) rotateZ(${(cur * 3.2).toFixed(2)}deg)`;
       raf = Math.abs(tgt - cur) > 0.002 ? requestAnimationFrame(tick) : 0;
     };
     const aim = value => { tgt = value; if (!still && !raf) raf = requestAnimationFrame(tick); };
