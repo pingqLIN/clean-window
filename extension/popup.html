@@ -9,61 +9,78 @@
 </head>
 <body>
   <header>
-    <div class="brand">
-      <div class="brand-glyph" aria-hidden="true">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-          <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.2"/>
-          <path d="M1.5 5.5h13" stroke="currentColor" stroke-width="1.2"/>
-          <circle cx="4" cy="3.5" r="0.75" fill="currentColor"/>
-          <circle cx="6.5" cy="3.5" r="0.75" fill="currentColor"/>
+    <span class="mark" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2.5H6A3.5 3.5 0 0 0 2.5 6v8A3.5 3.5 0 0 0 6 17.5h8a3.5 3.5 0 0 0 3.5-3.5V7"/>
+        <path d="M13 2.5v3A1.5 1.5 0 0 0 14.5 7h3"/>
+      </svg>
+    </span>
+    <span class="hdr-tools">
+      <button type="button" id="restore" class="secondary" data-action="restore" disabled title="還原目前視窗" aria-label="還原目前視窗">
+        <svg class="revert-icon" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2.5 7.5a5.5 5.5 0 1 1 1.6 3.9"/>
+          <path d="M2.5 3.5v4h4"/>
         </svg>
-      </div>
-      <span class="brand-title">CLEAN WINDOW</span>
-    </div>
-    <div class="header-tools">
-      <span class="version">0.1</span>
-      <button type="button" id="theme-toggle" class="icon-toggle" aria-label="切換主題" title="切換明暗主題">
-        <svg class="theme-icon sun" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="8" cy="8" r="3.2"/>
-          <path d="M8 1.5v1.5M8 13v1.5M1.5 8h1.5M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/>
-        </svg>
-        <svg class="theme-icon moon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M13.5 9.5a5.5 5.5 0 1 1-7-7 6.5 6.5 0 0 0 7 7z"/>
-        </svg>
+        <kbd class="sr-only"></kbd>
       </button>
-    </div>
+      <button type="button" id="theme-toggle" class="ghost" aria-label="切換主題" title="切換明暗主題">
+      <svg class="theme-icon sun" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="8" r="3.2"/>
+        <path d="M8 1.5v1.5M8 13v1.5M1.5 8h1.5M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/>
+      </svg>
+      <svg class="theme-icon moon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13.5 9.5a5.5 5.5 0 1 1-7-7 6.5 6.5 0 0 0 7 7z"/>
+      </svg>
+    </button>
+    </span>
   </header>
 
   <main>
-    <!-- Scope status indicator -->
-    <div class="scope">
-      <span class="dot" aria-hidden="true"></span>
-      <span id="target-status">正在確認目標視窗…</span>
+    <!-- Scope: one window glyph + one pip per tab. State is carried by shape, not words. -->
+    <div class="scope" id="scope" data-state="loading" title="僅處理目前視窗">
+      <span class="scope-win" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2"/>
+          <path d="M1.75 6.25h12.5"/>
+        </svg>
+        <i class="live"></i>
+      </span>
+      <span class="pips scope-pips" id="scope-pips" aria-hidden="true"></span>
+      <span class="grow"></span>
+      <span id="feedback-icon" class="fb" data-kind="error" hidden aria-hidden="true">
+        <svg class="k-info" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 7.4v3.6"/><path d="M8 5v.01"/></svg>
+        <svg class="k-warn" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.2l6 10.6H2z"/><path d="M8 6.6v3"/><path d="M8 11.5v.01"/></svg>
+        <svg class="k-error" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4"/></svg>
+      </span>
+      <span class="lock" aria-hidden="true" title="僅在本機處理，不連網">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="7" width="10" height="7" rx="1.75"/>
+          <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>
+        </svg>
+      </span>
+      <span id="target-status" class="sr-only">正在確認目標視窗…</span>
     </div>
 
-    <!-- Unified Mode Controller Card (Merged Block) -->
-    <div class="unified-card">
-      <!-- Top Action: Visual Transformation & Apply -->
+    <!-- Primary action sits above the level picker (kept in this order on purpose). -->
+    <div class="actions" hidden>
       <button type="button" class="choice primary" data-action="toggle-clean" disabled title="套用 / 還原簡化模式">
-        <div class="transform-diagram" aria-hidden="true">
-          <div class="diagram-win source">
-            <div class="win-tabs"><span></span><span></span><span></span></div>
-            <div class="win-body"></div>
-          </div>
-          <div class="diagram-arrow" id="diagram-arrow">
-            <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 6h22M17 1l5 5-5 5"/>
-            </svg>
-          </div>
-          <div class="diagram-win target" id="diagram-target" data-level="1">
-            <div class="win-bar dual"><span class="bar-dock"></span><span class="bar-url"></span></div>
-            <div class="win-bar single"><span class="bar-url center"></span></div>
-            <div class="win-body"></div>
-          </div>
-        </div>
-        <div class="choice-kbd">
-          <kbd>Alt + Shift + W</kbd>
-        </div>
+        <svg class="flow" width="72" height="28" viewBox="0 0 72 28" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <g class="flow-source">
+            <rect x="2" y="4" width="24" height="20" rx="3"/>
+            <path d="M2 9.5h24"/>
+            <path d="M6 6.75h.01M9 6.75h.01"/>
+          </g>
+          <g class="flow-arrow" id="diagram-arrow">
+            <path d="M32 14h10M38.5 10.5L42 14l-3.5 3.5"/>
+          </g>
+          <g class="flow-target" id="diagram-target" data-level="1">
+            <rect x="46" y="4" width="24" height="20" rx="3"/>
+            <g class="t1"><path d="M46 9.5h24M46 14h24"/></g>
+            <g class="t2"><path d="M46 9.5h24"/><path d="M53 12.1h10" stroke-width="1.2"/></g>
+            <g class="t3"></g>
+          </g>
+        </svg>
+        <kbd class="sr-only"></kbd>
         <!-- Required accessible elements -->
         <div class="sr-only">
           <span class="button-title" id="clean-label">套用此簡化等級</span>
@@ -71,118 +88,70 @@
         </div>
       </button>
 
-      <!-- Bottom: Single Large Morphing Window Button with Left/Center/Right Hover Zones -->
-      <section class="level-picker" aria-label="簡化等級">
-        <div class="morph-stage" id="morph-stage" data-preview-level="1" data-selected-level="1">
-          <!-- 3 Interactive Zones (Left / Center / Right) -->
-          <div class="morph-zones" role="radiogroup" aria-label="模式選擇">
-            <button type="button" class="morph-zone" data-level="1" aria-label="模式 1: 輕量工具列" title="01 · 輕量工具列"></button>
-            <button type="button" class="morph-zone" data-level="2" aria-label="模式 2: 自繪網址欄" title="02 · 自繪網址欄"></button>
-            <button type="button" class="morph-zone" data-level="3" aria-label="模式 3: 純精簡內容" title="03 · 純精簡內容"></button>
-          </div>
-
-          <!-- Single Large Morphing Window Canvas -->
-          <div class="morph-window" aria-hidden="true">
-            <!-- Window Titlebar with Traffic Lights & Level Badge -->
-            <div class="morph-titlebar">
-              <div class="traffic-lights">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="morph-badge">
-                <span id="morph-badge-num">01</span>
-              </div>
-            </div>
-
-            <!-- Morphing Toolbar Area (Collapses/Morphs across Level 1, 2, 3) -->
-            <div class="morph-toolbar-area">
-              <div class="morph-row row-1">
-                <div class="morph-dock">
-                  <span class="dock-dot"></span>
-                  <span class="dock-dot"></span>
-                </div>
-                <div class="morph-omnibox">
-                  <span class="omni-pill"></span>
-                </div>
-              </div>
-              <div class="morph-row row-2">
-                <span class="tool-chip"></span>
-                <span class="tool-chip wide"></span>
-              </div>
-            </div>
-
-            <!-- Content Area Wireframe -->
-            <div class="morph-content-area">
-              <div class="wire-lines">
-                <span class="wire-line heading"></span>
-                <span class="wire-line body"></span>
-              </div>
-            </div>
-
-            <!-- 3-Segment Indicator Track at Bottom of Window -->
-            <div class="morph-track">
-              <div class="track-segment" data-seg="1"><span>01</span></div>
-              <div class="track-segment" data-seg="2"><span>02</span></div>
-              <div class="track-segment" data-seg="3"><span>03</span></div>
-              <div class="track-cursor"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Required accessible elements -->
-        <div class="sr-only">
-          <output id="level-number" for="clean-level">1 / 3</output>
-          <input id="clean-level" type="range" min="1" max="3" step="1" value="1" disabled aria-describedby="level-title level-limit">
-          <div class="level-preview">
-            <strong id="level-title">1 · 自繪網址欄＋擴充欄</strong>
-            <p id="level-detail">精簡 Popup 加上自繪網址欄與 Clean Window 專屬擴充工具列。</p>
-            <p id="level-limit" class="limit"></p>
-          </div>
-        </div>
-      </section>
+      
     </div>
 
-    <!-- Secondary Action: Return / Restore Window with REVERT ICON -->
-    <button type="button" id="restore" data-action="restore" disabled title="還原目前視窗" aria-label="還原目前視窗">
-      <div class="restore-main">
-        <span class="revert-icon-wrap" aria-hidden="true">
-          <svg class="revert-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2.5 7.5a5.5 5.5 0 1 1 1.6 3.9"/>
-            <path d="M2.5 3.5v4h4"/>
-          </svg>
-        </span>
-        <span class="sr-only">還原目前視窗</span>
-      </div>
-      <kbd>Alt + Shift + R</kbd>
-    </button>
+    <!-- Level picker: one window that morphs; three pips show which level is selected. -->
+    <section class="level-picker" aria-label="簡化等級">
+      <div class="morph-stage" id="morph-stage" data-preview-level="1" data-selected-level="1">
+        <!-- 三模式視窗上緣：同位置疊放，共用一個 MASK 當底圖；預覽等級決定顯示哪一張 -->
+        <div class="shots" aria-hidden="true"><svg viewBox="0 0 360 164" preserveAspectRatio="xMidYMin slice"><rect class="w f" x="20" y="8" width="320" height="260" rx="14"/><circle class="d" cx="36" cy="22" r="3.2"/><circle class="d" cx="45" cy="22" r="3.2"/><circle class="d" cx="54" cy="22" r="3.2"/><rect class="d" x="36" y="35" width="10" height="10" rx="3"/><rect class="d" x="50" y="35" width="10" height="10" rx="3"/><rect class="s o" x="68" y="33" width="256" height="14" rx="7"/><rect class="d" x="77" y="40" width="5" height="4" rx="1"/><path class="dl" d="M78 40v-1.2a1.5 1.5 0 0 1 3 0V40"/><text class="u" x="88" y="43.4"><tspan class="h">github.com</tspan><tspan class="p">/pingqLIN</tspan></text><circle class="dl" cx="312" cy="40" r="2.6"/><rect class="s" x="36" y="54" width="20" height="7" rx="3.5"/><rect class="s" x="60" y="54" width="20" height="7" rx="3.5"/><rect class="s" x="84" y="54" width="44" height="7" rx="3.5"/><rect class="s" x="132" y="54" width="20" height="7" rx="3.5"/><rect class="l" x="36" y="76" width="110" height="8" rx="4"/><rect class="s" x="36" y="93" width="288" height="5" rx="2.5"/><rect class="s" x="36" y="105" width="200" height="5" rx="2.5"/><rect class="s" x="36" y="120" width="288" height="36" rx="8"/></svg><svg viewBox="0 0 360 164" preserveAspectRatio="xMidYMin slice"><rect class="w f" x="20" y="8" width="320" height="260" rx="14"/><circle class="d" cx="36" cy="22" r="3.2"/><circle class="d" cx="45" cy="22" r="3.2"/><circle class="d" cx="54" cy="22" r="3.2"/><rect class="s o" x="72" y="33" width="216" height="14" rx="7"/><rect class="d" x="81" y="40" width="5" height="4" rx="1"/><path class="dl" d="M82 40v-1.2a1.5 1.5 0 0 1 3 0V40"/><text class="u" x="92" y="43.4"><tspan class="h">github.com</tspan><tspan class="p">/pingqLIN</tspan></text><circle class="dl" cx="276" cy="40" r="2.6"/><rect class="l" x="36" y="62" width="110" height="8" rx="4"/><rect class="s" x="36" y="79" width="288" height="5" rx="2.5"/><rect class="s" x="36" y="91" width="200" height="5" rx="2.5"/><rect class="s" x="36" y="106" width="288" height="36" rx="8"/></svg><svg viewBox="0 0 360 164" preserveAspectRatio="xMidYMin slice"><rect class="w f" x="20" y="8" width="320" height="260" rx="14"/><circle class="d" cx="36" cy="22" r="3.2"/><circle class="d" cx="45" cy="22" r="3.2"/><circle class="d" cx="54" cy="22" r="3.2"/><rect class="l" x="36" y="40" width="110" height="8" rx="4"/><rect class="s" x="36" y="57" width="288" height="5" rx="2.5"/><rect class="s" x="36" y="69" width="200" height="5" rx="2.5"/><rect class="s" x="36" y="84" width="288" height="36" rx="8"/></svg></div>
 
-    <!-- Managed Windows Accordion (Text Removed) -->
+        <div class="morph-wrap">
+          <div class="morph-zones" role="radiogroup" aria-label="模式選擇">
+            <button type="button" class="morph-zone" role="radio" aria-checked="true" data-level="1" aria-label="模式 1: 輕量工具列" title="輕量工具列"><svg width="28" height="22" viewBox="0 0 28 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="25" height="19" rx="3"/><path d="M1.5 6.5h25M1.5 10.5h25"/></svg></button>
+            <button type="button" class="morph-zone" role="radio" aria-checked="false" data-level="2" aria-label="模式 2: 自繪網址欄" title="自繪網址欄"><svg width="28" height="22" viewBox="0 0 28 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="25" height="19" rx="3"/><path d="M1.5 6.5h25"/></svg></button>
+            <button type="button" class="morph-zone" role="radio" aria-checked="false" data-level="3" aria-label="模式 3: 純精簡內容" title="純精簡內容"><svg width="28" height="22" viewBox="0 0 28 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="25" height="19" rx="3"/></svg></button>
+            <i class="glow" aria-hidden="true"></i>
+          </div>
+        </div>
+
+        <!-- 模式英文說明：滑鼠移到下方圓點區時取代中央按鈕 -->
+        <div class="morph-caption" aria-hidden="true"><strong></strong><span></span></div>
+
+        <div class="pips level-pips" role="group" aria-label="Preview modes"><button type="button" class="pip" data-level="1" aria-label="Preview Standard Mode"></button><button type="button" class="pip" data-level="2" aria-label="Preview Compact Mode"></button><button type="button" class="pip" data-level="3" aria-label="Preview Focus Mode"></button></div>
+      </div>
+
+      <!-- Required accessible elements -->
+      <div class="sr-only">
+        <output id="level-number" for="clean-level">1 / 3</output>
+        <input id="clean-level" type="range" min="1" max="3" step="1" value="1" disabled aria-describedby="level-title level-limit">
+        <div class="level-preview">
+          <strong id="level-title">1 · 自繪網址欄＋擴充欄</strong>
+          <p id="level-detail">精簡 Popup 加上自繪網址欄與 Clean Window 專屬擴充工具列。</p>
+          <p id="level-limit" class="limit"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Managed windows: glyph + one pip per window, no words. -->
     <details id="managed-windows">
       <summary title="已啟用乾淨視窗" aria-label="已啟用乾淨視窗">
-        <div class="summary-left">
-          <span class="summary-glyph" aria-hidden="true">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="3" width="12" height="10" rx="1"/>
-              <path d="M2 6.5h12"/>
-            </svg>
-          </span>
-          <span id="managed-count"></span>
-          <span class="sr-only">已啟用乾淨視窗</span>
-        </div>
+        <span class="summary-glyph" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4.75" y="1.75" width="9.5" height="8" rx="1.75"/>
+            <path d="M3.25 4.75h-.5a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1v-.5"/>
+          </svg>
+        </span>
+        <span id="managed-count" class="pips" aria-hidden="true"></span>
+        <span class="grow"></span>
         <span class="summary-arrow" aria-hidden="true">
-          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 6l4 4 4-4"/>
           </svg>
         </span>
+        <span class="sr-only">已啟用乾淨視窗</span>
       </summary>
       <div id="managed-list" aria-live="polite"></div>
     </details>
 
     <p id="feedback" role="status" aria-live="polite" hidden></p>
   </main>
+  <!-- Edge tab: lives on the popup's own right edge. Click = rename window; hover = mode rail. -->
+  <div class="edge-tab" id="edge-tab">
+    <button type="button" class="et-handle" aria-label="Rename window" data-tip="Edge tab&#10;Click: rename this window&#10;Hover: pick a mode"></button>
+    <div class="et-rail" role="group" aria-label="Mode"><button type="button" class="et-stop" data-level="1" aria-pressed="false" aria-label="Standard Mode"><span class="et-tick"></span><span class="et-hint">1 · Standard</span></button><button type="button" class="et-stop" data-level="2" aria-pressed="false" aria-label="Compact Mode"><span class="et-tick"></span><span class="et-hint">2 · Compact</span></button><button type="button" class="et-stop" data-level="3" aria-pressed="false" aria-label="Focus Mode"><span class="et-tick"></span><span class="et-hint">3 · Focus</span></button></div>
+  </div>
 
-  <footer>
-    <span class="footer-tag">LOCAL · PRIVATE</span>
-    <span class="footer-tag">ISOLATED SCOPE</span>
-  </footer>
 </body>
 </html>
