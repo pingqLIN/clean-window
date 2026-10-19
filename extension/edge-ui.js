@@ -11,7 +11,6 @@
   let host, root, handle, buttons = [], currentLevel = 1;
   let preference = { side: 'right', ratio: 0.48 };
   let drag = null;
-  let ignoreHandleClick = false;
 
   const validLevel = value => Number.isInteger(value) && value >= 1 && value <= 3;
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -59,7 +58,6 @@
     const moved = drag.moved;
     drag = null;
     if (moved) {
-      ignoreHandleClick = true;
       void savePlacement();
     }
   }
@@ -76,11 +74,12 @@
     style.textContent = [
       ':host { color-scheme:light dark; font:12px system-ui,-apple-system,"Segoe UI",sans-serif; color:#393b3e; }',
       '*,*::before,*::after { box-sizing:border-box; }',
-      '.edge { display:flex;align-items:center;gap:2px;width:24px;height:42px; }',
-      '.close {position:relative;flex:none;width:30px;height:28px;border:0;border-radius:7px;',
+      '.edge { position:relative;display:flex;align-items:center;gap:2px;width:24px;height:42px; }',
+      '.close {position:absolute;bottom:1px;left:3px;width:18px;height:16px;z-index:3;border:0;border-radius:5px;',
       ' display:grid;place-items:center;padding:0;background:#c73030;color:white;font:700 19px/1 system-ui;',
       ' opacity:0;visibility:hidden;pointer-events:none;cursor:pointer;',
       ' transition:opacity .17s ease,visibility 0s linear .17s,background-color .17s ease;}',
+      ':host([data-side="right"]) .close {left:auto;right:2px;}',
       ':host(:hover) .close,:host(:focus-within) .close {opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s;}',
       '.close:hover {background:#aa1818;}',
       '.close:focus-visible {outline:2px solid white;outline-offset:1px;}',
@@ -145,8 +144,8 @@
     handle.className = 'handle';
     handle.type = 'button';
     handle.textContent = '';
-    handle.dataset.tip = '點擊編輯標題 · 拖曳移動 · 移入選擇簡化等級';
-    handle.setAttribute('aria-label', '拖曳調整乾淨模式工具位置；滑鼠移入展開等級');
+    handle.dataset.tip = '滑鼠移入：關閉乾淨模式或切換等級 · 拖曳移動';
+    handle.setAttribute('aria-label', '拖曳乾淨模式標籤；移入顯示關閉與模式選單');
     const rail = document.createElement('div');
     rail.className = 'rail';
     rail.setAttribute('role', 'group');
@@ -214,29 +213,14 @@
         status(error?.message || '無法還原視窗');
       } finally { close.disabled = false; }
     });
-    // Keep the restore control inside the hover rail: no clipped/out-of-bounds hit area,
-    // and no overlap with the draggable title-edit handle.
-    rail.prepend(close);
-    edge.append(handle, rail);
+    // Restore is on the edge tab itself, not in the mode rail.
+    // The bottom portion of the handle remains available for dragging.
+    edge.append(handle, rail, close);
     root.append(style, edge);
 
-    handle.addEventListener('click', async event => {
-      event.stopPropagation();
-      if (ignoreHandleClick) { ignoreHandleClick = false; return; }
-      if (!event.isTrusted) return;
-      status('');
-      try {
-        const result = await chrome.runtime.sendMessage({ type: 'clean-window:edge-title' });
-        if (!result?.ok) throw new Error(result?.error || '無法開啟標題編輯器。');
-      } catch (error) {
-        status(error?.message || '無法開啟標題編輯器。');
-      }
-    });
-    handle.title = '點擊編輯標題 · 拖曳調整位置';
-    handle.setAttribute('aria-label', '點擊編輯乾淨模式標題，拖曳調整位置');
+    handle.title = '拖曳調整位置；滑鼠移入顯示關閉 X 與模式選擇';
     handle.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
-      ignoreHandleClick = false;
       drag = {
         pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
         offsetY: event.clientY - host.getBoundingClientRect().top, moved: false

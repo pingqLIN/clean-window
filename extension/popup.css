@@ -423,19 +423,49 @@ html, body { overflow-x: hidden; }
 .managed-row { display: flex; align-items: center; gap: 4px; height: 40px; }
 
 .managed-row .managed-name {
-  flex: 1;
+  flex: 1 1 0;
   height: 32px;
   min-width: 0;
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  gap: 5px;
+  padding: 0 4px;
+  color: var(--ink);
+  text-align: left;
   border-radius: var(--r-md);
 }
 .managed-row .managed-name:hover { background: var(--surface-2); }
+.managed-name .ident { flex: none; }
+.managed-name-viewport { flex: 1; min-width: 0; overflow: hidden; }
+.managed-name-track { display: inline-flex; align-items: center; width: max-content; white-space: nowrap; }
+.managed-name-text { display: inline-block; flex: none; font-size: 11px; font-weight: 500; }
+.managed-name-repeat { margin-left: 20px; }
+.managed-name-viewport:not([data-overflow="true"]) .managed-name-repeat { display: none; }
+@keyframes cw-title-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-1 * var(--marquee-distance))); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .managed-name:hover .managed-name-viewport[data-overflow="true"] .managed-name-track,
+  .managed-name:focus-visible .managed-name-viewport[data-overflow="true"] .managed-name-track {
+    animation: cw-title-marquee var(--marquee-duration, 8s) linear infinite;
+  }
+}
+.managed-row .managed-edit {
+  width: 28px;
+  height: 32px;
+  flex: none;
+  border-radius: var(--r-md);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.managed-row .managed-edit:hover { background: var(--surface-2); color: var(--ink); }
 
 .managed-row .managed-restore {
   width: 32px;
   height: 32px;
+  flex: none;
   border-radius: var(--r-md);
   display: grid;
   place-items: center;
@@ -445,6 +475,7 @@ html, body { overflow-x: hidden; }
 
 .level-seg {
   display: flex;
+  flex: none;
   border-radius: 999px;
   background: var(--surface-2);
   padding: 0 2px;

@@ -35,6 +35,7 @@ const levels = {
   }
 };
 
+const EDIT_SVG = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.25 11.75l-.5 2 2-.5L12.9 5.1l-1.5-1.5z"/><path d="M10.55 4.45l1.5 1.5M2.75 13.75h10.5"/></svg>';
 const RESTORE_SVG = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5V10"/><path d="M9 2h5v5M14 2L7.5 8.5"/></svg>';
 const EMPTY_SVG = '<svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2" stroke-linecap="round" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="2"/></svg>';
 const icon = html => {
@@ -184,6 +185,42 @@ async function loadManaged() {
       name.title = item.title;
       name.setAttribute('aria-label', item.title);
       name.append(identityOf(item.title));
+      // The journal label is updated after editing; controller.listManaged() also
+      // falls back to the native tab title for windows without a custom label.
+      const viewport = document.createElement('span');
+      viewport.className = 'managed-name-viewport';
+      const track = document.createElement('span');
+      track.className = 'managed-name-track';
+      const title = document.createElement('span');
+      title.className = 'managed-name-text';
+      title.textContent = item.title;
+      const repeat = document.createElement('span');
+      repeat.className = 'managed-name-text managed-name-repeat';
+      repeat.textContent = item.title;
+      repeat.setAttribute('aria-hidden', 'true');
+      track.append(title, repeat);
+      viewport.append(track);
+      name.append(viewport);
+      // Measure text overflow once laid out; animate only clipped titles on
+      // hover, looping through a duplicate so the reset has no empty frame.
+      requestAnimationFrame(() => {
+        if (!viewport.isConnected) return;
+        const width = title.getBoundingClientRect().width;
+        const overflow = width > viewport.clientWidth + 1;
+        viewport.dataset.overflow = String(overflow);
+        viewport.style.setProperty('--marquee-distance', (width + 20) + 'px');
+        viewport.style.setProperty('--marquee-duration', Math.max(6, (width + 20) / 28).toFixed(2) + 's');
+      });
+      const edit = managedButton(async () => {
+        // Bring the intended managed window forward before opening its editor.
+        await requestHub('focus', { target: targetOf });
+        await requestHub('edit-title', { target: targetOf });
+        window.close();
+      });
+      edit.className = 'managed-edit';
+      edit.title = '編輯乾淨模式標題';
+      edit.setAttribute('aria-label', '編輯 ' + item.title + ' 的標題');
+      edit.append(icon(EDIT_SVG));
       const restore = managedButton(async () => {
         await requestHub('restore', { target: targetOf });
         await loadManaged();
@@ -192,7 +229,7 @@ async function loadManaged() {
       restore.title = '還原至普通視窗';
       restore.setAttribute('aria-label', '還原 ' + item.title);
       restore.append(icon(RESTORE_SVG));
-      line.append(name, levelSegOf(item), restore);
+      line.append(name, levelSegOf(item), edit, restore);
       managedList.append(line);
     }
   } catch (error) { show(error.message); }
@@ -260,7 +297,7 @@ async function init() {
       : validLevel(preference.cleanLevel) ? preference.cleanLevel : 1;
     const edgeHandle = document.querySelector?.('#edge-tab .et-handle');
     if (edgeHandle) {
-      edgeHandle.setAttribute('aria-label', managedPopup ? '編輯乾淨模式標題' : '預覽乾淨視窗側邊標籤');
+      edgeHandle.setAttribute('aria-label', '預覽乾淨視窗側邊標籤');
       edgeHandle.dataset.tip = '啟動後可透過側邊標籤切換模式或關閉乾淨視窗。';
     }
     levelInput.value = String(storedLevel);
@@ -398,21 +435,7 @@ if (stage) {
   }
   syncPreview();
 
-  // Popup edge bars are decorative; only its handle can edit the title.
-  if (edgeTab) {
-    edgeTab.querySelector?.('.et-handle')?.addEventListener('click', async () => {
-      if (!target) return;
-      if (!managedPopup) {
-        show('請先開啟乾淨模式，再編輯視窗標題。', 'info');
-        return;
-      }
-      try {
-        const result = await chrome.runtime.sendMessage({ type: 'clean-window:run', action: 'edit-title', target });
-        if (!result?.ok) throw new Error(result?.error || '無法開啟標題編輯器。');
-        window.close();
-      } catch (error) { show(error.message); }
-    });
-  }
+  // Popup side tab remains a preview; title editing lives in each managed-list row.
 
   // Pips: hovering previews temporarily, clicking selects until the black button applies.
   const pipsBox = stage.querySelector?.('.level-pips');

@@ -124,7 +124,7 @@
       </div>
     </section>
 
-    <!-- Managed windows: glyph + one pip per window, no words. -->
+    <!-- Managed windows: show each actual title, then its edit, level and restore actions. -->
     <details id="managed-windows">
       <summary title="已啟用乾淨視窗" aria-label="已啟用乾淨視窗">
         <span class="summary-glyph" aria-hidden="true">
@@ -147,9 +147,9 @@
 
     <p id="feedback" role="status" aria-live="polite" hidden></p>
   </main>
-  <!-- Edge tab: lives on the popup's own right edge. Click = rename window; hover = mode rail. -->
+  <!-- Decorative edge-tab preview; the real page tab supports hover-to-restore and level switching. -->
   <div class="edge-tab" id="edge-tab">
-    <button type="button" class="et-handle" aria-label="Rename window" data-tip="啟動後可透過側邊標籤切換模式或關閉乾淨視窗。"></button>
+    <button type="button" class="et-handle" aria-label="預覽乾淨視窗側邊標籤" data-tip="啟動後可透過側邊標籤切換模式或關閉乾淨視窗。"></button>
     <div class="et-rail" aria-hidden="true"><span class="et-stop" data-level="1"><span class="et-tick"></span></span><span class="et-stop" data-level="2"><span class="et-tick"></span></span><span class="et-stop" data-level="3"><span class="et-tick"></span></span></div>
   </div>
 

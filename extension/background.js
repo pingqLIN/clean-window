@@ -30,7 +30,7 @@ async function hub(message,sender) {
   const operation = message.action;
   if (operation === 'list') return {ok:true,items:await controller.listManaged()};
   if (operation === 'focus') return {ok:true,...await controller.focusManaged(message.target?.tabId,message.target?.windowId)};
-  if (operation === 'restore' || operation === 'set-level') {
+  if (operation === 'restore' || operation === 'set-level' || operation === 'edit-title') {
     return perform(operation,message.target,operation === 'set-level' ? {level:message.level} : {});
   }
   if (operation === 'bookmarks-status') {
@@ -93,7 +93,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     task.then(respond, error => respond({ok: false, error: String(error)}));
     return true;
   }
-  if (['clean-window:edge-level','clean-window:edge-title','clean-window:edge-restore'].includes(message?.type)) {
+  if (['clean-window:edge-level','clean-window:edge-restore'].includes(message?.type)) {
     if (!Number.isInteger(sender.tab?.id) || !Number.isInteger(sender.tab?.windowId) ||
         sender.frameId !== 0) return false;
     const target = {tabId:sender.tab.id,windowId:sender.tab.windowId};
@@ -103,8 +103,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         if (!matches.some(item => item.tabId === target.tabId && item.windowId === target.windowId))
           throw new Error('這個分頁不是受管理的乾淨視窗。');
       }
-      const action = message.type === 'clean-window:edge-title' ? 'edit-title'
-        : message.type === 'clean-window:edge-restore' ? 'restore' : 'set-level';
+      const action = message.type === 'clean-window:edge-restore' ? 'restore' : 'set-level';
       return perform(action,target,action === 'set-level' ? {level:message.level} : {});
     };
     run().then(respond,error=>respond({ok:false,error:error?.message||String(error)}));
@@ -114,6 +113,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     const popup = sender.url === chrome.runtime.getURL('popup.html');
     const run = async () => {
       if (!popup) {
+        if (message.action === 'edit-title') throw new Error('標題編輯只能從擴充 Popup 管理清單開啟。');
         if (!Number.isInteger(sender.tab?.id) || sender.frameId !== 0 ||
             !webURL(sender.url)) throw new Error('非授權的乾淨模式頁面。');
         const matches=await controller.listManaged();

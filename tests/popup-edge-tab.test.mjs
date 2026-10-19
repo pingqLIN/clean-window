@@ -130,12 +130,12 @@ test('re-entering a black button zone selects under-pointer mode without applyin
   assert.equal(p.closed, 0);
 });
 
-test('edge title control refuses to rename normal window', async () => {
+test('popup demonstration tab never launches title editing', async () => {
   const p = fixture();
   await flush();
   await p.handle.click();
   assert.equal(p.messages.length, 0);
-  assert.match(p.nodes.get('#feedback').textContent, /請先開啟乾淨模式/);
+  assert.equal(p.nodes.get('#feedback').textContent, '');
 });
 
 test('managed popup dots only preview; the original black button switches level', async () => {
@@ -157,12 +157,15 @@ test('managed popup dots only preview; the original black button switches level'
   assert.equal(p.closed, 1);
 });
 
-test('managed edge title action carries explicit window and tab IDs', async () => {
+test('managed-list EDIT uses an explicit target and clipped titles scroll only on hover', async () => {
   const p = fixture({ popup: true });
   await flush();
   await p.handle.click();
-  assert.equal(p.messages[0].type, 'clean-window:run');
-  assert.equal(p.messages[0].action, 'edit-title');
-  assert.deepEqual({ ...p.messages[0].target }, { tabId: 11, windowId: 1 });
-  assert.equal(p.closed, 1);
+  assert.equal(p.messages.length, 0, 'the decorative tab cannot edit titles');
+  assert.match(script, /requestHub\('edit-title', \{ target: targetOf \}\)/);
+  assert.match(script, /title\.textContent = item\.title/);
+  assert.match(script, /viewport\.dataset\.overflow = String\(overflow\)/);
+  const css = await readFile(new URL('../extension/popup.css', import.meta.url), 'utf8');
+  assert.match(css, /@keyframes cw-title-marquee/);
+  assert.match(css, /\.managed-name:hover \.managed-name-viewport\[data-overflow="true"\]/);
 });

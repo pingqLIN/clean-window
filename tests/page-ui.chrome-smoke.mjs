@@ -12,6 +12,9 @@ const chrome = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome Dev
 const source = (await readFile(new URL('../extension/page-ui.js', import.meta.url),'utf8'))
  .replace("attachShadow({mode:'closed'})","attachShadow({mode:'open'})");
 const titleSource = await readFile(new URL('../extension/title-ui.js', import.meta.url),'utf8');
+const popupSource = await readFile(new URL('../extension/popup.js', import.meta.url),'utf8');
+const popupHTML = await readFile(new URL('../extension/popup.html', import.meta.url),'utf8');
+const popupCSS = await readFile(new URL('../extension/popup.css', import.meta.url),'utf8');
 const edgeSource = await readFile(new URL('../extension/edge-ui.js', import.meta.url),'utf8');
 const server=createServer((req,res)=>{
   res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
@@ -128,11 +131,11 @@ try{
  const edgeCommand=level=>run('new Promise(resolve=>globalThis.__cwEdgeListener({type:"clean-window:edge-ui",level:'+JSON.stringify(level)+'}, {},resolve))');
  const rail=await edgeCommand(1);
  assert.equal(rail.ok,true);
- assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".rail .close").length'),1);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".edge .close").length'),1);
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close")).visibility'),'hidden');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".stop").length'),3);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").textContent'),'');
- assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").dataset.tip.includes("點擊編輯標題")'),true);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").dataset.tip.includes("關閉乾淨模式")'),true);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").dataset.tipPlacement'),'above');
  assert.notEqual(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle"),"::after").bottom'),'auto');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'1');
@@ -167,14 +170,14 @@ try{
  assert.equal(await run('(() => {const r=document.querySelector("#clean-window-edge-control").getBoundingClientRect();return Math.abs(r.left)<1;})()'),true,'drag snaps to the left viewport edge');
  assert.equal(await run('globalThis.__edgeSaved.edgeControl.side'),'left');
  console.log('PASS: dragging moves and persists the rail at the opposite screen edge');
- assert.equal(await run('globalThis.__edgeTitleRequests||0'),0,'drag must not open title editor');
+ assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0,'drag must not restore the window');
  const movedGrip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:movedGrip.x,y:movedGrip.y});
  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
  await sleep(30);
- assert.equal(await run('globalThis.__edgeTitleRequests'),1);
- console.log('PASS: one-click edge handle opens title editor and drag does not');
+ assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0,'the tab handle cannot restore or edit on click');
+ console.log('PASS: edge handle drag remains functional; tapping it does not edit title');
  // The red X is contained in the hover rail and must reject synthetic clicks.
  await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close").click();true');
  assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0);
@@ -184,7 +187,7 @@ try{
  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:closePoint.x,y:closePoint.y,button:'left',clickCount:1});
  await sleep(40);
  assert.equal(await run('globalThis.__edgeRestoreRequests'),1);
- console.log('PASS: edge rail red X requests restore only on a trusted pointer click');
+ console.log('PASS: edge-tab red X requests restore only on a trusted pointer click');
  await edgeCommand('off');
  assert.equal(await run('!document.querySelector("#clean-window-edge-control")'),true);
 
@@ -198,6 +201,10 @@ try{
 
  const opened=await titleCommand('edit');
  assert.equal(opened.ok,true);
+ const editorVisual=await run('(() => {const r=document.querySelector("#clean-window-title-editor").shadowRoot;return {corner:getComputedStyle(r.querySelector(".panel")).borderTopLeftRadius,applyCorner:getComputedStyle(r.querySelector("button.primary")).borderTopLeftRadius}})()');
+ assert.equal(editorVisual.corner,'16px');
+ assert.equal(editorVisual.applyCorner,'999px');
+ console.log('PASS: title editor follows the popup rounded-panel and pill-action styling');
  const custom=await run(`(() => {
    const root=document.querySelector('#clean-window-title-editor').shadowRoot;
    const symbol=root.querySelector('#cw-title-symbol');
@@ -274,6 +281,56 @@ try{
  assert.equal(await run('document.title'),'SPA Updated');
  console.log('PASS: restore original title and remove editor override');
  console.log('SMOKE PASS: 16/16 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
+
+ // Render the real popup HTML/CSS with an isolated extension API stub, then
+ // verify that managed names, clipping, hover marquee and EDIT are usable.
+ const popupBody=popupHTML.split('<body>')[1]?.split('</body>')[0];
+ assert.ok(popupBody,'popup body fixture missing');
+ await run('document.body.innerHTML='+JSON.stringify(popupBody)+';document.head.insertAdjacentHTML("beforeend",'+JSON.stringify('<style>'+popupCSS+'</style>')+');document.querySelector("#managed-windows").open=true;window.close=()=>{globalThis.__cwPopupClosed=true;};true');
+ const popupStub = [
+   'globalThis.__cwPopupMsgs=[];',
+   'globalThis.chrome={',
+   ' tabs:{async query(){return [{id:11,windowId:71}]}},',
+   ' windows:{async get(){return {id:71,type:"normal",state:"normal"}}},',
+   ' commands:{async getAll(){return []}},',
+   ' storage:{session:{async get(){return {}}},local:{async get(){return {cleanLevel:1}},async set(){}}},',
+   ' runtime:{async sendMessage(message){globalThis.__cwPopupMsgs.push(message);',
+   ' if(message.action==="list")return {ok:true,items:[',
+   ' {tabId:91,windowId:81,level:1,title:"🖋️ 已編輯的很長很長視窗標題，這是一段應該啟動連續跑馬燈顯示完整字串的測試內容"},',
+   ' {tabId:92,windowId:82,level:3,title:"短標題"}',
+   ' ]}; return {ok:true};}}};'
+ ].join('');
+ await run(popupStub+popupSource);
+ await sleep(95);
+ const popupRows=await run('(() => [...document.querySelectorAll("#managed-list .managed-row")].map(row=>({title:row.querySelector(".managed-name-text")?.textContent,overflow:row.querySelector(".managed-name-viewport")?.dataset.overflow,edit:!!row.querySelector(".managed-edit"),visibleWidth:row.querySelector(".managed-name-viewport")?.clientWidth})))()');
+ assert.equal(popupRows.length,2);
+ assert.equal(popupRows[0].title.startsWith('🖋️ 已編輯'),true);
+ assert.equal(popupRows[0].overflow,'true');
+ assert.equal(popupRows[1].overflow,'false');
+ assert.equal(popupRows[0].visibleWidth>25,true);
+ assert.equal(popupRows[0].edit,true);
+ console.log('PASS: popup list renders managed titles and individual edit icons, clips only long names');
+ const moving=await run('(() => {const r=document.querySelector("#managed-list .managed-name-viewport").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:moving.x,y:moving.y});
+ await sleep(40);
+ let marqueeStarted=false;
+ for(let attempt=0;attempt<10;attempt++){
+   const animation=await run('getComputedStyle(document.querySelector("#managed-list .managed-name-track")).animationName');
+   if(animation==='cw-title-marquee'){marqueeStarted=true;break;}
+   await sleep(25);
+ }
+ assert.equal(marqueeStarted,true,'long title must scroll on hover');
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+ assert.equal(await run('getComputedStyle(document.querySelector("#managed-list .managed-name-track")).animationName'),'none');
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+ console.log('PASS: clipped title loops on hover and stops for reduced-motion preference');
+ await run('document.querySelector("#managed-list .managed-edit").click();true');
+ await sleep(20);
+ assert.equal(await run('globalThis.__cwPopupMsgs.some(m=>m.action==="edit-title"&&m.target.tabId===91&&m.target.windowId===81)'),true);
+ const sequence=await run('globalThis.__cwPopupMsgs.filter(m=>m.action==="focus"||m.action==="edit-title").map(m=>m.action)');
+ assert.deepEqual(sequence,['focus','edit-title']);
+ console.log('PASS: popup EDIT focuses the selected window then opens its title editor');
+ console.log('SMOKE PASS: popup managed-list title, marquee and edit actions; real MV3 reload remains unverified');
 
 } finally {
  try{ws?.close();}catch{}

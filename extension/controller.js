@@ -372,7 +372,7 @@ export function createController(api) {
               !!tab.incognito !== !!record.incognito && tab.incognito !== undefined ||
               !!win.incognito !== !!record.incognito) return null;
           return {tabId,windowId:win.id,level:validLevel(record.cleanLevel) ? record.cleanLevel : 1,
-            title:(record.label || '乾淨視窗').slice(0,160)};
+            title:(record.label?.trim() || tab.title?.trim() || '乾淨視窗').slice(0,160)};
         } catch { return null; }
       }));
     return rows.filter(Boolean).sort((a,b) => a.windowId-b.windowId);

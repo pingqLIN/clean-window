@@ -140,32 +140,47 @@ test('edge-level message ignores other extensions, missing sender tab and subfra
 });
 
 
-test('single-tap edge title action opens editor for its own popup without moving tabs',async()=>{
- const f=await setup();f.api.failInjectInPopup=true;
+test('page-edge title command is retired',async()=>{
+ const f=await setup();
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,tab:{id:11,windowId:1}};
+ assert.equal(f.listener({type:'clean-window:edge-title'},sender,()=>{}),false);
+});
+test('managed-list EDIT opens the editor only for the explicitly targeted window',async()=>{
+ const f=await setup(); f.api.failInjectInPopup=true;
  const opened=await new Promise(resolve=>f.listener(
-  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
-  f.sender,resolve));
+   {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+   f.sender,resolve));
  assert.equal(opened.ok,true);
- const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
-   tab:{id:11,windowId:opened.windowId}};
+ const target={tabId:11,windowId:opened.windowId};
  const result=await new Promise(resolve=>f.listener(
-   {type:'clean-window:edge-title'},sender,resolve));
+   {type:'clean-window:hub',action:'edit-title',target},f.sender,resolve));
  assert.equal(result.ok,true);
  assert.equal(result.mode,'title-editor');
  assert.equal(f.titleModes.get(11),'editing');
  assert.equal(f.tabs.get(21).windowId,2);
+ const wrong=await new Promise(resolve=>f.listener(
+   {type:'clean-window:hub',action:'edit-title',target:{tabId:21,windowId:2}},
+   f.sender,resolve));
+ assert.equal(wrong.ok,false);
+ const web={id:f.sender.id,url:'https://example.test/',frameId:0,tab:{id:11,windowId:opened.windowId}};
+ const denied=await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'edit-title',target},web,resolve));
+ assert.equal(denied.ok,false);
 });
-test('edge title command rejects untrusted frames and unrelated popup windows',async()=>{
+test('managed title prioritizes the edited label, then falls back to the native tab title',async()=>{
  const f=await setup();
- const good={id:f.sender.id,url:'https://example.test/',frameId:0,
-   tab:{id:11,windowId:1}};
- for(const bad of [{...good,id:'other-extension'}, {...good,frameId:1}, {...good,tab:undefined}]) {
-   assert.equal(f.listener({type:'clean-window:edge-title'},bad,()=>{}),false);
- }
- const result=await new Promise(resolve=>f.listener(
-  {type:'clean-window:edge-title'},good,resolve));
- assert.equal(result.ok,false);
- assert.match(result.error,/先進入/);
+ const opened=await new Promise(resolve=>f.listener(
+   {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+   f.sender,resolve));
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
+   tab:{id:11,windowId:opened.windowId}};
+ const renamed=await new Promise(resolve=>f.listener(
+   {type:'clean-window:title-updated',title:'🖋️ 已編輯的視窗名稱'},sender,resolve));
+ assert.equal(renamed.ok,true);
+ const list=()=>new Promise(resolve=>f.listener({type:'clean-window:hub',action:'list'},f.sender,resolve));
+ assert.equal((await list()).items[0].title,'🖋️ 已編輯的視窗名稱');
+ f.db['clean:11'].label='';
+ f.tabs.get(11).title='原生分頁標題';
+ assert.equal((await list()).items[0].title,'原生分頁標題');
 });
 
 test('popup can list, focus, switch and restore only verified clean windows',async()=>{
