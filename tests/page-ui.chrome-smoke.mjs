@@ -129,6 +129,7 @@ try{
  // three-stop rail, hover-only explanations, instant switching, and edge drag.
  await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}if(message.type==="clean-window:edge-restore"){globalThis.__edgeRestoreRequests=(globalThis.__edgeRestoreRequests||0)+1;return{ok:true};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
  const edgeCommand=level=>run('new Promise(resolve=>globalThis.__cwEdgeListener({type:"clean-window:edge-ui",level:'+JSON.stringify(level)+'}, {},resolve))');
+ const edgeCloseAlignment=()=>run('(() => {const root=document.querySelector("#clean-window-edge-control").shadowRoot;const a=root.querySelector(".handle").getBoundingClientRect();const b=root.querySelector(".close").getBoundingClientRect();return {dx:Math.abs(a.left+a.width/2-b.left-b.width/2),dy:Math.abs(a.top+a.height/2-b.top-b.height/2)};})()');
  const rail=await edgeCommand(1);
  assert.equal(rail.ok,true);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".edge .close").length'),1);
@@ -144,7 +145,7 @@ try{
  await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").click();true');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'3','untrusted synthetic click must not invoke extension actions');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'3');
- const grip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ const grip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+5};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:grip.x,y:grip.y});
  const stop=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:stop.x,y:stop.y});
@@ -158,7 +159,9 @@ try{
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle"),"::after").visibility'),'visible');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".hint")).visibility'),'hidden');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close")).visibility'),'visible');
- console.log('PASS: hover reveals vertical rail, labels stay hidden on the handle');
+ const rightClose=await edgeCloseAlignment();
+ assert.ok(rightClose.dx <= 1 && rightClose.dy <= 1,'right-side X must be centered over the grey handle');
+ console.log('PASS: hover reveals vertical rail with an X centered on the right tab');
  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).transitionDuration'),'0s');
  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
@@ -169,16 +172,18 @@ try{
  assert.equal(await run('document.querySelector("#clean-window-edge-control").dataset.side'),'left');
  assert.equal(await run('(() => {const r=document.querySelector("#clean-window-edge-control").getBoundingClientRect();return Math.abs(r.left)<1;})()'),true,'drag snaps to the left viewport edge');
  assert.equal(await run('globalThis.__edgeSaved.edgeControl.side'),'left');
- console.log('PASS: dragging moves and persists the rail at the opposite screen edge');
+ const leftClose=await edgeCloseAlignment();
+ assert.ok(leftClose.dx <= 1 && leftClose.dy <= 1,'left-side X must be centered over the grey handle');
+ console.log('PASS: dragging persists opposite edge placement; X stays centered on either side');
  assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0,'drag must not restore the window');
- const movedGrip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ const movedGrip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+5};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:movedGrip.x,y:movedGrip.y});
  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
  await sleep(30);
  assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0,'the tab handle cannot restore or edit on click');
  console.log('PASS: edge handle drag remains functional; tapping it does not edit title');
- // The red X is contained in the hover rail and must reject synthetic clicks.
+ // The red X overlays the handle center and must reject synthetic clicks.
  await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close").click();true');
  assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0);
  const closePoint=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
