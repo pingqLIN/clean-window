@@ -201,6 +201,33 @@ test('only managed level-one popup top-frame content scripts may use hub actions
  await new Promise(resolve=>f.listener({type:'clean-window:edge-level',level:2},sender,resolve));
  assert.equal((await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'list'},sender,resolve))).ok,false);
 });
+test('real edge X restores its own managed popup, preserving the original tab',async()=>{
+ const f=await setup();f.preferences.cleanLevel=2;
+ const opened=await new Promise(resolve=>f.listener(
+   {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+   f.sender,resolve));
+ assert.equal(opened.ok,true);
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
+   tab:{id:11,windowId:opened.windowId}};
+ const response=await new Promise(resolve=>f.listener(
+   {type:'clean-window:edge-restore'},sender,resolve));
+ assert.equal(response.ok,true);
+ assert.equal(f.tabs.get(11).windowId,1);
+ assert.equal(f.tabs.get(21).windowId,2);
+ assert.equal(f.db['clean:11'],undefined);
+});
+test('edge X denies unrelated windows, foreign extensions, missing tab and subframes',async()=>{
+ const f=await setup();
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,tab:{id:11,windowId:1}};
+ let count=0;
+ for(const bad of [{...sender,id:'different-extension'},{...sender,frameId:1},{...sender,tab:undefined}])
+   assert.equal(f.listener({type:'clean-window:edge-restore'},bad,()=>count++),false);
+ assert.equal(count,0);
+ const result=await new Promise(resolve=>f.listener({type:'clean-window:edge-restore'},sender,resolve));
+ assert.equal(result.ok,false);
+ assert.equal(f.tabs.get(11).windowId,1);
+});
+
 test('bookmarks remain optional and current URL is sourced from authenticated sender',async()=>{
  const f=await setup();f.preferences.cleanLevel=1;
  const opened=await new Promise(resolve=>f.listener(

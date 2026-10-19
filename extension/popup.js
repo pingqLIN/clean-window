@@ -260,10 +260,8 @@ async function init() {
       : validLevel(preference.cleanLevel) ? preference.cleanLevel : 1;
     const edgeHandle = document.querySelector?.('#edge-tab .et-handle');
     if (edgeHandle) {
-      edgeHandle.setAttribute('aria-label', managedPopup ? '編輯乾淨模式標題' : '開啟乾淨模式後可編輯標題');
-      edgeHandle.dataset.tip = managedPopup
-        ? '點選：編輯標題\n短線僅顯示模式'
-        : '先啟用乾淨模式，才能編輯標題\n短線僅供預覽';
+      edgeHandle.setAttribute('aria-label', managedPopup ? '編輯乾淨模式標題' : '預覽乾淨視窗側邊標籤');
+      edgeHandle.dataset.tip = '啟動後可透過側邊標籤切換模式或關閉乾淨視窗。';
     }
     levelInput.value = String(storedLevel);
     levelInput.disabled = false;
@@ -336,7 +334,14 @@ const stage = document.querySelector?.('#morph-stage');
 if (stage) {
   const selected = () => stage.dataset.selectedLevel || '1';
   stage.querySelectorAll?.('.morph-zone').forEach(zone => {
-    const preview = () => { if (zone.dataset.level) stage.dataset.previewLevel = zone.dataset.level; };
+    const preview = () => {
+      const level = Number(zone.dataset.level);
+      if (!validLevel(level) || levelInput.disabled || !target) return;
+      // Re-entering the black button selects the zone under the pointer.
+      // Mode changes still require the existing zone click handler.
+      levelInput.value = String(level);
+      describeLevel();
+    };
     zone.addEventListener('mouseenter', preview);
     zone.addEventListener('focus', preview);
     zone.addEventListener('blur', () => { stage.dataset.previewLevel = selected(); });

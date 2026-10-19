@@ -77,12 +77,10 @@
       ':host { color-scheme:light dark; font:12px system-ui,-apple-system,"Segoe UI",sans-serif; color:#393b3e; }',
       '*,*::before,*::after { box-sizing:border-box; }',
       '.edge { display:flex;align-items:center;gap:2px;width:24px;height:42px; }',
-      '.close {position:absolute;left:0;bottom:100%;width:24px;height:24px;z-index:3;border:0;border-radius:4px;',
-      ' display:grid;place-items:center;padding:0;background:#c73030;color:white;font:700 15px/1 system-ui;',
+      '.close {position:relative;flex:none;width:30px;height:28px;border:0;border-radius:7px;',
+      ' display:grid;place-items:center;padding:0;background:#c73030;color:white;font:700 19px/1 system-ui;',
       ' opacity:0;visibility:hidden;pointer-events:none;cursor:pointer;',
       ' transition:opacity .17s ease,visibility 0s linear .17s,background-color .17s ease;}',
-      ':host([data-side="right"]) .close {left:auto;right:0;}',
-      ':host([data-tip-placement="below"]) .close {top:100%;bottom:auto;}',
       ':host(:hover) .close,:host(:focus-within) .close {opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s;}',
       '.close:hover {background:#aa1818;}',
       '.close:focus-visible {outline:2px solid white;outline-offset:1px;}',
@@ -216,7 +214,10 @@
         status(error?.message || '無法還原視窗');
       } finally { close.disabled = false; }
     });
-    edge.append(handle, rail, close);
+    // Keep the restore control inside the hover rail: no clipped/out-of-bounds hit area,
+    // and no overlap with the draggable title-edit handle.
+    rail.prepend(close);
+    edge.append(handle, rail);
     root.append(style, edge);
 
     handle.addEventListener('click', async event => {

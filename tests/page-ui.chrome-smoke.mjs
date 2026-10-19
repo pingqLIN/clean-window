@@ -124,10 +124,12 @@ try{
 
  // The edge control has no text on the handle, but exposes an accessible
  // three-stop rail, hover-only explanations, instant switching, and edge drag.
- await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
+ await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}if(message.type==="clean-window:edge-restore"){globalThis.__edgeRestoreRequests=(globalThis.__edgeRestoreRequests||0)+1;return{ok:true};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
  const edgeCommand=level=>run('new Promise(resolve=>globalThis.__cwEdgeListener({type:"clean-window:edge-ui",level:'+JSON.stringify(level)+'}, {},resolve))');
  const rail=await edgeCommand(1);
  assert.equal(rail.ok,true);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".rail .close").length'),1);
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close")).visibility'),'hidden');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".stop").length'),3);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").textContent'),'');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").dataset.tip.includes("點擊編輯標題")'),true);
@@ -152,6 +154,7 @@ try{
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).display'),'flex');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle"),"::after").visibility'),'visible');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".hint")).visibility'),'hidden');
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close")).visibility'),'visible');
  console.log('PASS: hover reveals vertical rail, labels stay hidden on the handle');
  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).transitionDuration'),'0s');
@@ -172,6 +175,16 @@ try{
  await sleep(30);
  assert.equal(await run('globalThis.__edgeTitleRequests'),1);
  console.log('PASS: one-click edge handle opens title editor and drag does not');
+ // The red X is contained in the hover rail and must reject synthetic clicks.
+ await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close").click();true');
+ assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0);
+ const closePoint=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:closePoint.x,y:closePoint.y});
+ await send('Input.dispatchMouseEvent',{type:'mousePressed',x:closePoint.x,y:closePoint.y,button:'left',clickCount:1});
+ await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:closePoint.x,y:closePoint.y,button:'left',clickCount:1});
+ await sleep(40);
+ assert.equal(await run('globalThis.__edgeRestoreRequests'),1);
+ console.log('PASS: edge rail red X requests restore only on a trusted pointer click');
  await edgeCommand('off');
  assert.equal(await run('!document.querySelector("#clean-window-edge-control")'),true);
 
@@ -260,7 +273,7 @@ try{
  await titleCommand('off');
  assert.equal(await run('document.title'),'SPA Updated');
  console.log('PASS: restore original title and remove editor override');
- console.log('SMOKE PASS: 15/15 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
+ console.log('SMOKE PASS: 16/16 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
 
 } finally {
  try{ws?.close();}catch{}

@@ -90,6 +90,9 @@ test('popup edge tab replaces decorative hint with three accessible controls', a
   assert.match(css, /\.edge-tab:hover \.et-rail/);
   assert.match(css, /\.edge-tab:focus-within \.et-rail/);
   assert.match(css, /prefers-reduced-motion: reduce/);
+  assert.match(html, /data-tip="啟動後可透過側邊標籤切換模式或關閉乾淨視窗。"/);
+  assert.match(css, /\.et-handle\s*\{[^}]*z-index:\s*2/s);
+  assert.match(css, /\.et-rail\s*\{[^}]*z-index:\s*1/s);
 });
 
 test('bottom dots select a mode without applying; black button keeps instant apply', async () => {
@@ -109,6 +112,22 @@ test('bottom dots select a mode without applying; black button keeps instant app
   assert.equal(p.messages.at(-1).action, 'toggle-clean');
   assert.deepEqual({ ...p.messages.at(-1).target }, { tabId: 11, windowId: 1 });
   assert.equal(p.closed, 1);
+});
+
+test('re-entering a black button zone selects under-pointer mode without applying', async () => {
+  const p = fixture();
+  await flush();
+  p.pips[0].click();
+  assert.equal(p.stage.dataset.selectedLevel, '1');
+  p.zones[2].listeners.mouseenter();
+  p.sync();
+  assert.equal(p.stage.dataset.selectedLevel, '3');
+  assert.equal(p.stage.dataset.previewLevel, '3');
+  assert.equal(p.zones[2].attrs['aria-checked'], 'true');
+  assert.equal(p.pips[2].attrs['aria-checked'], 'true');
+  assert.equal(p.prefs.cleanLevel, 1);
+  assert.equal(p.messages.filter(m => m.action === 'toggle-clean').length, 0);
+  assert.equal(p.closed, 0);
 });
 
 test('edge title control refuses to rename normal window', async () => {
