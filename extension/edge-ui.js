@@ -77,6 +77,13 @@
       ':host { color-scheme:light dark; font:12px system-ui,-apple-system,"Segoe UI",sans-serif; color:#393b3e; }',
       '*,*::before,*::after { box-sizing:border-box; }',
       '.edge { display:flex;align-items:center;gap:2px;width:24px;height:42px; }',
+      '.close {position:absolute;left:4px;top:4px;width:16px;height:16px;z-index:3;border:0;border-radius:4px;',
+      ' display:grid;place-items:center;padding:0;background:#c73030;color:white;font:700 15px/1 system-ui;',
+      ' opacity:0;visibility:hidden;pointer-events:none;cursor:pointer;',
+      ' transition:opacity .17s ease,visibility 0s linear .17s,background-color .17s ease;}',
+      ':host(:hover) .close,:host(:focus-within) .close {opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s;}',
+      '.close:hover {background:#aa1818;}',
+      '.close:focus-visible {outline:2px solid white;outline-offset:1px;}',
       ':host([data-side="right"]) .edge { flex-direction:row-reverse; }',
       ':host(:hover) .edge,:host(:focus-within) .edge { width:70px; }',
       '.handle { position:relative;width:24px;height:42px;flex:none;border:1px solid #999da2;background:#b8bbbf;',
@@ -120,7 +127,7 @@
       '.feedback:not([hidden]) {animation:cw-edge-feedback .17s ease both;}',
       '@keyframes cw-edge-feedback {from {opacity:0} to {opacity:1}}',
       '@media(prefers-reduced-motion:reduce) {',
-      ' .handle,.handle::after,.stop,.rail {transition:none!important;animation:none!important;}',
+      ' .handle,.handle::after,.stop,.rail,.close {transition:none!important;animation:none!important;}',
       ' .handle:hover::after,.handle:focus-visible::after {transform:none!important;}',
       '}',
       '[hidden] { display:none!important; }',
@@ -187,7 +194,27 @@
     feedback.hidden = true;
     feedback.setAttribute('role', 'status');
     rail.append(feedback);
-    edge.append(handle, rail);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'close';
+    close.textContent = '×';
+    close.title = '離開乾淨模式並還原原本視窗';
+    close.setAttribute('aria-label', '關閉乾淨模式並還原原本視窗');
+    close.addEventListener('click', async event => {
+      if (!event.isTrusted) return;
+      event.preventDefault();
+      event.stopPropagation();
+      close.disabled = true;
+      status('');
+      try {
+        const result = await chrome.runtime.sendMessage({type:'clean-window:edge-restore'});
+        if (!result?.ok) throw new Error(result?.error || '無法還原視窗');
+        if (result.warning) status(result.warning);
+      } catch (error) {
+        status(error?.message || '無法還原視窗');
+      } finally { close.disabled = false; }
+    });
+    edge.append(handle, rail, close);
     root.append(style, edge);
 
     handle.addEventListener('click', async event => {

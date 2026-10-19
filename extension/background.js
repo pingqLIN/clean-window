@@ -93,14 +93,21 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     task.then(respond, error => respond({ok: false, error: String(error)}));
     return true;
   }
-  if (message?.type === 'clean-window:edge-level' ||
-      message?.type === 'clean-window:edge-title') {
+  if (['clean-window:edge-level','clean-window:edge-title','clean-window:edge-restore'].includes(message?.type)) {
     if (!Number.isInteger(sender.tab?.id) || !Number.isInteger(sender.tab?.windowId) ||
         sender.frameId !== 0) return false;
-    const action = message.type === 'clean-window:edge-title' ? 'edit-title' : 'set-level';
-    perform(action, {tabId:sender.tab.id,windowId:sender.tab.windowId},
-      action === 'set-level' ? {level:message.level} : {}).then(respond,
-        error => respond({ok:false,error:String(error)}));
+    const target = {tabId:sender.tab.id,windowId:sender.tab.windowId};
+    const run = async () => {
+      if (message.type === 'clean-window:edge-restore') {
+        const matches = await controller.listManaged();
+        if (!matches.some(item => item.tabId === target.tabId && item.windowId === target.windowId))
+          throw new Error('這個分頁不是受管理的乾淨視窗。');
+      }
+      const action = message.type === 'clean-window:edge-title' ? 'edit-title'
+        : message.type === 'clean-window:edge-restore' ? 'restore' : 'set-level';
+      return perform(action,target,action === 'set-level' ? {level:message.level} : {});
+    };
+    run().then(respond,error=>respond({ok:false,error:error?.message||String(error)}));
     return true;
   }
   if (message?.type === 'clean-window:hub') {

@@ -219,8 +219,8 @@ const describeLevel = () => {
   if (stage) {
     stage.dataset.selectedLevel = String(level);
     stage.dataset.previewLevel = String(level);
-    stage.querySelectorAll?.('.morph-zone').forEach(zone => {
-      zone.setAttribute('aria-checked', String(zone.dataset.level === String(level)));
+    stage.querySelectorAll?.('.pip').forEach(pip => {
+      pip.setAttribute('aria-checked', String(pip.dataset.level === String(level)));
     });
   }
   const diagramTarget = document.querySelector?.('#diagram-target');
@@ -259,8 +259,8 @@ async function init() {
     if (edgeHandle) {
       edgeHandle.setAttribute('aria-label', managedPopup ? '編輯乾淨模式標題' : '開啟乾淨模式後可編輯標題');
       edgeHandle.dataset.tip = managedPopup
-        ? '點選：編輯標題\n滑鼠移入：切換等級'
-        : '先啟用乾淨模式，才能編輯標題\n滑鼠移入：選擇等級';
+        ? '點選：編輯標題\n短線僅顯示模式'
+        : '先啟用乾淨模式，才能編輯標題\n短線僅供預覽';
     }
     levelInput.value = String(storedLevel);
     levelInput.disabled = false;
@@ -328,39 +328,35 @@ for (const button of buttons) {
 }
 void init();
 
-// Morphing window: hover/focus previews a level, click selects it.
+// Dots select a local preview; only the black button applies a mode.
 const stage = document.querySelector?.('#morph-stage');
 if (stage) {
   const selected = () => stage.dataset.selectedLevel || '1';
-  stage.querySelectorAll?.('.morph-zone').forEach(zone => {
-    const preview = () => { if (zone.dataset.level) stage.dataset.previewLevel = zone.dataset.level; };
-    zone.addEventListener('mouseenter', preview);
-    zone.addEventListener('focus', preview);
-    zone.addEventListener('blur', () => { stage.dataset.previewLevel = selected(); });
-    zone.addEventListener('click', async event => {
-      event.stopPropagation();
-      const level = Number(zone.dataset.level);
-      if (!validLevel(level) || levelInput.disabled || !target) return;
-      const previous = storedLevel;
-      levelInput.value = String(level);
-      describeLevel();
-      try {
-        await chrome.storage.local.set({ cleanLevel: level });
-        storedLevel = level;
-        show('');
-        if (isRestoring) {
-          await requestHub('set-level', { target, level });
-          window.close();
-        } else {
-          document.querySelector('.choice.primary')?.click();
-        }
-      } catch (error) {
-        levelInput.value = String(previous);
-        storedLevel = previous;
-        describeLevel();
-        show(`無法套用簡化等級：${error.message}`);
+  let applying = false;
+  stage.querySelector?.('.morph-action')?.addEventListener('click', async event => {
+    event.stopPropagation();
+    const level = Number(selected());
+    if (!validLevel(level) || levelInput.disabled || !target || applying) return;
+    applying = true;
+    const previous = storedLevel;
+    try {
+      await chrome.storage.local.set({ cleanLevel: level });
+      storedLevel = level;
+      show('');
+      let result;
+      if (managedPopup) result = await requestHub('set-level', { target, level });
+      else {
+        result = await chrome.runtime.sendMessage({ type: 'clean-window:run', action: 'toggle-clean', target });
+        if (!result?.ok) throw new Error(result?.error || '套用簡化模式失敗');
       }
-    });
+      if (result.warning) show(result.warning, 'warn');
+      else window.close();
+    } catch (error) {
+      storedLevel = previous;
+      levelInput.value = String(previous);
+      describeLevel();
+      show('無法套用簡化等級：' + (error?.message || String(error)));
+    } finally { applying = false; }
   });
   stage.addEventListener('mouseleave', () => { stage.dataset.previewLevel = selected(); });
 
@@ -377,7 +373,6 @@ if (stage) {
     edgeTab?.querySelectorAll?.('.et-stop').forEach(item => {
       const on = item.dataset.level === level;
       item.classList.toggle('selected', on);
-      item.setAttribute('aria-pressed', String(on));
     });
   };
   const syncPreview = () => {
@@ -391,14 +386,8 @@ if (stage) {
   }
   syncPreview();
 
-  // Edge tab on the popup edge: stops pick a mode (same path as the main button); handle renames the window.
+  // Popup edge bars are decorative; only its handle can edit the title.
   if (edgeTab) {
-    edgeTab.querySelectorAll?.('.et-stop').forEach(item => {
-      item.addEventListener('click', event => {
-        event.stopPropagation();
-        stage.querySelector?.(`.morph-zone[data-level="${item.dataset.level}"]`)?.click();
-      });
-    });
     edgeTab.querySelector?.('.et-handle')?.addEventListener('click', async () => {
       if (!target) return;
       if (!managedPopup) {
@@ -413,7 +402,7 @@ if (stage) {
     });
   }
 
-  // Pips: hovering the row fades the button out; clicking a pip previews that mode (no apply).
+  // Pips: hovering previews temporarily, clicking selects until the black button applies.
   const pipsBox = stage.querySelector?.('.level-pips');
   if (pipsBox) {
     const enter = level => { stage.dataset.pips = 'on'; if (level) stage.dataset.previewLevel = level; };
@@ -421,7 +410,13 @@ if (stage) {
     pipsBox.addEventListener('pointerenter', () => enter());
     pipsBox.addEventListener('pointerleave', leave);
     pipsBox.querySelectorAll?.('.pip').forEach(pip => {
-      pip.addEventListener('click', () => enter(pip.dataset.level));
+      pip.addEventListener('click', () => {
+        const level = Number(pip.dataset.level);
+        if (!validLevel(level) || levelInput.disabled || !target) return;
+        levelInput.value = String(level);
+        describeLevel();
+        enter(String(level));
+      });
       pip.addEventListener('focus', () => enter(pip.dataset.level));
       pip.addEventListener('blur', () => { if (!pipsBox.matches(':hover')) leave(); });
     });
@@ -435,7 +430,8 @@ if (stage) {
     let tgt = 0, cur = 0, raf = 0;
     const tick = () => {
       cur += (tgt - cur) * 0.18;
-      pill.style.transform = `rotateY(${(cur * 14).toFixed(2)}deg) rotateZ(${(cur * 3.2).toFixed(2)}deg)`;
+      pill.style.setProperty('--cw-hover-y', (cur * 4).toFixed(2) + 'deg');
+      pill.style.setProperty('--cw-hover-z', (cur * 0.8).toFixed(2) + 'deg');
       raf = Math.abs(tgt - cur) > 0.002 ? requestAnimationFrame(tick) : 0;
     };
     const aim = value => { tgt = value; if (!still && !raf) raf = requestAnimationFrame(tick); };
