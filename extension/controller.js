@@ -13,7 +13,7 @@ export function createController(api) {
   );
   const isId = id => Number.isInteger(id) && id >= 0;
   const validLevel = level => Number.isInteger(level) && level >= 1 && level <= 3;
-  const levelMode = level => level === 1 ? 'address-dock' : 'address';
+  const levelMode = level => level === 1 ? 'address-dock' : level === 2 ? 'address' : 'address-hidden';
   async function assertLocation(tabId, windowId) {
     const current = await api.tabs.get(tabId);
     if (current.windowId !== windowId) throw new Error('目標分頁已移至另一視窗；請重新開啟操作面板。');
@@ -236,20 +236,26 @@ export function createController(api) {
         // The session journal is authoritative for the selected level, but the
         // injected page UI can drift after navigation, reinjection, or DOM changes.
         // Always reconcile the requested UI, even when the journal already matches.
-        if (requested === 3) await clearPageUI(tab);
-        else await pageUI(tab, levelMode(requested));
+        // Level 3's address bar is optional on restricted Chrome pages; the Popup
+        // remains usable there even when content-script injection is denied.
+        let warning;
+        try { await pageUI(tab, levelMode(requested)); }
+        catch (error) {
+          if (requested !== 3) throw error;
+          warning = '已切換第 3 級；此頁面不允許注入，因此無法顯示自繪網址列。';
+        }
         try {
           await write(key, { ...record, cleanLevel: requested });
           await api.storage.local.set({ cleanLevel: requested });
         } catch (error) {
-          if (previous === 3) await clearPageUI(tab);
-          else await pageUI(tab, levelMode(previous)).catch(() => {});
+          await pageUI(tab, levelMode(previous)).catch(() => {});
           await write(key, record).catch(() => {});
           throw error;
         }
-        let warning;
         try { await edgeUI(tab, requested); }
-        catch { warning = '已切換等級；此頁面的邊緣工具無法更新，可使用快捷鍵還原。'; }
+        catch {
+          warning = [warning,'已切換等級；此頁面的邊緣工具無法更新，可使用快捷鍵還原。'].filter(Boolean).join(' ');
+        }
         return {windowId:win.id,mode:'clean',level:requested,warning};
       }
       if (action === 'edit-title') {
@@ -289,11 +295,15 @@ export function createController(api) {
         if (win.state === 'fullscreen') return await leaveFullscreen(win);
         const level = await selectedLevel();
         await clearPageUI(tab);
-        if (level !== 3) {
-          await pageUI(tab, levelMode(level));
+        let pageWarning;
+        try { await pageUI(tab, levelMode(level)); }
+        catch (error) {
+          if (level !== 3) throw error;
+          pageWarning = '已開啟第 3 級；此頁面不允許注入，因此無法顯示自繪網址列。';
         }
         try {
-          // Title customization is optional in level 3 (restricted pages still open as bare popups).
+          // Title customization and the hidden URL bar are optional in level 3;
+          // restricted pages still open as a minimal Popup without page injection.
           try { await titleUI(tab, 'start'); }
           catch (error) { if (level !== 3) throw error; }
           // Install before moving the tab: activeTab permission may not allow
@@ -305,8 +315,12 @@ export function createController(api) {
             preparedEdge = true;
           } catch { /* Restricted documents still permit bare level-3 popup. */ }
           const opened = await toCleanWindow(tab, win, level);
+          if (pageWarning) opened.warning = pageWarning;
           try { await edgeUI(tab, level, { prepared: preparedEdge }); }
-          catch { opened.warning = '乾淨視窗已開啟；此頁無法顯示邊緣工具，請使用 Alt+Shift+R 還原。'; }
+          catch {
+            opened.warning = [opened.warning,'乾淨視窗已開啟；此頁無法顯示邊緣工具，請使用 Alt+Shift+R 還原。']
+              .filter(Boolean).join(' ');
+          }
           return opened;
         } catch (error) {
           await clearPageUI(tab);
@@ -354,7 +368,8 @@ export function createController(api) {
     if (win.type !== 'popup' || record?.popupWindowId !== windowId ||
         record.phase !== 'open') return false;
     const level = validLevel(record.cleanLevel) ? record.cleanLevel : 1;
-    if (level !== 3) await pageUI(tab, levelMode(level));
+    try { await pageUI(tab, levelMode(level)); }
+    catch (error) { if (level !== 3) throw error; }
     await edgeUI(tab, level);
     await titleUI(tab, 'start').catch(() => {});
     return true;

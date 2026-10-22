@@ -49,7 +49,7 @@ async function managedWebSender(sender) {
   }
   const item = (await controller.listManaged()).find(row =>
     row.tabId === sender.tab.id && row.windowId === sender.tab.windowId);
-  if (!item || ![1, 2].includes(item.level)) throw new Error('此頁不是可導覽的第一或第二級乾淨視窗。');
+  if (!item || ![1, 2, 3].includes(item.level)) throw new Error('此頁不是可導覽的乾淨視窗。');
   return item;
 }
 function siteAccessToken(sender) {

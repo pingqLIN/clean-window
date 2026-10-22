@@ -64,7 +64,7 @@
     const player = document.querySelector('ytd-watch-flexy #player-container');
     const before = videoImageBox(player);
     stopTransition();
-    page.apply(level === 3 ? 'off' : level === 2 ? 'address' : 'address-dock');
+    page.apply(level === 3 ? 'address-hidden' : level === 2 ? 'address' : 'address-dock');
     globalThis.__cleanWindowYoutubeUI?.apply(level);
     if (!animate || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
     const id = transitionId;

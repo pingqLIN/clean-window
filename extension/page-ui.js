@@ -55,31 +55,36 @@
     }
     originalPadding = null;
   }
-  function startBar(withDock = false) {
+  function startBar(withDock = false, hiddenByDefault = false) {
     if (!isWebPage()) throw new Error('自繪網址欄僅支援一般 HTTP(S) 網頁。');
-    if (bar?.isConnected && bar.dataset.cwDock === String(withDock)) return;
+    if (bar?.isConnected && bar.dataset.cwDock === String(withDock)
+        && bar.dataset.cwHidden === String(hiddenByDefault)) return;
     if (bar?.isConnected) stopBar();
     const html = document.documentElement;
     const workspace = isWorkspaceLayout();
-    // Level 1 is a collapsed overlay: do not reserve a permanent 86px gap.
-    // Level 2 remains visible and reserves space on ordinary pages; AI workspaces
-    // keep their app-owned viewport layout unchanged.
-    originalPadding = (workspace || withDock) ? null : { value: html.style.getPropertyValue('padding-top') };
-    originalPriority = (workspace || withDock) ? '' : html.style.getPropertyPriority('padding-top');
+    // Level 1's two-row dock and level 3's URL-only bar are collapsed overlays.
+    // Only level 2 reserves space for its persistently visible 48px address bar.
+    originalPadding = (workspace || withDock || hiddenByDefault) ? null : { value: html.style.getPropertyValue('padding-top') };
+    originalPriority = (workspace || withDock || hiddenByDefault) ? '' : html.style.getPropertyPriority('padding-top');
     const height = withDock ? 86 : BAR_HEIGHT;
-    if (!workspace && !withDock) {
+    if (!workspace && !withDock && !hiddenByDefault) {
       const currentPadding = getComputedStyle(html).paddingTop || '0px';
       html.style.setProperty('padding-top', `calc(${currentPadding} + ${height}px)`, 'important');
     }
     bar = document.createElement('div');
     bar.id = BAR_ID;
     bar.dataset.cwDock = withDock ? 'true' : 'false';
+    bar.dataset.cwHidden = hiddenByDefault ? 'true' : 'false';
     bar.dataset.cwHeight = String(height);
     bar.dataset.cwWorkspace = String(workspace);
-    if (withDock) {
+    if (withDock || hiddenByDefault) {
       bar.tabIndex = 0;
-      bar.setAttribute('aria-label', 'Clean Window 第一級工具列；聚焦或移至視窗上緣中央可展開');
-      bar.title = '第一級工具列預設收闔；將滑鼠移至視窗上緣中央或使用鍵盤聚焦即可展開';
+      bar.setAttribute('aria-label', withDock
+        ? 'Clean Window 第一級工具列；聚焦或移至視窗上緣中央可展開'
+        : 'Clean Window 第三級網址列；聚焦或移至視窗上緣中央可展開');
+      bar.title = withDock
+        ? '第一級雙列工具列預設收闔；將滑鼠移至視窗上緣中央或使用鍵盤聚焦即可展開'
+        : '第三級網址列預設隱藏；將滑鼠移至視窗上緣中央或使用鍵盤聚焦即可展開';
     }
     bar.style.cssText = 'all:initial!important;position:fixed!important;inset:0 0 auto 0!important;height:'+height+'px!important;z-index:2147483647!important;';
     const shadow = bar.attachShadow({mode:'closed'});
@@ -87,28 +92,35 @@
     style.textContent = `
       :host { color-scheme:light; animation:cw-bar-enter .18s cubic-bezier(.16,1,.3,1) both; }
       @keyframes cw-bar-enter {from {opacity:0;transform:translateY(-4px);} to {opacity:1;transform:none;}}
-      /* Level 1 is a two-row dock that stays out of the way until requested.
-         Level 2 is intentionally persistent, including inside AI workspaces. */
-      :host([data-cw-dock="true"]) {
+      /* Level 1 hides its two-row toolbar; level 3 hides only the URL bar.
+         Level 2 remains visible and reserves space on ordinary pages. */
+      :host([data-cw-dock="true"]),
+      :host([data-cw-hidden="true"]) {
         animation:none!important;transform:translateY(calc(-100% + 6px))!important;
         clip-path:inset(0 calc(50% - 38px))!important;
         transition:transform .2s ease,clip-path .2s ease!important;
       }
       :host([data-cw-dock="true"]:hover),
       :host([data-cw-dock="true"]:focus-within),
+      :host([data-cw-hidden="true"]:hover),
+      :host([data-cw-hidden="true"]:focus-within),
       :host([data-cw-menu-open="true"]) {
         transform:none!important;clip-path:inset(0)!important;
       }
-      :host([data-cw-dock="true"])::after {
+      :host([data-cw-dock="true"])::after,
+      :host([data-cw-hidden="true"])::after {
         content:'⌄';position:absolute;bottom:0;left:calc(50% - 38px);
         width:76px;height:6px;border-radius:0 0 6px 6px;
         background:#a9b1bc;color:transparent;pointer-events:none;
       }
       :host([data-cw-dock="true"]:hover)::after,
       :host([data-cw-dock="true"]:focus-within)::after,
+      :host([data-cw-hidden="true"]:hover)::after,
+      :host([data-cw-hidden="true"]:focus-within)::after,
       :host([data-cw-menu-open="true"])::after {opacity:0;}
       @media (prefers-reduced-motion:reduce) {
-        :host([data-cw-dock="true"]) {transition:none!important;}
+        :host([data-cw-dock="true"]),
+        :host([data-cw-hidden="true"]) {transition:none!important;}
       }
       :host([data-theme="dark"]) { color-scheme:dark; }
       *,*::before,*::after { box-sizing:border-box; }
@@ -425,6 +437,7 @@
     if (mode === 'off') {stopBar(true);return {ok:true,active:false};}
     if (mode === 'address') {startBar(false);return {ok:true,active:true};}
     if (mode === 'address-dock') {startBar(true);return {ok:true,active:true};}
+    if (mode === 'address-hidden') {startBar(false,true);return {ok:true,active:true};}
     throw new Error('不支援的頁面顯示模式。');
   }
   chrome.runtime.onMessage.addListener((message,_sender,respond)=>{

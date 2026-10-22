@@ -76,6 +76,7 @@ export function fakeChrome() {
         if (message.mode === 'off') { pageModes.set(id,'off');return {ok:true,active:false}; }
         if (message.mode === 'address') { pageModes.set(id,'address');return {ok:true,active:true}; }
         if (message.mode === 'address-dock') {pageModes.set(id,'address-dock');return {ok:true,active:true};}
+        if (message.mode === 'address-hidden') {pageModes.set(id,'address-hidden');return {ok:true,active:true};}
         if (message.mode === 'focus-toggle') {
           if (api.noMain) return {ok:false,error:'找不到主內容'};
           const active=pageModes.get(id)!=='focus';

@@ -32,7 +32,7 @@ The Runtime folder is generated output. Edit `extension/`, then rebuild; never h
 Runtime is **not** a second or reduced-feature product variant. The generated package must contain the same runtime code as `extension/`; packaging may remove development files but must not change behavior.
 
 - [ ] Level 1 lightweight toolbar, managed-window list and optional bookmarks entry are present.
-- [ ] Level 2 address-only toolbar and level 3 bare popup remain available.
+- [ ] Level 2 persistent address-only toolbar and level 3 hidden URL-only bar remain available.
 - [ ] Restore, fullscreen, title editing and documented keyboard commands remain wired.
 - [ ] Edge handle drag, level preview/commit, reduced-motion handling and Restore cleanup remain present.
 - [ ] Symbol/Emoji title editing, original-title restoration and SPA title tracking remain present.

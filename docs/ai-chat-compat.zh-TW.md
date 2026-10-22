@@ -7,7 +7,7 @@
 - **程式碼確認**：原工具列在 `document.documentElement` 加入 48px 或 86px 的 `padding-top !important`。這可能讓採用 `100vh`、固定高度或獨立捲動容器的 SPA 導覽側欄出現超出視窗範圍的內容。
 - **相容模式**：在下列精確 host 啟用「不改動 HTML 根節點」模式：`gemini.google.com`、`claude.ai`、`www.claude.ai`、`chatgpt.com`、`www.chatgpt.com`、`chat.openai.com`。
 - 第一／二級原本的自繪網址欄與第一級擴充工具列保留功能，但以頂部中央可聚焦／滑鼠展開的小型收合控制呈現；收合時不覆蓋原站左／右上角的操作。
-- 第三級純 Popup 行為不變；YouTube 專屬影片模式與一般網站工具列不變。
+- 第三級新增預設隱藏的自繪網址欄（上緣中央 Hover／鍵盤聚焦展開），不顯示擴充工具列；YouTube 專屬影片模式維持播放器填滿內容區的行為。
 - 不新增任何網站存取權限，也不隱藏、刪除或改寫 AI 網站原生元件。
 
 ## 驗證

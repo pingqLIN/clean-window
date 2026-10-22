@@ -170,8 +170,34 @@ try{
  await invoke('off');
  assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
  assert.equal(await run('document.documentElement.style.paddingTop'), '');
- console.log('PASS: bare popup mode removes content toolbar and restores padding');
- console.log('SMOKE PASS: 4/4 drawn-bar Chrome Headless DOM checks');
+ const hidden=await invoke('address-hidden');
+ assert.equal(hidden.ok,true);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHidden'),'true');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'48');
+ assert.equal(await run('document.documentElement.style.paddingTop'),'','level 3 must not reserve permanent page space');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 3 URL bar starts hidden');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','level 3 exposes only the small top-center handle');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector("input")!==null'),true);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".ribbon")===null'),true);
+ const hiddenHandle=await run('(() => {const r=document.getElementById("clean-window-address-ui").getBoundingClientRect();return{x:r.left+r.width/2,y:r.bottom-3};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:hiddenHandle.x,y:hiddenHandle.y});
+ await sleep(240);
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','hovering the handle reveals the level 3 URL bar');
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'inset(0px)');
+ assert.equal(await run('document.documentElement.style.paddingTop'),'','revealing level 3 does not push page content down');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
+ await sleep(240);
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 3 hides the URL bar again after pointer leaves');
+ await invoke('address');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHidden'),'false','level 2 clears the hidden-mode state');
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none');
+ assert.equal(await run('getComputedStyle(document.documentElement).paddingTop'),'48px');
+ await invoke('off');
+ assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
+ assert.equal(await run('document.documentElement.style.paddingTop'),'');
+ console.log('PASS: level 3 URL bar stays hidden by default, reveals on top-edge hover, and overlays without reserving space');
+ console.log('SMOKE PASS: 5/5 drawn-bar Chrome Headless DOM checks');
 
  // The edge control has no text on the handle, but exposes an accessible
  // three-stop rail, hover-only explanations, instant switching, and edge drag.
@@ -365,6 +391,8 @@ try{
  })()`);
  await run('(function(location){'+youtubeSource+'})(globalThis.__youtubeLocation);true');
  const youtubeLevel=async level=>{
+   const mode=level===3?'address-hidden':level===2?'address':'address-dock';
+   assert.equal((await invoke(mode)).ok,true,'the controller applies the selected URL mode before updating the edge rail');
    assert.equal((await edgeCommand(level)).ok,true);
    await sleep(45);
  };
@@ -383,6 +411,8 @@ try{
  })()`);
  await youtubeLevel(3);
  let yt=await youtubeLayout();
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHidden'),'true','YouTube level 3 retains its hidden URL-only bar');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','YouTube level 3 URL bar starts collapsed');
  assert.equal(yt.mode,'3');
  assert.deepEqual(yt.player,{x:0,y:0,w:yt.inner[0],h:yt.inner[1]});
  assert.equal(yt.video.w,yt.inner[0]);assert.equal(yt.video.h,yt.inner[1]);

@@ -4,11 +4,18 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 ## Current local verification — 2026-10-22
 
-- `npm test`: **PASS, 93/93** simulated Chrome API and Popup tests, including reapplying the recorded level when the page UI has drifted.
+- `npm test`: **PASS, 94/94** simulated Chrome API and Popup tests, including level-3 hidden URL navigation and reapplying the recorded level when the page UI has drifted.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
-- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (63,039 bytes).
-- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover level-1 default collapse/hover expansion/menu persistence, level-2 persistent visibility and spacing, same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
+- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (63,395 bytes).
+- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover level-1 default collapse/hover expansion/menu persistence, level-2 persistent visibility and spacing, level-3 hidden URL bar reveal/re-collapse with no layout reservation, same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
 - The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
+
+## Level 3 hidden URL bar — 2026-10-22
+
+- Level 3 now uses the same 48px self-drawn address bar as level 2, but starts translated above the viewport with only a 76×6px top-center handle exposed. Hover or keyboard focus expands the URL bar; pointer leave collapses it again.
+- Level 3 does not reserve document padding when hidden or expanded. Level 2 remains persistently visible and reserves 48px on ordinary pages; level 1 retains its separate two-row URL + extension dock behavior.
+- Controller startup, level switching, navigation recovery and the YouTube mode preview all use the explicit `address-hidden` page mode. Restricted pages still open in level 3 when injection is denied, with a warning that the drawn URL bar is unavailable.
+- Chrome Headless DOM smoke verifies hidden/revealed CSS, pointer-triggered expansion, re-collapse, absence of layout padding, transition back to persistent level 2, and YouTube level-3 behavior.
 
 ## Level 1 UI reconciliation — 2026-10-22
 
@@ -75,7 +82,7 @@ The original extension runtime files were preserved for publication. Public docu
 
 ## Automated coverage
 
-The current 92 automated tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, cleanup isolation, cross-origin permission gating, pending-navigation cleanup and temporary reapplication.
+The current 94 automated tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, cleanup isolation, cross-origin permission gating (including level 3), pending-navigation cleanup, level-3 hidden URL-bar recovery and temporary reapplication.
 
 ## Re-run the accepted checks
 

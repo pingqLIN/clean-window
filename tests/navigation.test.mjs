@@ -85,6 +85,24 @@ test('cross-origin address navigation opens a per-host prompt without granting a
   assert.equal(f.originPermissions.size, 0, 'opening the prompt must not grant a permission');
 });
 
+test('level 3 hidden URL bar can request per-host access for cross-origin navigation', async () => {
+  const f = await setup();
+  f.preferences.cleanLevel = 3;
+  const clean = await openClean(f);
+  assert.equal(f.db['clean:11'].cleanLevel, 3);
+  const target = 'https://level-three-destination.example/work';
+  const result = await send(f, {
+    type: 'clean-window:navigate', url: target
+  }, webSender(f, clean.windowId));
+  assert.equal(result.ok, true);
+  assert.equal(result.action, 'prompt');
+  assert.equal(result.host, 'level-three-destination.example');
+  const [, pending] = pendingRows(f)[0];
+  assert.equal(pending.url, target);
+  assert.equal(pending.windowId, clean.windowId);
+  assert.deepEqual(pending.originPatterns, ['https://level-three-destination.example/*']);
+});
+
 test('HTTP destinations request both schemes for the same hostname to survive common HTTPS upgrades', async () => {
   const f = await setup();
   const clean = await openClean(f);

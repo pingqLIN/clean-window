@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — 2026-10-22 (Level 3 hidden URL bar)
+
+- Added a URL-only bar to level 3. It starts hidden behind a 76×6px top-center handle and expands on hover or keyboard focus; unlike level 2, it never reserves page layout space.
+- Kept level 1's hidden two-row URL + extension dock and level 2's persistent URL-only bar as distinct behaviors.
+- Reconciled the new `address-hidden` mode on startup, level changes, navigation recovery and YouTube mode preview; restricted pages still open level 3 with a clear fallback warning if injection is denied.
+- Allowed level-3 URL submissions to use the same per-host cross-origin access prompt as levels 1 and 2.
+- Added Chrome Headless CSS/interaction coverage and a controller navigation regression for level 3.
+
 ## Unreleased — 2026-10-22 (Level 1 UI reconciliation)
 
 - Made selecting a level reapply the requested page UI even when the session journal already records that level, repairing stale or drifted toolbars instead of returning early.

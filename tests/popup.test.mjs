@@ -67,10 +67,12 @@ test('setting level 2 persists and advertises URL only',async()=>{
  assert.equal(p.messages[0].action,'toggle-clean');
  assert.equal(p.closed,1);
 });
-test('level 3 has no additional toolbar and no limitation',async()=>{
+test('level 3 advertises a URL bar that is hidden until requested',async()=>{
  const p=panel({cleanLevel:3});await flush();
  assert.equal(p.nodes.get('#clean-level').value,'3');
- assert.match(p.nodes.get('#level-title').textContent,/純精簡/);
+ assert.match(p.nodes.get('#level-title').textContent,/隱藏式網址欄/);
+ assert.match(p.nodes.get('#level-detail').textContent,/預設收闔/);
+ assert.match(p.nodes.get('#level-detail').textContent,/不顯示擴充工具列/);
  assert.equal(p.nodes.get('#level-limit').hidden,true);
 });
 test('invalid saved level falls back to level one of three',async()=>{

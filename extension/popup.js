@@ -29,8 +29,8 @@ const levels = {
     limit: '非 Chrome 原生網址列；跨頁導覽可能使欄位消失。'
   },
   3: {
-    name: '純精簡 Popup',
-    detail: '只保留可拖曳縮放的 Popup 視窗與標題列，不顯示額外工具列。',
+    name: '隱藏式網址欄',
+    detail: '只顯示自繪網址欄，預設收闔；移至視窗上緣中央或使用鍵盤聚焦即可展開，不顯示擴充工具列。',
     limit: ''
   }
 };
@@ -260,9 +260,9 @@ const describeLevel = () => {
   if (!isRestoring) {
     cleanLabel.textContent = '套用此簡化等級';
     cleanDescription.textContent = level === 1
-      ? '精簡 Popup，搭配輕量瀏覽器雙列工具列。'
-      : level === 2 ? '精簡 Popup，搭配自繪網址欄。'
-        : '將目前分頁移至純精簡 Popup。';
+      ? '精簡 Popup，搭配預設收闔的輕量雙列工具列。'
+      : level === 2 ? '精簡 Popup，搭配持續顯示的自繪網址欄。'
+        : '精簡 Popup，搭配預設隱藏的自繪網址欄。';
   }
   const stage = document.querySelector?.('#morph-stage');
   if (stage) {
