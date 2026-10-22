@@ -61,10 +61,13 @@
     if (bar?.isConnected) stopBar();
     const html = document.documentElement;
     const workspace = isWorkspaceLayout();
-    originalPadding = workspace ? null : { value: html.style.getPropertyValue('padding-top') };
-    originalPriority = workspace ? '' : html.style.getPropertyPriority('padding-top');
+    // Level 1 is a collapsed overlay: do not reserve a permanent 86px gap.
+    // Level 2 remains visible and reserves space on ordinary pages; AI workspaces
+    // keep their app-owned viewport layout unchanged.
+    originalPadding = (workspace || withDock) ? null : { value: html.style.getPropertyValue('padding-top') };
+    originalPriority = (workspace || withDock) ? '' : html.style.getPropertyPriority('padding-top');
     const height = withDock ? 86 : BAR_HEIGHT;
-    if (!workspace) {
+    if (!workspace && !withDock) {
       const currentPadding = getComputedStyle(html).paddingTop || '0px';
       html.style.setProperty('padding-top', `calc(${currentPadding} + ${height}px)`, 'important');
     }
@@ -73,10 +76,10 @@
     bar.dataset.cwDock = withDock ? 'true' : 'false';
     bar.dataset.cwHeight = String(height);
     bar.dataset.cwWorkspace = String(workspace);
-    if (workspace) {
+    if (withDock) {
       bar.tabIndex = 0;
-      bar.setAttribute('aria-label', 'Clean Window 工具列；聚焦或移至視窗上緣中央可展開');
-      bar.title = '將滑鼠移至視窗上緣中央，即可展開 Clean Window 工具列';
+      bar.setAttribute('aria-label', 'Clean Window 第一級工具列；聚焦或移至視窗上緣中央可展開');
+      bar.title = '第一級工具列預設收闔；將滑鼠移至視窗上緣中央或使用鍵盤聚焦即可展開';
     }
     bar.style.cssText = 'all:initial!important;position:fixed!important;inset:0 0 auto 0!important;height:'+height+'px!important;z-index:2147483647!important;';
     const shadow = bar.attachShadow({mode:'closed'});
@@ -84,26 +87,28 @@
     style.textContent = `
       :host { color-scheme:light; animation:cw-bar-enter .18s cubic-bezier(.16,1,.3,1) both; }
       @keyframes cw-bar-enter {from {opacity:0;transform:translateY(-4px);} to {opacity:1;transform:none;}}
-      /* Workspace-safe mode: peek from the top without mutating the app's root
-         layout. Only the small center handle can intercept native top controls. */
-      :host([data-cw-workspace="true"]) {
+      /* Level 1 is a two-row dock that stays out of the way until requested.
+         Level 2 is intentionally persistent, including inside AI workspaces. */
+      :host([data-cw-dock="true"]) {
         animation:none!important;transform:translateY(calc(-100% + 6px))!important;
         clip-path:inset(0 calc(50% - 38px))!important;
         transition:transform .2s ease,clip-path .2s ease!important;
       }
-      :host([data-cw-workspace="true"]:hover),
-      :host([data-cw-workspace="true"]:focus-within) {
+      :host([data-cw-dock="true"]:hover),
+      :host([data-cw-dock="true"]:focus-within),
+      :host([data-cw-menu-open="true"]) {
         transform:none!important;clip-path:inset(0)!important;
       }
-      :host([data-cw-workspace="true"])::after {
+      :host([data-cw-dock="true"])::after {
         content:'⌄';position:absolute;bottom:0;left:calc(50% - 38px);
         width:76px;height:6px;border-radius:0 0 6px 6px;
         background:#a9b1bc;color:transparent;pointer-events:none;
       }
-      :host([data-cw-workspace="true"]:hover)::after,
-      :host([data-cw-workspace="true"]:focus-within)::after {opacity:0;}
+      :host([data-cw-dock="true"]:hover)::after,
+      :host([data-cw-dock="true"]:focus-within)::after,
+      :host([data-cw-menu-open="true"])::after {opacity:0;}
       @media (prefers-reduced-motion:reduce) {
-        :host([data-cw-workspace="true"]) {transition:none!important;}
+        :host([data-cw-dock="true"]) {transition:none!important;}
       }
       :host([data-theme="dark"]) { color-scheme:dark; }
       *,*::before,*::after { box-sizing:border-box; }
@@ -292,8 +297,15 @@
         feedback.textContent=error?.message || String(error);
         feedback.hidden=false;
       };
-      const clearMenu=()=>{menu.replaceChildren();menu.hidden=true;};
+      const clearMenu=()=>{
+        menu.replaceChildren();menu.hidden=true;delete bar.dataset.cwMenuOpen;
+        bar.style.removeProperty('transform');bar.style.removeProperty('clip-path');
+      };
       const openMenu=title=>{
+        bar.dataset.cwMenuOpen='true';
+        // Keep the dock expanded even after the pointer leaves the toolbar for its menu.
+        bar.style.setProperty('transform','none','important');
+        bar.style.setProperty('clip-path','inset(0)','important');
         const heading=document.createElement('div');heading.className='menu-header';
         heading.textContent=title;
         const close=makeButton('×','關閉工具選單',clearMenu);

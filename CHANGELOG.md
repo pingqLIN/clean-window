@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — 2026-10-22 (Level 1 collapsed toolbar)
+
+- Made level 1's two-row drawn toolbar collapse by default to a small top-center handle; hover or keyboard focus expands it.
+- Kept level 2's 48px drawn address bar persistently visible, including AI workspace pages, so levels 1 and 2 remain visibly distinct.
+- Removed level 1's permanent document padding reservation to avoid an empty 86px gap. Keep the toolbar expanded while its extension menu is open.
+- Added Chrome Headless DOM coverage for default collapse, hover expand, auto-collapse, menu persistence, and level-2 visibility/layout spacing.
+
 ## Unreleased — 2026-10-22 (Cross-origin navigation and YouTube positioning)
 
 - Added optional HTTP(S) host permission patterns; they are not granted at installation and are requested only for the destination hostname after an explicit cross-origin URL-bar submission. HTTPS targets request HTTPS; HTTP targets request both schemes for that hostname to support common automatic upgrades.

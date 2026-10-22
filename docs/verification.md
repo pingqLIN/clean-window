@@ -6,9 +6,15 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 - `npm test`: **PASS, 92/92** simulated Chrome API and Popup tests.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
-- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (62,618 bytes).
-- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
+- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (62,903 bytes).
+- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover level-1 default collapse/hover expansion/menu persistence, level-2 persistent visibility and spacing, same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
 - The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
+
+## Level 1 / Level 2 distinction — 2026-10-22
+
+- Level 1 (`address-dock`) now starts collapsed to a 76px-wide, 6px-high top-center handle; hover or keyboard focus expands the full two-row toolbar. An open extension menu pins the toolbar open.
+- Level 1 no longer reserves a permanent 86px document padding gap; its expanded toolbar overlays the page's top edge. Level 2 (`address`) stays visible and reserves 48px on ordinary pages; AI workspace pages retain their app-owned document layout without padding mutation.
+- Chrome Headless DOM smoke asserts default collapse, hover expansion, pointer-leave collapse, menu persistence, level-2 visibility and layout spacing.
 
 ## Cross-origin navigation and YouTube positioning — 2026-10-22
 

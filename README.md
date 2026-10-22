@@ -33,8 +33,8 @@ The single slider offers three modes, all implemented as a resizable Chrome popu
 
 | Level | Drawn toolbar | Behavior |
 | --- | --- | --- |
-| 1 (default) | **Lightweight browser toolbar** | Two rows (86px): URL/navigation, light/dark toggle, bookmark shortcut and star, managed-window list, history, downloads, extensions management and Restore |
-| 2 | Address only | URL input, navigation and a light/dark toggle, without the extension dock |
+| 1 (default) | **Lightweight browser toolbar** | Two rows (86px) with URL/navigation and extension shortcuts; collapsed by default, expands from the top-center handle on hover or keyboard focus, overlays the page's top edge while open, and does not reserve a permanent page-layout gap |
+| 2 | Address only | Persistent 48px URL bar with navigation and light/dark toggle, without the extension dock |
 | 3 | None | Bare popup with no injected toolbar |
 
 The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security indicator. The drawn toolbar cannot invoke other extensions' action buttons. No required broad host permission or `management` permission is used. Bookmarks use an **optional** `bookmarks` permission, requested only from a separate extension page after an explicit user click. Levels 1–2 only inject on eligible HTTP(S) sites. When a user submits a cross-origin URL in the drawn address bar, Clean Window opens a per-site access choice: an HTTPS destination requests HTTPS access for that hostname; an HTTP destination requests both HTTP and HTTPS for that same hostname to survive common automatic HTTPS upgrades. Declining still allows navigation, but the toolbar may disappear. For links or redirects that cross origins without prior permission, use the page context menu's **Re-enable Clean Window on this site** action to reinject on demand with temporary `activeTab` access. No all-sites access is granted automatically. Level 3 does not require injection to open, but keeps the edge control when eligible.
