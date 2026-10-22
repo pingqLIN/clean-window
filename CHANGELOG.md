@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — 2026-10-22 (Level 1 initial hover guard)
+
+- Prevented level 1 from expanding merely because the pointer is already over the toolbar handle when the clean popup is created.
+- Level 1 stays collapsed until real pointer movement reaches the handle, while deliberate keyboard focus and an open extension menu can still reveal the toolbar.
+- Added a Chrome Headless regression that positions the pointer over the future handle before creating the toolbar; level 2 and level 3 behavior is unchanged.
+
 ## Unreleased — 2026-10-22 (Level 3 hidden URL bar)
 
 - Added a URL-only bar to level 3. It starts hidden behind a 76×6px top-center handle and expands on hover or keyboard focus; unlike level 2, it never reserves page layout space.

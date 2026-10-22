@@ -75,6 +75,15 @@
     bar.id = BAR_ID;
     bar.dataset.cwDock = withDock ? 'true' : 'false';
     bar.dataset.cwHidden = hiddenByDefault ? 'true' : 'false';
+    // A newly opened popup can inherit the pointer position from the extension
+    // icon. Do not let that initial :hover reveal level 1 until real pointer input.
+    if (withDock) {
+      bar.dataset.cwArmed = 'false';
+      const dockBar = bar;
+      dockBar.addEventListener('pointermove', () => {
+        if (dockBar.isConnected) dockBar.dataset.cwArmed = 'true';
+      }, { once: true });
+    }
     bar.dataset.cwHeight = String(height);
     bar.dataset.cwWorkspace = String(workspace);
     if (withDock || hiddenByDefault) {
@@ -100,7 +109,7 @@
         clip-path:inset(0 calc(50% - 38px))!important;
         transition:transform .2s ease,clip-path .2s ease!important;
       }
-      :host([data-cw-dock="true"]:hover),
+      :host([data-cw-dock="true"][data-cw-armed="true"]:hover),
       :host([data-cw-dock="true"]:focus-within),
       :host([data-cw-hidden="true"]:hover),
       :host([data-cw-hidden="true"]:focus-within),
@@ -113,7 +122,7 @@
         width:76px;height:6px;border-radius:0 0 6px 6px;
         background:#a9b1bc;color:transparent;pointer-events:none;
       }
-      :host([data-cw-dock="true"]:hover)::after,
+      :host([data-cw-dock="true"][data-cw-armed="true"]:hover)::after,
       :host([data-cw-dock="true"]:focus-within)::after,
       :host([data-cw-hidden="true"]:hover)::after,
       :host([data-cw-hidden="true"]:focus-within)::after,

@@ -79,17 +79,25 @@ try{
  await run('globalThis.__navigationRequests=[];globalThis.__cwNavigationMode="prompt";globalThis.chrome={storage:{local:{async get(key){return {[key]:globalThis.__cwTheme};},async set(value){globalThis.__cwTheme=value.cleanWindowUiTheme;}}},runtime:{onMessage:{addListener(fn){globalThis.__cwListener=fn;}},async sendMessage(message){if(message.type==="clean-window:navigate"){globalThis.__navigationRequests.push(message);return {ok:true,action:globalThis.__cwNavigationMode};}globalThis.__hubCalls=(globalThis.__hubCalls||[]).concat(message);if(message.action==="list")return {ok:true,items:[{tabId:11,windowId:5,title:"🎨 研究視窗",level:1}]};if(message.action==="bookmarks-recent")return{ok:true,granted:false,items:[]};if(message.action==="bookmarks-status")return {ok:true,granted:false};return{ok:true,level:message.level};}}};'+source);
  const invoke=(mode)=>run('new Promise(resolve=>globalThis.__cwListener({type:"clean-window:page-ui",mode:"'+mode+'"}, {},resolve))');
 
+ const dockX=await run('window.innerWidth/2');
+ // Simulate opening a popup while the pointer is already over its future handle.
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:dockX,y:3});
  const full=await invoke('address-dock');
  assert.equal(full.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwArmed'),'false');
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'86');
  assert.equal(await run('document.documentElement.style.paddingTop'), '', 'level 1 should not reserve a permanent blank gap');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 starts collapsed');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 remains collapsed even if the pointer is already over the handle when it is created');
  assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','only the center handle is exposed while collapsed');
  const dockHandle=await run('(() => {const r=document.getElementById("clean-window-address-ui").getBoundingClientRect();return{x:r.left+r.width/2,y:r.bottom-3};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
+ await sleep(40);
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','moving away from the initial pointer position keeps level 1 collapsed');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:dockHandle.x,y:dockHandle.y});
  await sleep(240);
- assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','hovering the top handle expands level 1');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwArmed'),'true');
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','a real pointer move onto the top handle expands level 1');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
  await sleep(250);
  assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 collapses again after pointer leaves');
