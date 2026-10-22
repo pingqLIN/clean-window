@@ -11,11 +11,14 @@
   let host, root, handle, buttons = [], currentLevel = 1;
   let preference = { side: 'right', ratio: 0.48 };
   let drag = null;
+  let previewTimer, previewLevel = null, previewSession = null, committing = false;
+  let animations = [], transitionFrame, transitionId = 0;
 
   const validLevel = value => Number.isInteger(value) && value >= 1 && value <= 3;
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   function position() {
     if (!host) return;
+    if (previewSession && !drag) return;
     host.dataset.side = preference.side;
     host.style.setProperty('left', preference.side === 'left' ? '0px' : 'auto', 'important');
     host.style.setProperty('right', preference.side === 'right' ? '0px' : 'auto', 'important');
@@ -26,12 +29,107 @@
   }
   function updateLevel(level) {
     if (!validLevel(level)) return;
+    clearTimeout(previewTimer);
+    previewLevel = previewSession = null;
+    stopTransition();
+    if (host) delete host.dataset.previewLevel;
+    globalThis.__cleanWindowYoutubeUI?.apply(level);
     currentLevel = level;
     for (const button of buttons) {
       const selected = Number(button.dataset.level) === level;
       button.classList.toggle('selected', selected);
       button.setAttribute('aria-pressed', String(selected));
+      button.classList.remove('preview');
     }
+    position();
+  }
+  function stopTransition() {
+    transitionId++;
+    if (transitionFrame) cancelAnimationFrame(transitionFrame);
+    transitionFrame = null;
+    for (const animation of animations) animation.cancel();
+    animations = [];
+  }
+  function videoImageBox(player) {
+    const video = player?.querySelector('video');
+    if (!video) return null;
+    const rect = video.getBoundingClientRect();
+    const ratio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 16/9;
+    const width = Math.min(rect.width,rect.height*ratio), height = width/ratio;
+    return {x:rect.x+(rect.width-width)/2,y:rect.y+(rect.height-height)/2,width,height};
+  }
+  function renderLevel(level, animate = true) {
+    const page = globalThis.__cleanWindowPageUI;
+    if (!page?.apply) throw new Error('此頁尚未載入模式預覽，請重新啟用乾淨視窗。');
+    const player = document.querySelector('ytd-watch-flexy #player-container');
+    const before = videoImageBox(player);
+    stopTransition();
+    page.apply(level === 3 ? 'off' : level === 2 ? 'address' : 'address-dock');
+    globalThis.__cleanWindowYoutubeUI?.apply(level);
+    if (!animate || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
+    const id = transitionId;
+    transitionFrame = requestAnimationFrame(() => {
+      transitionFrame = null;
+      if (id !== transitionId) return;
+      const after = player?.isConnected ? player.getBoundingClientRect() : null;
+      const image = videoImageBox(player);
+      const timing = {duration:200,easing:'cubic-bezier(.2,.7,.2,1)'};
+      if (before?.width > 0 && image?.width > 0 && after?.height > 0 && player.animate) {
+        // Animate the live player, never a screenshot or a second video element.
+        // Uniform scale keeps the image proportional even when the stages have different ratios.
+        const scale = before.width/image.width;
+        const x = before.x-after.x-(image.x-after.x)*scale;
+        const y = before.y-after.y-(image.y-after.y)*scale;
+        animations.push(player.animate([
+          {transformOrigin:'0 0',transform:`translate(${x}px,${y}px) scale(${scale})`},
+          {transformOrigin:'0 0',transform:'none'}
+        ],timing));
+      }
+      const columns = document.querySelector('ytd-watch-flexy #columns');
+      if (columns?.animate && level !== 3) animations.push(columns.animate([{opacity:0},{opacity:1}],timing));
+    });
+  }
+  function cancelPreview({animate = true, restore = true} = {}) {
+    clearTimeout(previewTimer);
+    if (committing) return;
+    const saved = previewSession;
+    previewLevel = previewSession = null;
+    if (host) delete host.dataset.previewLevel;
+    for (const button of buttons) button.classList.remove('preview');
+    if (saved && restore) {
+      try {
+        renderLevel(currentLevel, animate);
+        if (saved.url === location.href) window.scrollTo({left:saved.x,top:saved.y,behavior:'instant'});
+      } catch (error) { status(error?.message || '預覽還原失敗'); }
+      status('');
+    } else if (!animate) stopTransition();
+    position();
+  }
+  function queuePreview(level, event) {
+    if (!event.isTrusted || event.pointerType === 'touch' || drag || committing) return;
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => {
+      if (!host?.isConnected || committing || drag || previewLevel === level) return;
+      if (level === currentLevel && !previewSession) return;
+      try {
+        if (!previewSession) {
+          const rect = host.getBoundingClientRect();
+          previewSession = {x:window.scrollX,y:window.scrollY,url:location.href,
+            visualScale:window.visualViewport?.scale};
+          // Scrollbar changes must not move the mode rail out from under the pointer.
+          host.style.setProperty('left',rect.left+'px','important');
+          host.style.setProperty('right','auto','important');
+        }
+        renderLevel(level);
+        previewLevel = level;
+        host.dataset.previewLevel = String(level);
+        for (const button of buttons) button.classList.toggle('preview',Number(button.dataset.level) === level);
+        status('預覽第 '+level+' 級 · 點擊套用，移出還原');
+      } catch (error) {
+        cancelPreview({animate:false});
+        status(error?.message || '無法預覽此模式');
+      }
+    },150);
   }
   function status(message) {
     if (!root) return;
@@ -110,6 +208,7 @@
       '.stop { position:relative;display:grid;place-items:center;width:30px;height:32px;',
       ' border:0;border-radius:7px;background:transparent;cursor:pointer;color:#696d73; }',
       '.stop.selected { background:#dadddf;color:#34383d; }',
+      '.stop.preview { outline:1px dashed currentColor;outline-offset:-3px; }',
       '.stop:hover { background:#e4e6e8; }',
       '.handle,.stop { transition:background-color .14s ease,border-color .14s ease,color .14s ease,box-shadow .14s ease; }',
       '.stop:active { opacity:.68; }',
@@ -122,8 +221,10 @@
       ' box-shadow:0 2px 8px #0003;font-size:11px; }',
       ':host([data-side="left"]) .hint { left:calc(100% + 12px);right:auto; }',
       '.stop:hover .hint,.stop:focus-visible .hint { visibility:visible; }',
-      '.feedback { max-width:145px;padding:6px;color:#9e3535;font-size:11px;',
+      '.feedback { position:absolute;top:calc(100% + 8px);right:0;pointer-events:none;',
+      ' width:max-content;max-width:145px;padding:6px;border-radius:6px;background:#f5f5f6;color:#9e3535;font-size:11px;',
       ' overflow-wrap:anywhere; }',
+      ':host([data-side="left"]) .feedback {left:0;right:auto;}',
       '.feedback:not([hidden]) {animation:cw-edge-feedback .17s ease both;}',
       '@keyframes cw-edge-feedback {from {opacity:0} to {opacity:1}}',
       '@media(prefers-reduced-motion:reduce) {',
@@ -165,12 +266,18 @@
       hint.textContent = (index + 1) + ' · ' + name;
       hint.setAttribute('aria-hidden', 'true');
       button.append(tick, hint);
+      button.addEventListener('pointerenter', event => queuePreview(index + 1,event));
+      button.addEventListener('focus', event => queuePreview(index + 1,event));
+      button.addEventListener('pointerleave', () => clearTimeout(previewTimer));
+      button.addEventListener('blur', () => clearTimeout(previewTimer));
       button.addEventListener('click', async event => {
         if (!event.isTrusted) return;
         event.preventDefault();
         event.stopPropagation();
         const level = index + 1;
-        if (currentLevel === level) return;
+        clearTimeout(previewTimer);
+        if (currentLevel === level) {cancelPreview();return;}
+        committing = true;
         status('');
         buttons.forEach(item => { item.disabled = true; });
         try {
@@ -181,8 +288,11 @@
           updateLevel(result.level);
           if (result.warning) status(result.warning);
         } catch (error) {
+          committing = false;
+          cancelPreview();
           status(error?.message || '等級切換失敗');
         } finally {
+          committing = false;
           buttons.forEach(item => { item.disabled = false; });
         }
       });
@@ -204,6 +314,7 @@
       if (!event.isTrusted) return;
       event.preventDefault();
       event.stopPropagation();
+      cancelPreview({animate:false});
       close.disabled = true;
       status('');
       try {
@@ -226,6 +337,7 @@
     handle.title = '拖曳調整位置；滑鼠移入顯示關閉 X 與模式選擇';
     handle.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
+      cancelPreview({animate:false});
       drag = {
         pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
         offsetY: event.clientY - host.getBoundingClientRect().top, moved: false
@@ -237,6 +349,10 @@
     // Listen at the window's capture phase so crossing out of a narrow edge tab
     // does not interrupt a drag even when pointer capture is unavailable.
     document.documentElement.append(host);
+    host.addEventListener('pointerleave', () => cancelPreview());
+    host.addEventListener('focusout', event => {
+      if (!root?.contains(event.relatedTarget)) cancelPreview();
+    });
     position();
     void chrome.storage.local.get('edgeControl').then(saved => {
       if (!host?.isConnected || drag) return;
@@ -250,6 +366,10 @@
   }
   function apply(level) {
     if (level === 'off') {
+      committing = false;
+      cancelPreview({animate:false,restore:false});
+      stopTransition();
+      globalThis.__cleanWindowYoutubeUI?.apply('off');
       host?.remove();
       host = root = handle = null;
       buttons = [];
@@ -265,7 +385,25 @@
   }, true);
   window.addEventListener('pointerup', finishDrag, true);
   window.addEventListener('pointercancel', finishDrag, true);
-  window.addEventListener('resize', position);
+  window.addEventListener('resize', () => {cancelPreview({animate:false});position();});
+  window.visualViewport?.addEventListener('resize', () => {
+    const viewport = window.visualViewport;
+    // Scrollbar changes resize this viewport in either axis. Window resize is handled above;
+    // only an actual pinch-scale change should cancel through this event.
+    if (previewSession && viewport.scale !== previewSession.visualScale) {
+      cancelPreview({animate:false});
+    }
+  });
+  window.addEventListener('blur', () => cancelPreview({animate:false}));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelPreview({animate:false});
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') cancelPreview();
+  }, true);
+  for (const name of ['yt-navigate-start','popstate','fullscreenchange']) {
+    (name === 'popstate' ? window : document).addEventListener(name, () => cancelPreview({animate:false}));
+  }
   chrome.runtime.onMessage.addListener((message, _sender, respond) => {
     if (message?.type !== 'clean-window:edge-ui') return false;
     try { respond(apply(message.level)); }

@@ -68,3 +68,25 @@ The script is not included in required CI and has not passed its full browser ru
 Verify two-window isolation, popup chrome, actual shortcuts, clean/fullscreen restoration, real-site forms/media, incognito boundaries, multiple monitors, DPI, Windows Snap, and special browser/PWA pages. Follow [the safe first-check procedure](usage.md#install-and-first-check).
 
 No independent second-person security review has been completed. Automated coverage does not establish security, UI appearance, or real-site state preservation.
+
+## Edge mode preview verification — 2026-10-21
+
+- Chrome DOM tests use trusted CDP mouse/key events on the production edge script and a synthetic YouTube fixture. Verified 150ms hover activation, distinct preview/committed selection, no background mode commands or local-storage writes during hover, and reuse of the same video element.
+- Verified live-player animation and uniform horizontal/vertical scale, leave/Escape restoration including scroll position, level-1 toolbar preview, rapid target replacement, click committing once, failed-commit rollback, reduced-motion behavior, navigation/resize cancellation and cleanup during Restore.
+- Regression: preview feedback originally enlarged the rail and moved the target away from the pointer. Feedback now sits outside the rail flow; the test confirms that the original pointer coordinates still hit the same mode button after preview activation.
+- Regression: scrollbar changes can fire visual-viewport resize events. Those must not cancel preview; actual window resize and pinch-scale changes cancel it instead.
+- INCOMPLETE: new hover previews and transitions have not been accepted in the installed extension on a live YouTube stream or across physical monitors. Earlier live mode-switching results below apply to committed layouts, not this new preview feature.
+- 繁中驗證摘要：隔離 Chrome 已驗證預覽不儲存、過渡等比例、移出／Esc 還原、點擊確認、失敗回復及各項取消流程；提示文字不再推移按鈕。新預覽尚待已安裝擴充中的真實 YouTube 與實體多螢幕驗收。
+
+## YouTube layout verification — 2026-10-20
+
+- `npm test`: 77 tests passed. `npm run check`: passed with no manifest permission changes.
+- `npm run smoke:dom`: passed, including actual Chrome CSS geometry for level 3 viewport fit/resize, level 2 normal/theater player height and preserved comment colors/scrolling, level 1/Restore cleanup, SPA routes, native fullscreen state transitions and lookalike-host rejection.
+- The YouTube smoke fixture uses the production script and synthetic website DOM in an isolated temporary Chrome profile. It does not load the real MV3 extension or a signed-in YouTube session.
+- A later live YouTube level-2 inspection reproduced metadata/recommendations overlapping the video: the outer `#full-bleed-container` retained its native height while the inner player grew. The absolutely positioned `ytd-app` also bypassed the drawn toolbar's root padding. Both cases now have a failing-then-passing Chrome fixture regression.
+- The same scoped CSS correction was applied to the current live document and visually checked. Player top and drawn toolbar bottom both measured 48 CSS px; player bottom and following content top both measured 871 CSS px. Playback continued. Temporary screenshots remain outside the repository.
+- Adaptive sizing regression: changing the rendered toolbar to 72px updates both player offset and height; hiding it reserves no space. Chrome emulation covers 640×720 at DPR 1, 1440×900 at DPR 1.5 and 1920×1080 at DPR 2. These are viewport/device-metric simulations, not physical monitor transitions or actual browser zoom acceptance.
+- Follow-up mode distinction: level 2 uses aspect-based player height capped by available viewport height, keeping native page content visible. Level 3 hides non-player website descendants and explicitly retains the player subtree, preventing native sibling stacking contexts from painting metadata/recommendations above the video. Chrome regressions cover both theater and normal player placement.
+- Live current-document verification: level 2 measured a player at (0,48), 1183×665.4375 CSS px, with following page content starting at 713.4375 and visible. A trusted hover/click on the extension's actual edge rail switched to level 3: player (0,0), 1198×874, matching the viewport; page content hidden, video visible, playback continued. Screenshots were inspected. The separate temporary correction style was absent during this check.
+- INCOMPLETE: a controlled full-extension reload, complete level-1/Restore acceptance and physical monitor/browser-zoom transitions remain unverified. Earlier temporary DevTools demonstrations are separate evidence.
+- 本次通過 77 項測試、靜態檢查與隔離 Chrome 版面測試；真實 YouTube 已驗證第二模式保留頁面內容，並透過實際側邊控制器切換第三模式，確認影片滿版且其餘網站內容隱藏、持續播放。受控的完整擴充重載、第一模式／還原及實體跨螢幕驗收仍未完成。未變更 manifest 權限。

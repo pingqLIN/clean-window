@@ -16,6 +16,7 @@ const popupSource = await readFile(new URL('../extension/popup.js', import.meta.
 const popupHTML = await readFile(new URL('../extension/popup.html', import.meta.url),'utf8');
 const popupCSS = await readFile(new URL('../extension/popup.css', import.meta.url),'utf8');
 const edgeSource = await readFile(new URL('../extension/edge-ui.js', import.meta.url),'utf8');
+const youtubeSource = await readFile(new URL('../extension/youtube-ui.js', import.meta.url),'utf8');
 const server=createServer((req,res)=>{
   res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
   res.end('<!doctype html><title>Clean Window Test</title><header>Outside main</header><main style="width:75vw;height:72vh;background:#e1e8f2;margin:20px"><h1>Main Content</h1><p>Smoke Fixture</p></main><footer>Outside main</footer>');
@@ -295,6 +296,193 @@ try{
  assert.equal(await run('document.title'),'SPA Updated');
  console.log('PASS: restore original title and remove editor override');
  console.log('SMOKE PASS: 16/16 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
+
+ // Real CSS/layout checks with a synthetic YouTube DOM, never a logged-in profile.
+ await run(`document.body.innerHTML = '<div id="masthead-container" style="height:56px">YouTube header</div><ytd-watch-flexy theater><div id="player-full-bleed-container" style="height:300px"><div id="player-container"><ytd-player><div id="container"><div id="movie_player"><div class="html5-video-container"><video class="html5-main-video" style="width:640px;height:360px"></video></div></div></div></ytd-player></div></div><div id="columns"><div id="primary"><div id="player-container-outer"></div><article id="comments" style="background:rgb(220,230,240);height:500px">Comments</article></div><aside id="secondary">Recommendations</aside></div></ytd-watch-flexy>';globalThis.__youtubeLocation={hostname:'www.youtube.com',pathname:'/watch'};true`);
+ await run(`(() => {
+   const watch=document.querySelector('ytd-watch-flexy');watch.style.display='block';
+   const manager=document.createElement('ytd-page-manager');manager.style.cssText='display:block;margin-top:56px';
+   const app=document.createElement('ytd-app');app.style.cssText='display:block;position:absolute;top:0;width:100%';
+   watch.before(app);app.append(manager);manager.append(watch);
+   const stage=document.querySelector('#player-full-bleed-container');
+   const outer=document.createElement('div');outer.id='full-bleed-container';
+   outer.style.cssText='display:flex;position:relative;height:300px;max-height:300px';
+   stage.before(outer);outer.append(stage);
+ })()`);
+ await run('(function(location){'+youtubeSource+'})(globalThis.__youtubeLocation);true');
+ const youtubeLevel=async level=>{
+   assert.equal((await edgeCommand(level)).ok,true);
+   await sleep(45);
+ };
+ const youtubeLayout=()=>run(`(() => {
+   const player=document.querySelector('#movie_player').getBoundingClientRect();
+   const video=document.querySelector('video').getBoundingClientRect();
+   return {mode:document.documentElement.getAttribute('data-clean-window-youtube'),
+     inner:[innerWidth,innerHeight],player:{x:player.x,y:player.y,w:player.width,h:player.height},
+     video:{w:video.width,h:video.height},overflow:getComputedStyle(document.documentElement).overflowY,
+     comments:getComputedStyle(document.querySelector('#comments')).backgroundColor,
+     scrollHeight:document.documentElement.scrollHeight,
+     columnsTop:document.querySelector('#columns').getBoundingClientRect().top,
+     columnsVisibility:getComputedStyle(document.querySelector('#columns')).visibility,
+     videoVisibility:getComputedStyle(document.querySelector('video')).visibility,
+     header:getComputedStyle(document.querySelector('#masthead-container')).display};
+ })()`);
+ await youtubeLevel(3);
+ let yt=await youtubeLayout();
+ assert.equal(yt.mode,'3');
+ assert.deepEqual(yt.player,{x:0,y:0,w:yt.inner[0],h:yt.inner[1]});
+ assert.equal(yt.video.w,yt.inner[0]);assert.equal(yt.video.h,yt.inner[1]);
+ assert.equal(yt.overflow,'hidden');
+ assert.equal(yt.columnsVisibility,'hidden','level 3 must hide page content that can paint above the player');
+ assert.equal(yt.videoVisibility,'visible');
+ await send('Emulation.setDeviceMetricsOverride',{width:900,height:500,deviceScaleFactor:1,mobile:false});
+ await sleep(45);yt=await youtubeLayout();
+ assert.deepEqual(yt.player,{x:0,y:0,w:900,h:500});
+ console.log('PASS: YouTube level 3 fills the viewport and follows resize without the theater height cap');
+ await invoke('address');
+ await youtubeLevel(2);yt=await youtubeLayout();
+ assert.equal(yt.mode,'2');assert.equal(yt.player.h,452);
+ assert.ok(yt.columnsTop>=yt.player.y+yt.player.h,'metadata and recommendations must start below the resized theater player');
+ assert.equal(yt.player.y,48,'site header spacing must not remain below the drawn bar');
+ assert.equal(yt.comments,'rgb(220, 230, 240)');assert.notEqual(yt.overflow,'hidden');
+ assert.ok(yt.scrollHeight>yt.inner[1]);
+ // Layout uses CSS coordinates, not physical pixels or a captured monitor's DPI.
+ await run(`document.querySelector('#clean-window-address-ui').style.setProperty('height','72px','important');true`);
+ await sleep(80);yt=await youtubeLayout();
+ assert.equal(yt.player.y,72,'measure the rendered toolbar instead of assuming 48px');
+ assert.equal(yt.player.h,428);
+ for (const display of [
+   {width:640,height:720,deviceScaleFactor:1},
+   {width:1440,height:900,deviceScaleFactor:1.5},
+   {width:1920,height:1080,deviceScaleFactor:2}
+ ]) {
+   await send('Emulation.setDeviceMetricsOverride',{...display,mobile:false});
+   await sleep(80);yt=await youtubeLayout();
+   assert.equal(yt.player.y,72);
+   const expectedHeight=Math.min(display.height-72,yt.player.w*9/16);
+   assert.ok(Math.abs(yt.player.h-expectedHeight)<1,'level 2 uses the video ratio with a viewport height cap');
+   assert.equal(yt.columnsVisibility,'visible');
+   assert.ok(yt.columnsTop>=yt.player.y+yt.player.h);
+ }
+ await run(`document.querySelector('#clean-window-address-ui').style.setProperty('display','none','important');true`);
+ await sleep(80);yt=await youtubeLayout();
+ assert.equal(yt.player.y,0,'a hidden toolbar must not reserve phantom space');
+ assert.ok(Math.abs(yt.player.h-Math.min(1080,yt.player.w*9/16))<1);
+ await run(`document.querySelector('#clean-window-address-ui').style.removeProperty('display');true`);
+ await run(`document.querySelector('#clean-window-address-ui').style.setProperty('height','48px','important');true`);
+ await send('Emulation.setDeviceMetricsOverride',{width:900,height:500,deviceScaleFactor:1,mobile:false});
+ await sleep(80);
+ console.log('PASS: player follows measured toolbar height and multiple viewport sizes/device pixel ratios');
+ await run(`document.querySelector('ytd-watch-flexy').removeAttribute('theater');document.querySelector('#full-bleed-container').style.display='none';document.querySelector('#player-container-outer').append(document.querySelector('#player-container'));true`);
+ await sleep(45);yt=await youtubeLayout();
+ assert.equal(yt.player.h,452,'normal player also fills content below the URL bar');
+ await youtubeLevel(3);yt=await youtubeLayout();
+ assert.equal(yt.columnsVisibility,'hidden');
+ assert.equal(yt.videoVisibility,'visible','normal-mode player remains visible inside the hidden columns');
+ await youtubeLevel(2);
+ console.log('PASS: YouTube level 2 reserves the rendered toolbar and preserves scrollable comments and page colors');
+ // Trusted pointer events exercise preview separately from persisted mode commands.
+ await invoke('address');
+ await run(`globalThis.__previewCommands=[];globalThis.__previewWrites=[];globalThis.__previewFail=false;
+   globalThis.__previewVideo=document.querySelector('video');
+   chrome.storage.local.set=async value=>{globalThis.__previewWrites.push(value);};
+   chrome.runtime.sendMessage=async message=>{globalThis.__previewCommands.push(message);
+     return globalThis.__previewFail?{ok:false,error:'Preview commit failed'}:{ok:true,level:message.level};};
+   window.scrollTo(0,100);true`);
+ const previewState=()=>run(`(() => {const host=document.querySelector('#clean-window-edge-control');return {
+   preview:host.dataset.previewLevel||null,selected:host.shadowRoot.querySelector('.stop.selected').dataset.level,
+   mode:document.documentElement.getAttribute('data-clean-window-youtube'),scrollY,
+   sameVideo:globalThis.__previewVideo===document.querySelector('video'),
+   commands:globalThis.__previewCommands.length,writes:globalThis.__previewWrites.length,
+   playerScale:(()=>{const m=new DOMMatrixReadOnly(getComputedStyle(document.querySelector('#player-container')).transform);return [m.a,m.d];})(),
+   animations:document.querySelector('#player-container').getAnimations().length};})()`);
+ const hoverMode=async level=>{
+   const handle=await run(`(() => {const r=document.querySelector('#clean-window-edge-control').shadowRoot.querySelector('.handle').getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+35};})()`);
+   await send('Input.dispatchMouseEvent',{type:'mouseMoved',...handle});
+   await sleep(30);
+   const point=await run(`(() => {const r=document.querySelector('#clean-window-edge-control').shadowRoot.querySelector('.stop[data-level="${level}"]').getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+   await send('Input.dispatchMouseEvent',{type:'mouseMoved',...point});
+   return point;
+ };
+ const leaveModes=()=>send('Input.dispatchMouseEvent',{type:'mouseMoved',x:300,y:25});
+ const clickPoint=async point=>{
+   await send('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});
+   await send('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',clickCount:1});
+   await sleep(50);
+ };
+ const originalScroll=(await previewState()).scrollY;
+ await hoverMode(3);await sleep(190);
+ let preview=await previewState();
+ assert.equal(preview.preview,'3');assert.equal(preview.selected,'2');assert.equal(preview.mode,'3');
+ assert.equal(preview.commands,0);assert.equal(preview.writes,0);assert.ok(preview.animations>0);
+ assert.ok(Math.abs(preview.playerScale[0]-preview.playerScale[1])<0.001,'transition must not stretch the video on one axis');
+ assert.equal(preview.sameVideo,true);
+ await leaveModes();await sleep(80);preview=await previewState();
+ assert.equal(preview.preview,null);assert.equal(preview.mode,'2');assert.equal(preview.scrollY,originalScroll);
+ console.log('PASS: hover previews with live-player animation, no mode writes, and leave restores mode/scroll');
+ await hoverMode(1);await sleep(190);
+ assert.equal((await previewState()).mode,null);
+ assert.equal(await run('document.querySelector("#clean-window-address-ui").dataset.cwDock'),'true');
+ await leaveModes();await sleep(60);
+ await hoverMode(1);await sleep(40);await hoverMode(3);await sleep(190);
+ assert.equal((await previewState()).mode,'3');
+ await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});
+ await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});
+ assert.equal((await previewState()).mode,'2');
+ const commitPoint=await hoverMode(3);await sleep(190);
+ assert.equal(await run(`document.querySelector('#clean-window-edge-control').shadowRoot.elementFromPoint(${commitPoint.x},${commitPoint.y})?.closest('button')?.dataset.level`),'3','preview feedback must not move the mode button away from the pointer');
+ await clickPoint(commitPoint);
+ await leaveModes();await sleep(60);preview=await previewState();
+ assert.equal(preview.selected,'3');assert.equal(preview.mode,'3');assert.equal(preview.preview,null);
+ assert.equal(preview.commands,1,'only the actual click commits a mode');
+ await invoke('address');await youtubeLevel(2);
+ await run('globalThis.__previewFail=true;true');
+ const failPoint=await hoverMode(3);await sleep(190);await clickPoint(failPoint);
+ preview=await previewState();assert.equal(preview.mode,'2');assert.equal(preview.selected,'2');
+ await leaveModes();await run('globalThis.__previewFail=false;true');
+ console.log('PASS: latest hover wins, Escape restores, click commits once, failed commit restores');
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+ await hoverMode(3);await sleep(190);
+ assert.equal((await previewState()).animations,0);
+ await leaveModes();await sleep(40);
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+ await hoverMode(3);await sleep(190);
+ await send('Emulation.setPageScaleFactor',{pageScaleFactor:1.2});
+ await sleep(60);assert.equal((await previewState()).preview,null,'pinch scaling cancels a preview');
+ await send('Emulation.setPageScaleFactor',{pageScaleFactor:1});
+ await leaveModes();await sleep(40);
+ await hoverMode(3);await sleep(190);
+ await run(`document.dispatchEvent(new Event('yt-navigate-start'));true`);
+ assert.equal((await previewState()).preview,null);
+ await leaveModes();
+ await hoverMode(3);await sleep(190);
+ await send('Emulation.setDeviceMetricsOverride',{width:880,height:510,deviceScaleFactor:1,mobile:false});
+ await sleep(70);assert.equal((await previewState()).preview,null);
+ await leaveModes();
+ await hoverMode(3);await sleep(190);
+ await invoke('off');await edgeCommand('off');
+ assert.equal(await run('!!document.querySelector("#clean-window-address-ui")'),false,'Restore must not resurrect a preview toolbar');
+ await invoke('address');await youtubeLevel(2);await leaveModes();
+ console.log('PASS: reduced motion, resize cancellation and Restore during preview leave no stale UI');
+ await youtubeLevel(1);yt=await youtubeLayout();
+ assert.equal(yt.mode,null);assert.notEqual(yt.header,'none');
+ assert.equal(await run('!!document.getElementById("clean-window-youtube-style")'),false);
+ await youtubeLevel(3);
+ await run(`globalThis.__youtubeLocation.pathname='/results';document.dispatchEvent(new Event('yt-navigate-finish'));true`);
+ await sleep(45);assert.equal((await youtubeLayout()).mode,null);
+ await run(`globalThis.__youtubeLocation.pathname='/watch';document.dispatchEvent(new Event('yt-navigate-finish'));true`);
+ await sleep(45);assert.equal((await youtubeLayout()).mode,'3');
+ await run(`Object.defineProperty(document,'fullscreenElement',{configurable:true,value:document.querySelector('#movie_player')});document.dispatchEvent(new Event('fullscreenchange'));true`);
+ await sleep(45);assert.equal((await youtubeLayout()).mode,null);
+ await run(`delete document.fullscreenElement;document.dispatchEvent(new Event('fullscreenchange'));true`);
+ await sleep(45);assert.equal((await youtubeLayout()).mode,'3');
+ await edgeCommand('off');
+ assert.equal((await youtubeLayout()).mode,null);
+ await run(`globalThis.__youtubeLocation.hostname='youtube.com.example.test';true`);
+ await youtubeLevel(3);assert.equal((await youtubeLayout()).mode,null);
+ await edgeCommand('off');await invoke('off');
+ await send('Emulation.clearDeviceMetricsOverride');
+ console.log('PASS: YouTube level 1/restore clean up, SPA route and fullscreen transitions recover, lookalike hosts stay unchanged');
 
  // Render the real popup HTML/CSS with an isolated extension API stub, then
  // verify that managed names, clipping, hover marquee and EDIT are usable.

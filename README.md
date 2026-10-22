@@ -49,6 +49,10 @@ The former DOM masking experiment and levels 4–6 are removed from the selector
 
 **Editable clean-mode title:** A clean popup initially displays the standard Unicode symbol `◈` followed by the original webpage title. Press `Alt + Shift + T`, or use the page context menu, to select another built-in Symbol glyph, edit the text, or reset it. Normal-window restoration restores the native webpage title. This adjusts `document.title`, **not** Chrome's native favicon/security identity. It is limited to eligible HTTP(S) pages; the headless DOM behavior has passed, but actual Windows popup titlebar rendering needs GUI acceptance.
 
+**YouTube watch pages:** level 1 preserves the website layout. Level 2 sizes the player using the video aspect ratio, capped by the visible height below the drawn URL bar, preserving scrollable titles, comments, recommendations and their colors. Level 3 fills the content viewport with the player on a black background, hides other website content and disables page scrolling. Video keeps its original aspect ratio without cropping; mismatched window proportions produce letterboxing. Level 1 or Restore removes the special styles. See the [usage guide](docs/usage.md#youtube-watch-pages).
+
+**Edge mode preview:** hover a stop for about 150ms to preview, with a roughly 200ms live-player transition. Click saves; leaving the rail or Escape restores the committed layout. Reduced-motion preferences are respected. See [preview usage](docs/usage.md#edge-mode-preview).
+
 ## Shortcuts
 
 | Action | Default shortcut |

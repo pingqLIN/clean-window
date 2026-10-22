@@ -172,7 +172,7 @@ export function createController(api) {
         const existing = await api.tabs.sendMessage(tab.id, { type: 'clean-window:edge-ui', level });
         if (existing?.ok) return existing;
       } catch { /* New document or controller not yet injected. */ }
-      await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js'] });
+      await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js', 'youtube-ui.js', 'page-ui.js'] });
     }
     const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:edge-ui', level });
     if (!response?.ok) throw new Error(response?.error || '頁面邊緣工具無法更新。');
@@ -299,7 +299,7 @@ export function createController(api) {
           // nothing until the move and recovery journal have succeeded.
           let preparedEdge = false;
           try {
-            await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js'] });
+            await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js', 'youtube-ui.js', 'page-ui.js'] });
             preparedEdge = true;
           } catch { /* Restricted documents still permit bare level-3 popup. */ }
           const opened = await toCleanWindow(tab, win, level);

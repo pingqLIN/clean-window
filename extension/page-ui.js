@@ -337,5 +337,6 @@
     catch(error) {respond({ok:false,error:error?.message || String(error)});}
     return false;
   });
-  globalThis.__cleanWindowPageUI = true;
+  // Shared only inside this extension's isolated world; preview never calls the background worker.
+  globalThis.__cleanWindowPageUI = { apply };
 })();
