@@ -31,4 +31,8 @@ The title editor is opened via an explicit `edit-title` command or page context-
 
 These behaviors are tested with [a deterministic Chrome API simulator](../tests/fake-chrome.mjs). Native rendering, real-site state retention, screen geometry, and OS interactions still require browser acceptance.
 
+## Runtime and Development packaging
+
+`extension/` is the canonical Runtime source. The Development workspace remains the repository root; `npm run build:runtime` creates an unpacked Runtime folder and a minimal ZIP under ignored `dist/`. Do not maintain or edit a second copy of the extension source. See the [Runtime / Development separation checklist](runtime-development-checklist.md) and [繁體中文檢核表](runtime-development-checklist.zh-TW.md).
+
 [Verification](verification.md) · [Chrome Windows API](https://developer.chrome.com/docs/extensions/reference/api/windows)

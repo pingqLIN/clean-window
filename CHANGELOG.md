@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — 2026-10-21 (Edge mode previews)
+
+- Hover or keyboard-focus a real edge mode stop for 150ms to preview without saving the mode. Click commits; leaving the rail or Escape restores the committed mode and original scroll position.
+- Animate the live player geometry and returning page content over 200ms, with no video cloning or screenshot transitions. Reduced-motion preferences disable the transition.
+- Cancel previews on drag, viewport resize, navigation, focus loss and fullscreen changes. Keep the mode rail and feedback stable as scrollbars and toolbars change; failed commits restore the original layout.
+
+## Unreleased — 2026-10-20 (YouTube player layouts)
+
+- Detect YouTube watch pages within the explicitly managed document. Level 1 keeps the native layout; level 2 fills the area below the drawn URL bar while retaining scrollable page content/colors; level 3 fills the viewport with a black player background.
+- Keep video proportions without cropping; remove the theater height cap while allowing manual window resizing.
+- Keep the outer theater stage height aligned with the player so metadata/recommendations remain below it; place the YouTube app below the level-2 URL bar.
+- Measure the rendered toolbar rather than deducting a fixed 48px; update on viewport/toolbar size changes and use CSS coordinates across device pixel ratios. Dynamic viewport units have a `vh` fallback.
+- Distinguish the YouTube modes: level 2 uses aspect-based player height so surrounding page content stays accessible; level 3 explicitly hides non-player website content to prevent sibling layers from overlapping the video.
+- Remove styles on Restore, level 1 and non-watch routes; suspend them for native video fullscreen. Reuse the existing injection permission and lifecycle without adding manifest permissions.
+
 ## Unreleased — 2026-10-18 (UI micro-motion and tooltip placement)
 
 - Added measured, reduced-motion-aware fade/feedback transitions to the self-drawn address bar, edge controller, title editor and extension popup.

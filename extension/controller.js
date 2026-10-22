@@ -172,7 +172,7 @@ export function createController(api) {
         const existing = await api.tabs.sendMessage(tab.id, { type: 'clean-window:edge-ui', level });
         if (existing?.ok) return existing;
       } catch { /* New document or controller not yet injected. */ }
-      await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js'] });
+      await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js', 'youtube-ui.js', 'page-ui.js'] });
     }
     const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:edge-ui', level });
     if (!response?.ok) throw new Error(response?.error || '頁面邊緣工具無法更新。');
@@ -183,19 +183,21 @@ export function createController(api) {
     catch { /* Script may already be gone after a page navigation. */ }
   }
 
-  async function titleUI(tab, action) {
+  async function titleUI(tab, action, anchor) {
     try {
       if (action !== 'off') {
         // Reuse an already injected controller first. Moving a tab into a
         // popup can make a second executeScript fail even though the script
         // remains alive in the same document.
         try {
-          const existing = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action });
+          const existing = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action,
+            ...(action === 'edit' && anchor ? {anchor} : {}) });
           if (existing?.ok) return existing;
         } catch { /* New document: install the script below when permitted. */ }
         await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['title-ui.js'] });
       }
-      const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action });
+      const response = await api.tabs.sendMessage(tab.id, { type: 'clean-window:title', action,
+        ...(action === 'edit' && anchor ? {anchor} : {}) });
       if (!response?.ok) throw new Error(response?.error || '標題控制未回應。');
       return response;
     } catch (error) {
@@ -255,7 +257,7 @@ export function createController(api) {
           throw new Error('請先進入本擴充建立的乾淨 Popup，再編輯頁面標題。');
         }
         await titleUI(tab, 'start');
-        await titleUI(tab, 'edit');
+        await titleUI(tab, 'edit', options.anchor);
         return { windowId: win.id, mode: 'title-editor' };
       }
       if (action === 'toggle-fullscreen') return await toggleFullscreen(win);
@@ -297,7 +299,7 @@ export function createController(api) {
           // nothing until the move and recovery journal have succeeded.
           let preparedEdge = false;
           try {
-            await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js'] });
+            await api.scripting.executeScript({ target: { tabId: tab.id }, files: ['edge-ui.js', 'youtube-ui.js', 'page-ui.js'] });
             preparedEdge = true;
           } catch { /* Restricted documents still permit bare level-3 popup. */ }
           const opened = await toCleanWindow(tab, win, level);
@@ -372,7 +374,7 @@ export function createController(api) {
               !!tab.incognito !== !!record.incognito && tab.incognito !== undefined ||
               !!win.incognito !== !!record.incognito) return null;
           return {tabId,windowId:win.id,level:validLevel(record.cleanLevel) ? record.cleanLevel : 1,
-            title:(record.label || '乾淨視窗').slice(0,160)};
+            title:(record.label?.trim() || tab.title?.trim() || '乾淨視窗').slice(0,160)};
         } catch { return null; }
       }));
     return rows.filter(Boolean).sort((a,b) => a.windowId-b.windowId);

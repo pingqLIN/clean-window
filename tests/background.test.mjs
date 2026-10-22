@@ -140,32 +140,54 @@ test('edge-level message ignores other extensions, missing sender tab and subfra
 });
 
 
-test('single-tap edge title action opens editor for its own popup without moving tabs',async()=>{
- const f=await setup();f.api.failInjectInPopup=true;
+test('page-edge title command is retired',async()=>{
+ const f=await setup();
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,tab:{id:11,windowId:1}};
+ assert.equal(f.listener({type:'clean-window:edge-title'},sender,()=>{}),false);
+});
+test('managed-list EDIT opens the editor only for the explicitly targeted window',async()=>{
+ const f=await setup(); f.api.failInjectInPopup=true;
  const opened=await new Promise(resolve=>f.listener(
-  {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
-  f.sender,resolve));
+   {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+   f.sender,resolve));
  assert.equal(opened.ok,true);
- const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
-   tab:{id:11,windowId:opened.windowId}};
+ const target={tabId:11,windowId:opened.windowId};
+ const sent=[];
+ const send=f.api.tabs.sendMessage.bind(f.api.tabs);
+ f.api.tabs.sendMessage=async(id,message)=>{sent.push({id,message});return send(id,message);};
+ const anchor={screenX:940,screenY:350};
  const result=await new Promise(resolve=>f.listener(
-   {type:'clean-window:edge-title'},sender,resolve));
+   {type:'clean-window:hub',action:'edit-title',target,anchor},f.sender,resolve));
  assert.equal(result.ok,true);
  assert.equal(result.mode,'title-editor');
  assert.equal(f.titleModes.get(11),'editing');
+ assert.ok(sent.some(item=>item.id===11 && item.message.action==='edit' &&
+   item.message.anchor?.screenX===940 && item.message.anchor?.screenY===350),
+   'the already-injected title controller must receive the popup EDIT anchor');
  assert.equal(f.tabs.get(21).windowId,2);
+ const wrong=await new Promise(resolve=>f.listener(
+   {type:'clean-window:hub',action:'edit-title',target:{tabId:21,windowId:2}},
+   f.sender,resolve));
+ assert.equal(wrong.ok,false);
+ const web={id:f.sender.id,url:'https://example.test/',frameId:0,tab:{id:11,windowId:opened.windowId}};
+ const denied=await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'edit-title',target},web,resolve));
+ assert.equal(denied.ok,false);
 });
-test('edge title command rejects untrusted frames and unrelated popup windows',async()=>{
+test('managed title prioritizes the edited label, then falls back to the native tab title',async()=>{
  const f=await setup();
- const good={id:f.sender.id,url:'https://example.test/',frameId:0,
-   tab:{id:11,windowId:1}};
- for(const bad of [{...good,id:'other-extension'}, {...good,frameId:1}, {...good,tab:undefined}]) {
-   assert.equal(f.listener({type:'clean-window:edge-title'},bad,()=>{}),false);
- }
- const result=await new Promise(resolve=>f.listener(
-  {type:'clean-window:edge-title'},good,resolve));
- assert.equal(result.ok,false);
- assert.match(result.error,/先進入/);
+ const opened=await new Promise(resolve=>f.listener(
+   {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+   f.sender,resolve));
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
+   tab:{id:11,windowId:opened.windowId}};
+ const renamed=await new Promise(resolve=>f.listener(
+   {type:'clean-window:title-updated',title:'🖋️ 已編輯的視窗名稱'},sender,resolve));
+ assert.equal(renamed.ok,true);
+ const list=()=>new Promise(resolve=>f.listener({type:'clean-window:hub',action:'list'},f.sender,resolve));
+ assert.equal((await list()).items[0].title,'🖋️ 已編輯的視窗名稱');
+ f.db['clean:11'].label='';
+ f.tabs.get(11).title='原生分頁標題';
+ assert.equal((await list()).items[0].title,'原生分頁標題');
 });
 
 test('popup can list, focus, switch and restore only verified clean windows',async()=>{
@@ -201,6 +223,33 @@ test('only managed level-one popup top-frame content scripts may use hub actions
  await new Promise(resolve=>f.listener({type:'clean-window:edge-level',level:2},sender,resolve));
  assert.equal((await new Promise(resolve=>f.listener({type:'clean-window:hub',action:'list'},sender,resolve))).ok,false);
 });
+test('real edge X restores its own managed popup, preserving the original tab',async()=>{
+ const f=await setup();f.preferences.cleanLevel=2;
+ const opened=await new Promise(resolve=>f.listener(
+   {type:'clean-window:run',action:'toggle-clean',target:{tabId:11,windowId:1}},
+   f.sender,resolve));
+ assert.equal(opened.ok,true);
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,
+   tab:{id:11,windowId:opened.windowId}};
+ const response=await new Promise(resolve=>f.listener(
+   {type:'clean-window:edge-restore'},sender,resolve));
+ assert.equal(response.ok,true);
+ assert.equal(f.tabs.get(11).windowId,1);
+ assert.equal(f.tabs.get(21).windowId,2);
+ assert.equal(f.db['clean:11'],undefined);
+});
+test('edge X denies unrelated windows, foreign extensions, missing tab and subframes',async()=>{
+ const f=await setup();
+ const sender={id:f.sender.id,url:'https://example.test/',frameId:0,tab:{id:11,windowId:1}};
+ let count=0;
+ for(const bad of [{...sender,id:'different-extension'},{...sender,frameId:1},{...sender,tab:undefined}])
+   assert.equal(f.listener({type:'clean-window:edge-restore'},bad,()=>count++),false);
+ assert.equal(count,0);
+ const result=await new Promise(resolve=>f.listener({type:'clean-window:edge-restore'},sender,resolve));
+ assert.equal(result.ok,false);
+ assert.equal(f.tabs.get(11).windowId,1);
+});
+
 test('bookmarks remain optional and current URL is sourced from authenticated sender',async()=>{
  const f=await setup();f.preferences.cleanLevel=1;
  const opened=await new Promise(resolve=>f.listener(

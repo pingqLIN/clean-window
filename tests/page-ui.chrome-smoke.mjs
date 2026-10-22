@@ -12,7 +12,11 @@ const chrome = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome Dev
 const source = (await readFile(new URL('../extension/page-ui.js', import.meta.url),'utf8'))
  .replace("attachShadow({mode:'closed'})","attachShadow({mode:'open'})");
 const titleSource = await readFile(new URL('../extension/title-ui.js', import.meta.url),'utf8');
+const popupSource = await readFile(new URL('../extension/popup.js', import.meta.url),'utf8');
+const popupHTML = await readFile(new URL('../extension/popup.html', import.meta.url),'utf8');
+const popupCSS = await readFile(new URL('../extension/popup.css', import.meta.url),'utf8');
 const edgeSource = await readFile(new URL('../extension/edge-ui.js', import.meta.url),'utf8');
+const youtubeSource = await readFile(new URL('../extension/youtube-ui.js', import.meta.url),'utf8');
 const server=createServer((req,res)=>{
   res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
   res.end('<!doctype html><title>Clean Window Test</title><header>Outside main</header><main style="width:75vw;height:72vh;background:#e1e8f2;margin:20px"><h1>Main Content</h1><p>Smoke Fixture</p></main><footer>Outside main</footer>');
@@ -124,13 +128,17 @@ try{
 
  // The edge control has no text on the handle, but exposes an accessible
  // three-stop rail, hover-only explanations, instant switching, and edge drag.
- await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
+ await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}if(message.type==="clean-window:edge-restore"){globalThis.__edgeRestoreRequests=(globalThis.__edgeRestoreRequests||0)+1;return{ok:true};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
  const edgeCommand=level=>run('new Promise(resolve=>globalThis.__cwEdgeListener({type:"clean-window:edge-ui",level:'+JSON.stringify(level)+'}, {},resolve))');
+ const edgeCloseAlignment=()=>run('(() => {const root=document.querySelector("#clean-window-edge-control").shadowRoot;const a=root.querySelector(".handle").getBoundingClientRect();const b=root.querySelector(".close").getBoundingClientRect();return {dx:Math.abs(a.left+a.width/2-b.left-b.width/2),dy:(b.top+b.height/2)-(a.top+a.height/2),inside:root.querySelector(".handle-anchor")?.contains(root.querySelector(".close"))};})()');
+ const edgeLayout=()=>run('(() => {const root=document.querySelector("#clean-window-edge-control").shadowRoot;const a=root.querySelector(".handle-anchor").getBoundingClientRect();const b=root.querySelector(".rail").getBoundingClientRect();return {width:a.width,height:a.height,gap:root.host.dataset.side==="right"?a.left-b.right:b.left-a.right};})()');
  const rail=await edgeCommand(1);
  assert.equal(rail.ok,true);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".edge .close").length'),1);
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close")).visibility'),'hidden');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".stop").length'),3);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").textContent'),'');
- assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").dataset.tip.includes("點擊編輯標題")'),true);
+ assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").dataset.tip.includes("關閉乾淨模式")'),true);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").dataset.tipPlacement'),'above');
  assert.notEqual(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle"),"::after").bottom'),'auto');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'1');
@@ -139,7 +147,7 @@ try{
  await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").click();true');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'3','untrusted synthetic click must not invoke extension actions');
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'3');
- const grip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ const grip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+34};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:grip.x,y:grip.y});
  const stop=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop[data-level=\'2\']").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:stop.x,y:stop.y});
@@ -152,7 +160,14 @@ try{
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).display'),'flex');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle"),"::after").visibility'),'visible');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".hint")).visibility'),'hidden');
- console.log('PASS: hover reveals vertical rail, labels stay hidden on the handle');
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close")).visibility'),'visible');
+ const rightClose=await edgeCloseAlignment();
+ assert.ok(rightClose.inside && rightClose.dx <= 1 && Math.abs(rightClose.dy + 7) <= 1,'right-side X must sit 7px above handle center');
+ const rightSpacing=await edgeLayout();
+ assert.equal(rightSpacing.width,30);
+ assert.equal(rightSpacing.height,50);
+ assert.ok(Math.abs(rightSpacing.gap-8)<1,'right rail must stand 8px clear of enlarged tab');
+ console.log('PASS: hover reveals vertical rail with an X centered on the right tab');
  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).transitionDuration'),'0s');
  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
@@ -163,28 +178,48 @@ try{
  assert.equal(await run('document.querySelector("#clean-window-edge-control").dataset.side'),'left');
  assert.equal(await run('(() => {const r=document.querySelector("#clean-window-edge-control").getBoundingClientRect();return Math.abs(r.left)<1;})()'),true,'drag snaps to the left viewport edge');
  assert.equal(await run('globalThis.__edgeSaved.edgeControl.side'),'left');
- console.log('PASS: dragging moves and persists the rail at the opposite screen edge');
- assert.equal(await run('globalThis.__edgeTitleRequests||0'),0,'drag must not open title editor');
- const movedGrip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ const leftClose=await edgeCloseAlignment();
+ assert.ok(leftClose.inside && leftClose.dx <= 1 && Math.abs(leftClose.dy + 7) <= 1,'left-side X must sit 7px above handle center');
+ const leftSpacing=await edgeLayout();
+ assert.ok(Math.abs(leftSpacing.gap-8)<1,'left rail must stand 8px clear of enlarged tab');
+ console.log('PASS: dragging persists opposite edge placement; X stays centered on either side');
+ assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0,'drag must not restore the window');
+ const movedGrip=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle").getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+34};})()');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:movedGrip.x,y:movedGrip.y});
  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:movedGrip.x,y:movedGrip.y,button:'left',clickCount:1});
  await sleep(30);
- assert.equal(await run('globalThis.__edgeTitleRequests'),1);
- console.log('PASS: one-click edge handle opens title editor and drag does not');
+ assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0,'the tab handle cannot restore or edit on click');
+ console.log('PASS: edge handle drag remains functional; tapping it does not edit title');
+ // The red X overlays the handle center and must reject synthetic clicks.
+ await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close").click();true');
+ assert.equal(await run('globalThis.__edgeRestoreRequests||0'),0);
+ const closePoint=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".close").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:closePoint.x,y:closePoint.y});
+ await send('Input.dispatchMouseEvent',{type:'mousePressed',x:closePoint.x,y:closePoint.y,button:'left',clickCount:1});
+ await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:closePoint.x,y:closePoint.y,button:'left',clickCount:1});
+ await sleep(40);
+ assert.equal(await run('globalThis.__edgeRestoreRequests'),1);
+ console.log('PASS: edge-tab red X requests restore only on a trusted pointer click');
  await edgeCommand('off');
  assert.equal(await run('!document.querySelector("#clean-window-edge-control")'),true);
 
  // Title editor: default native title, symbol selection, custom text, SPA updates, restoration.
  await run('globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwTitleListener=fn;};'+titleSource);
- const titleCommand=action=>run('new Promise(resolve=>globalThis.__cwTitleListener({type:"clean-window:title",action:"'+action+'"}, {},resolve))');
+ const titleCommand=(action,anchor)=>run('new Promise(resolve=>globalThis.__cwTitleListener('+JSON.stringify({type:'clean-window:title',action,...(anchor?{anchor}:{})})+', {},resolve))');
  const started=await titleCommand('start');
  assert.equal(started.ok,true);
  assert.equal(await run('document.title'),'◈ Clean Window Test');
  console.log('PASS: symbol + original page title without favicon spoofing');
 
- const opened=await titleCommand('edit');
+ const opened=await titleCommand('edit',{screenX:900,screenY:350});
  assert.equal(opened.ok,true);
+ const editorVisual=await run('(() => {const r=document.querySelector("#clean-window-title-editor").shadowRoot;return {corner:getComputedStyle(r.querySelector(".panel")).borderTopLeftRadius,applyCorner:getComputedStyle(r.querySelector("button.primary")).borderTopLeftRadius}})()');
+ assert.equal(editorVisual.corner,'16px');
+ assert.equal(editorVisual.applyCorner,'999px');
+ assert.equal(await run('document.querySelector("#clean-window-title-editor").dataset.sidecar'),'true');
+ assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-title-editor").shadowRoot.querySelector(".panel")).animationName'),'cw-title-sidecar-enter');
+ console.log('PASS: title editor follows the popup rounded-panel and pill-action styling');
  const custom=await run(`(() => {
    const root=document.querySelector('#clean-window-title-editor').shadowRoot;
    const symbol=root.querySelector('#cw-title-symbol');
@@ -260,7 +295,350 @@ try{
  await titleCommand('off');
  assert.equal(await run('document.title'),'SPA Updated');
  console.log('PASS: restore original title and remove editor override');
- console.log('SMOKE PASS: 15/15 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
+ console.log('SMOKE PASS: 16/16 Chrome Headless DOM checks; not full MV3 window/titlebar acceptance');
+
+ // Real CSS/layout checks with a synthetic YouTube DOM, never a logged-in profile.
+ await run(`document.body.innerHTML = '<div id="masthead-container" style="height:56px">YouTube header</div><ytd-watch-flexy theater><div id="player-full-bleed-container" style="height:300px"><div id="player-container"><ytd-player><div id="container"><div id="movie_player"><div class="html5-video-container"><video class="html5-main-video" style="width:640px;height:360px"></video></div></div></div></ytd-player></div></div><div id="columns"><div id="primary"><div id="player-container-outer"></div><article id="comments" style="background:rgb(220,230,240);height:500px">Comments</article></div><aside id="secondary">Recommendations</aside></div></ytd-watch-flexy>';globalThis.__youtubeLocation={hostname:'www.youtube.com',pathname:'/watch'};true`);
+ await run(`(() => {
+   const watch=document.querySelector('ytd-watch-flexy');watch.style.display='block';
+   const manager=document.createElement('ytd-page-manager');manager.style.cssText='display:block;margin-top:56px';
+   const app=document.createElement('ytd-app');app.style.cssText='display:block;position:absolute;top:0;width:100%';
+   watch.before(app);app.append(manager);manager.append(watch);
+   const stage=document.querySelector('#player-full-bleed-container');
+   const outer=document.createElement('div');outer.id='full-bleed-container';
+   outer.style.cssText='display:flex;position:relative;height:300px;max-height:300px';
+   stage.before(outer);outer.append(stage);
+ })()`);
+ await run('(function(location){'+youtubeSource+'})(globalThis.__youtubeLocation);true');
+ const youtubeLevel=async level=>{
+   assert.equal((await edgeCommand(level)).ok,true);
+   await sleep(45);
+ };
+ const youtubeLayout=()=>run(`(() => {
+   const player=document.querySelector('#movie_player').getBoundingClientRect();
+   const video=document.querySelector('video').getBoundingClientRect();
+   return {mode:document.documentElement.getAttribute('data-clean-window-youtube'),
+     inner:[innerWidth,innerHeight],player:{x:player.x,y:player.y,w:player.width,h:player.height},
+     video:{w:video.width,h:video.height},overflow:getComputedStyle(document.documentElement).overflowY,
+     comments:getComputedStyle(document.querySelector('#comments')).backgroundColor,
+     scrollHeight:document.documentElement.scrollHeight,
+     columnsTop:document.querySelector('#columns').getBoundingClientRect().top,
+     columnsVisibility:getComputedStyle(document.querySelector('#columns')).visibility,
+     videoVisibility:getComputedStyle(document.querySelector('video')).visibility,
+     header:getComputedStyle(document.querySelector('#masthead-container')).display};
+ })()`);
+ await youtubeLevel(3);
+ let yt=await youtubeLayout();
+ assert.equal(yt.mode,'3');
+ assert.deepEqual(yt.player,{x:0,y:0,w:yt.inner[0],h:yt.inner[1]});
+ assert.equal(yt.video.w,yt.inner[0]);assert.equal(yt.video.h,yt.inner[1]);
+ assert.equal(yt.overflow,'hidden');
+ assert.equal(yt.columnsVisibility,'hidden','level 3 must hide page content that can paint above the player');
+ assert.equal(yt.videoVisibility,'visible');
+ await send('Emulation.setDeviceMetricsOverride',{width:900,height:500,deviceScaleFactor:1,mobile:false});
+ await sleep(45);yt=await youtubeLayout();
+ assert.deepEqual(yt.player,{x:0,y:0,w:900,h:500});
+ console.log('PASS: YouTube level 3 fills the viewport and follows resize without the theater height cap');
+ await invoke('address');
+ await youtubeLevel(2);yt=await youtubeLayout();
+ assert.equal(yt.mode,'2');assert.equal(yt.player.h,452);
+ assert.ok(yt.columnsTop>=yt.player.y+yt.player.h,'metadata and recommendations must start below the resized theater player');
+ assert.equal(yt.player.y,48,'site header spacing must not remain below the drawn bar');
+ assert.equal(yt.comments,'rgb(220, 230, 240)');assert.notEqual(yt.overflow,'hidden');
+ assert.ok(yt.scrollHeight>yt.inner[1]);
+ // Layout uses CSS coordinates, not physical pixels or a captured monitor's DPI.
+ await run(`document.querySelector('#clean-window-address-ui').style.setProperty('height','72px','important');true`);
+ await sleep(80);yt=await youtubeLayout();
+ assert.equal(yt.player.y,72,'measure the rendered toolbar instead of assuming 48px');
+ assert.equal(yt.player.h,428);
+ for (const display of [
+   {width:640,height:720,deviceScaleFactor:1},
+   {width:1440,height:900,deviceScaleFactor:1.5},
+   {width:1920,height:1080,deviceScaleFactor:2}
+ ]) {
+   await send('Emulation.setDeviceMetricsOverride',{...display,mobile:false});
+   await sleep(80);yt=await youtubeLayout();
+   assert.equal(yt.player.y,72);
+   const expectedHeight=Math.min(display.height-72,yt.player.w*9/16);
+   assert.ok(Math.abs(yt.player.h-expectedHeight)<1,'level 2 uses the video ratio with a viewport height cap');
+   assert.equal(yt.columnsVisibility,'visible');
+   assert.ok(yt.columnsTop>=yt.player.y+yt.player.h);
+ }
+ await run(`document.querySelector('#clean-window-address-ui').style.setProperty('display','none','important');true`);
+ await sleep(80);yt=await youtubeLayout();
+ assert.equal(yt.player.y,0,'a hidden toolbar must not reserve phantom space');
+ assert.ok(Math.abs(yt.player.h-Math.min(1080,yt.player.w*9/16))<1);
+ await run(`document.querySelector('#clean-window-address-ui').style.removeProperty('display');true`);
+ await run(`document.querySelector('#clean-window-address-ui').style.setProperty('height','48px','important');true`);
+ await send('Emulation.setDeviceMetricsOverride',{width:900,height:500,deviceScaleFactor:1,mobile:false});
+ await sleep(80);
+ console.log('PASS: player follows measured toolbar height and multiple viewport sizes/device pixel ratios');
+ await run(`document.querySelector('ytd-watch-flexy').removeAttribute('theater');document.querySelector('#full-bleed-container').style.display='none';document.querySelector('#player-container-outer').append(document.querySelector('#player-container'));true`);
+ await sleep(45);yt=await youtubeLayout();
+ assert.equal(yt.player.h,452,'normal player also fills content below the URL bar');
+ await youtubeLevel(3);yt=await youtubeLayout();
+ assert.equal(yt.columnsVisibility,'hidden');
+ assert.equal(yt.videoVisibility,'visible','normal-mode player remains visible inside the hidden columns');
+ await youtubeLevel(2);
+ console.log('PASS: YouTube level 2 reserves the rendered toolbar and preserves scrollable comments and page colors');
+ // Trusted pointer events exercise preview separately from persisted mode commands.
+ await invoke('address');
+ await run(`globalThis.__previewCommands=[];globalThis.__previewWrites=[];globalThis.__previewFail=false;
+   globalThis.__previewVideo=document.querySelector('video');
+   chrome.storage.local.set=async value=>{globalThis.__previewWrites.push(value);};
+   chrome.runtime.sendMessage=async message=>{globalThis.__previewCommands.push(message);
+     return globalThis.__previewFail?{ok:false,error:'Preview commit failed'}:{ok:true,level:message.level};};
+   window.scrollTo(0,100);true`);
+ const previewState=()=>run(`(() => {const host=document.querySelector('#clean-window-edge-control');return {
+   preview:host.dataset.previewLevel||null,selected:host.shadowRoot.querySelector('.stop.selected').dataset.level,
+   mode:document.documentElement.getAttribute('data-clean-window-youtube'),scrollY,
+   sameVideo:globalThis.__previewVideo===document.querySelector('video'),
+   commands:globalThis.__previewCommands.length,writes:globalThis.__previewWrites.length,
+   playerScale:(()=>{const m=new DOMMatrixReadOnly(getComputedStyle(document.querySelector('#player-container')).transform);return [m.a,m.d];})(),
+   animations:document.querySelector('#player-container').getAnimations().length};})()`);
+ const hoverMode=async level=>{
+   const handle=await run(`(() => {const r=document.querySelector('#clean-window-edge-control').shadowRoot.querySelector('.handle').getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+35};})()`);
+   await send('Input.dispatchMouseEvent',{type:'mouseMoved',...handle});
+   await sleep(30);
+   const point=await run(`(() => {const r=document.querySelector('#clean-window-edge-control').shadowRoot.querySelector('.stop[data-level="${level}"]').getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+   await send('Input.dispatchMouseEvent',{type:'mouseMoved',...point});
+   return point;
+ };
+ const leaveModes=()=>send('Input.dispatchMouseEvent',{type:'mouseMoved',x:300,y:25});
+ const clickPoint=async point=>{
+   await send('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',clickCount:1});
+   await send('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',clickCount:1});
+   await sleep(50);
+ };
+ const originalScroll=(await previewState()).scrollY;
+ await hoverMode(3);await sleep(190);
+ let preview=await previewState();
+ assert.equal(preview.preview,'3');assert.equal(preview.selected,'2');assert.equal(preview.mode,'3');
+ assert.equal(preview.commands,0);assert.equal(preview.writes,0);assert.ok(preview.animations>0);
+ assert.ok(Math.abs(preview.playerScale[0]-preview.playerScale[1])<0.001,'transition must not stretch the video on one axis');
+ assert.equal(preview.sameVideo,true);
+ await leaveModes();await sleep(80);preview=await previewState();
+ assert.equal(preview.preview,null);assert.equal(preview.mode,'2');assert.equal(preview.scrollY,originalScroll);
+ console.log('PASS: hover previews with live-player animation, no mode writes, and leave restores mode/scroll');
+ await hoverMode(1);await sleep(190);
+ assert.equal((await previewState()).mode,null);
+ assert.equal(await run('document.querySelector("#clean-window-address-ui").dataset.cwDock'),'true');
+ await leaveModes();await sleep(60);
+ await hoverMode(1);await sleep(40);await hoverMode(3);await sleep(190);
+ assert.equal((await previewState()).mode,'3');
+ await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});
+ await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});
+ assert.equal((await previewState()).mode,'2');
+ const commitPoint=await hoverMode(3);await sleep(190);
+ assert.equal(await run(`document.querySelector('#clean-window-edge-control').shadowRoot.elementFromPoint(${commitPoint.x},${commitPoint.y})?.closest('button')?.dataset.level`),'3','preview feedback must not move the mode button away from the pointer');
+ await clickPoint(commitPoint);
+ await leaveModes();await sleep(60);preview=await previewState();
+ assert.equal(preview.selected,'3');assert.equal(preview.mode,'3');assert.equal(preview.preview,null);
+ assert.equal(preview.commands,1,'only the actual click commits a mode');
+ await invoke('address');await youtubeLevel(2);
+ await run('globalThis.__previewFail=true;true');
+ const failPoint=await hoverMode(3);await sleep(190);await clickPoint(failPoint);
+ preview=await previewState();assert.equal(preview.mode,'2');assert.equal(preview.selected,'2');
+ await leaveModes();await run('globalThis.__previewFail=false;true');
+ console.log('PASS: latest hover wins, Escape restores, click commits once, failed commit restores');
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+ await hoverMode(3);await sleep(190);
+ assert.equal((await previewState()).animations,0);
+ await leaveModes();await sleep(40);
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+ await hoverMode(3);await sleep(190);
+ await send('Emulation.setPageScaleFactor',{pageScaleFactor:1.2});
+ await sleep(60);assert.equal((await previewState()).preview,null,'pinch scaling cancels a preview');
+ await send('Emulation.setPageScaleFactor',{pageScaleFactor:1});
+ await leaveModes();await sleep(40);
+ await hoverMode(3);await sleep(190);
+ await run(`document.dispatchEvent(new Event('yt-navigate-start'));true`);
+ assert.equal((await previewState()).preview,null);
+ await leaveModes();
+ await hoverMode(3);await sleep(190);
+ await send('Emulation.setDeviceMetricsOverride',{width:880,height:510,deviceScaleFactor:1,mobile:false});
+ await sleep(70);assert.equal((await previewState()).preview,null);
+ await leaveModes();
+ await hoverMode(3);await sleep(190);
+ await invoke('off');await edgeCommand('off');
+ assert.equal(await run('!!document.querySelector("#clean-window-address-ui")'),false,'Restore must not resurrect a preview toolbar');
+ await invoke('address');await youtubeLevel(2);await leaveModes();
+ console.log('PASS: reduced motion, resize cancellation and Restore during preview leave no stale UI');
+ await youtubeLevel(1);yt=await youtubeLayout();
+ assert.equal(yt.mode,null);assert.notEqual(yt.header,'none');
+ assert.equal(await run('!!document.getElementById("clean-window-youtube-style")'),false);
+ await youtubeLevel(3);
+ await run(`globalThis.__youtubeLocation.pathname='/results';document.dispatchEvent(new Event('yt-navigate-finish'));true`);
+ await sleep(45);assert.equal((await youtubeLayout()).mode,null);
+ await run(`globalThis.__youtubeLocation.pathname='/watch';document.dispatchEvent(new Event('yt-navigate-finish'));true`);
+ await sleep(45);assert.equal((await youtubeLayout()).mode,'3');
+ await run(`Object.defineProperty(document,'fullscreenElement',{configurable:true,value:document.querySelector('#movie_player')});document.dispatchEvent(new Event('fullscreenchange'));true`);
+ await sleep(45);assert.equal((await youtubeLayout()).mode,null);
+ await run(`delete document.fullscreenElement;document.dispatchEvent(new Event('fullscreenchange'));true`);
+ await sleep(45);assert.equal((await youtubeLayout()).mode,'3');
+ await edgeCommand('off');
+ assert.equal((await youtubeLayout()).mode,null);
+ await run(`globalThis.__youtubeLocation.hostname='youtube.com.example.test';true`);
+ await youtubeLevel(3);assert.equal((await youtubeLayout()).mode,null);
+ await edgeCommand('off');await invoke('off');
+ await send('Emulation.clearDeviceMetricsOverride');
+ console.log('PASS: YouTube level 1/restore clean up, SPA route and fullscreen transitions recover, lookalike hosts stay unchanged');
+
+ // Render the real popup HTML/CSS with an isolated extension API stub, then
+ // verify that managed names, clipping, hover marquee and EDIT are usable.
+ const popupBody=popupHTML.split('<body>')[1]?.split('</body>')[0];
+ assert.ok(popupBody,'popup body fixture missing');
+ await run('document.body.innerHTML='+JSON.stringify(popupBody)+';document.head.insertAdjacentHTML("beforeend",'+JSON.stringify('<style>'+popupCSS+'</style>')+');document.querySelector("#managed-windows").open=true;window.close=()=>{globalThis.__cwPopupClosed=true;};true');
+ const popupStub = [
+   'globalThis.__cwPopupMsgs=[];',
+   'globalThis.chrome={',
+   ' tabs:{async query(){return [{id:11,windowId:71}]}},',
+   ' windows:{async get(){return {id:71,type:"normal",state:"normal"}}},',
+   ' commands:{async getAll(){return []}},',
+   ' storage:{session:{async get(){return {}}},local:{async get(){return {cleanLevel:1}},async set(){}}},',
+   ' runtime:{async sendMessage(message){globalThis.__cwPopupMsgs.push(message);',
+   ' if(message.action==="list")return {ok:true,items:[',
+   ' {tabId:91,windowId:81,level:1,title:"🖋️ 已編輯的很長很長視窗標題，這是一段應該啟動連續跑馬燈顯示完整字串的測試內容"},',
+   ' {tabId:92,windowId:82,level:3,title:"短標題"}',
+   ' ]}; return {ok:true};}}};'
+ ].join('');
+ await run(popupStub+popupSource);
+ await sleep(95);
+ const headerLayout=await run('(() => {const h=document.querySelector("header");return {height:getComputedStyle(h).height,headerGap:document.querySelector("main").getBoundingClientRect().top-h.getBoundingClientRect().bottom,decorative:document.querySelectorAll(".mark,.lock,.scope-win,.scope-pips").length,restore:!!h.querySelector("#restore"),theme:!!h.querySelector("#theme-toggle"),status:!!h.querySelector("#target-status"),feedback:!!h.querySelector("#feedback-icon")}})()');
+ assert.equal(headerLayout.height,'68px');
+ assert.ok(headerLayout.headerGap >= 8 && headerLayout.headerGap <= 18,'allow one small intentional breathing gap below the taller header');
+ assert.equal(headerLayout.decorative,0,'nonfunctional top decoration must be removed');
+ assert.ok(headerLayout.restore && headerLayout.theme && headerLayout.status && headerLayout.feedback);
+ console.log('PASS: balanced one-row popup header retains actions with restored breathing room');
+ const demoHandle=await run('(() => {const r=document.querySelector(".edge-tab .et-handle").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:demoHandle.x,y:demoHandle.y});
+ let tooltipVisible=false;
+ for(let i=0;i<12 && !tooltipVisible;i++) {
+   await sleep(25);
+   tooltipVisible=await run('getComputedStyle(document.querySelector(".et-tooltip")).visibility==="visible"');
+ }
+ assert.ok(tooltipVisible,'preview-tab hover must reveal its help text');
+ const popupSpacing=await run(`(() => {
+   const box=s=>document.querySelector(s).getBoundingClientRect();
+   const tip=box(".et-tooltip"),shots=box(".shots"),rail=box(".et-rail");
+   const pill=box(".morph-wrap"),tools=box(".hdr-tools");
+   const hint=getComputedStyle(document.querySelector(".et-tooltip"));
+   return {
+     tip:{top:tip.top,right:tip.right,bottom:tip.bottom},
+     shots:{top:shots.top},
+     rail:{left:rail.left,top:rail.top,bottom:rail.bottom},
+     pill:{top:pill.top,right:pill.right},
+     tools:{left:tools.left},
+     hintVisible:hint.visibility,
+     tipPosition:hint.position,
+     tipAboveIllustration:shots.top-tip.bottom,
+     railAbovePill:pill.top-rail.bottom
+   };
+ })()`);
+ assert.equal(popupSpacing.hintVisible,'visible','preview-tab hover should reveal help');
+ assert.equal(popupSpacing.tipPosition,'fixed');
+ assert.ok(popupSpacing.tipAboveIllustration>=4,'help text must stay in its own upper lane');
+ assert.ok(popupSpacing.tip.right+8 < popupSpacing.tools.left,'help text must not cover header controls');
+ assert.ok(popupSpacing.railAbovePill>=5,'preview mode rail must maintain a visible gap above the black mode button');
+ console.log('PASS: hover tooltip stays clear of toolbar and illustration; mode rail avoids the black button');
+ await run('document.documentElement.dataset.theme="dark";true');
+ assert.equal(await run('getComputedStyle(document.body).backgroundColor'),'rgb(32, 33, 36)');
+ await run('document.querySelector("#theme-toggle").click();true');
+ assert.equal(await run('getComputedStyle(document.body).backgroundColor'),'rgb(246, 245, 241)');
+ console.log('PASS: dark popup uses elevated deep-grey background while theme switch stays active');
+ const popupRows=await run('(() => [...document.querySelectorAll("#managed-list .managed-row")].map(row=>({title:row.querySelector(".managed-name-text")?.textContent,overflow:row.querySelector(".managed-name-viewport")?.dataset.overflow,edit:!!row.querySelector(".managed-edit"),visibleWidth:row.querySelector(".managed-name-viewport")?.clientWidth})))()');
+ assert.equal(popupRows.length,2);
+ assert.equal(popupRows[0].title.startsWith('🖋️ 已編輯'),true);
+ assert.equal(popupRows[0].overflow,'true');
+ assert.equal(popupRows[1].overflow,'false');
+ assert.equal(popupRows[0].visibleWidth>25,true);
+ assert.equal(popupRows[0].edit,true);
+ console.log('PASS: popup list renders managed titles and individual edit icons, clips only long names');
+ const moving=await run('(() => {const r=document.querySelector("#managed-list .managed-name-viewport").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:moving.x,y:moving.y});
+ await sleep(40);
+ let marqueeStarted=false;
+ for(let attempt=0;attempt<10;attempt++){
+   const animation=await run('getComputedStyle(document.querySelector("#managed-list .managed-name-track")).animationName');
+   if(animation==='cw-title-marquee'){marqueeStarted=true;break;}
+   await sleep(25);
+ }
+ assert.equal(marqueeStarted,true,'long title must scroll on hover');
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+ assert.equal(await run('getComputedStyle(document.querySelector("#managed-list .managed-name-track")).animationName'),'none');
+ await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+ console.log('PASS: clipped title loops on hover and stops for reduced-motion preference');
+ await run('document.querySelector("#managed-list .managed-edit").click();true');
+ await sleep(20);
+ assert.equal(await run('globalThis.__cwPopupMsgs.some(m=>m.action==="edit-title"&&m.target.tabId===91&&m.target.windowId===81)'),true);
+ const sequence=await run('globalThis.__cwPopupMsgs.filter(m=>m.action==="focus"||m.action==="edit-title").map(m=>m.action)');
+ assert.deepEqual(sequence,['edit-title','focus']);
+ assert.equal(await run('globalThis.__cwPopupMsgs.find(m=>m.action==="edit-title")?.anchor?.screenY>0'),true);
+ console.log('PASS: popup EDIT opens anchored sidecar before focusing its managed window');
+ console.log('SMOKE PASS: popup managed-list title, marquee and edit actions; real MV3 reload remains unverified');
+ // Synthetic viewport-locked AI layouts: sidebar bottom controls must survive.
+ const fixtureHTML='<!doctype html><html><head><style>html,body{margin:0;padding:0}#app{display:flex;height:100vh}#side{width:200px;height:100%;display:flex;flex-direction:column}#main{flex:1;height:100%;display:flex;flex-direction:column}.bottom{height:48px;margin-top:auto}</style></head><body><div id="app"><nav id="side"><button>menu</button><button class="bottom">settings</button></nav><main id="main"><button>new chat</button><button class="bottom">send</button></main></div></body></html>';
+ const workspaceFixture=async (hostname,height=650)=>{
+   const expr=`(() => {
+     const frame=document.createElement('iframe');
+     frame.style.cssText='position:absolute;top:0;left:0;width:900px;height:650px;border:0';
+     frame.style.height=${height}+'px';
+     document.body.append(frame);
+     const d=frame.contentDocument;d.open();d.write(${JSON.stringify(fixtureHTML)});d.close();
+     const w=frame.contentWindow;
+     w.chrome={storage:{local:{async get(){return{}},async set(){}}},runtime:{onMessage:{addListener(){}}}};
+     w.__cwLocation={protocol:'https:',hostname:${JSON.stringify(hostname)},href:'https://'+${JSON.stringify(hostname)}+'/',origin:'https://'+${JSON.stringify(hostname)}};
+     w.eval(${JSON.stringify('((location)=>{'+source+'})(globalThis.__cwLocation)')});
+     const before=d.documentElement.style.paddingTop;
+     w.__cleanWindowPageUI.apply('address-dock');
+     const bar=d.getElementById('clean-window-address-ui');
+     const result={
+       workspace:bar.dataset.cwWorkspace,
+       before,after:d.documentElement.style.paddingTop,
+       height:w.innerHeight,scroll:d.documentElement.scrollHeight,
+       side:d.querySelector('#side .bottom').getBoundingClientRect().bottom,
+       send:d.querySelector('#main .bottom').getBoundingClientRect().bottom,
+       leftClear:d.elementFromPoint(12,2)!==bar,
+       peek:d.elementFromPoint(450,2)===bar
+     };
+     bar.focus();result.focused=bar.matches(':focus-within');bar.blur();
+     w.__cleanWindowPageUI.apply('address');
+     result.addressHeight=d.getElementById('clean-window-address-ui').dataset.cwHeight;
+     result.addressPadding=d.documentElement.style.paddingTop;
+     w.__cleanWindowPageUI.apply('off');
+     result.restored=d.documentElement.style.paddingTop;
+     frame.remove();
+     return result;
+   })()`;
+   return run(expr);
+ };
+ for(const host of ['gemini.google.com','claude.ai','www.claude.ai',
+                    'chatgpt.com','www.chatgpt.com','chat.openai.com']){
+   const r=await workspaceFixture(host);
+   assert.equal(r.workspace,'true',host);
+   assert.equal(r.after,r.before,host+' must not shift document root');
+   assert.equal(r.addressPadding,r.before,host+' level 2 must not shift root');
+   assert.equal(r.restored,r.before,host+' restore must preserve original padding');
+   assert.equal(r.addressHeight,'48');
+   assert.ok(r.side<=r.height+1 && r.send<=r.height+1,host+' bottom controls visible');
+   assert.ok(r.scroll<=r.height+1,host+' no unwanted root scroll');
+   assert.equal(r.leftClear,true,host+' native left controls accessible');
+   assert.equal(r.peek,true,host+' toolbar handle accessible');
+   assert.equal(r.focused,true,host+' keyboard toolbar expansion');
+ }
+ for(const height of [360,500,780]) {
+   for(const host of ['gemini.google.com','claude.ai','chatgpt.com']) {
+     const r=await workspaceFixture(host,height);
+     assert.equal(r.after,r.before,host+' '+height+'px root unchanged');
+     assert.ok(r.side<=r.height+1 && r.send<=r.height+1,host+' '+height+'px bottom actions');
+     assert.ok(r.scroll<=r.height+1,host+' '+height+'px no overflow');
+   }
+ }
+ const lookalike=await workspaceFixture('gemini.google.com.example.com');
+ assert.equal(lookalike.workspace,'false');
+ assert.notEqual(lookalike.after,lookalike.before);
+ assert.equal(lookalike.restored,lookalike.before);
+ console.log('PASS: Gemini/Claude/ChatGPT preserve viewport-locked navigation, bottom actions and accessible toolbar handle');
 
 } finally {
  try{ws?.close();}catch{}

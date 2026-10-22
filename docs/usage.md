@@ -4,7 +4,7 @@
 
 ## Install and first check
 
-Load the repository's `extension/` folder through `chrome://extensions/` → Developer mode → Load unpacked. Do not load the repository root. No build is needed. Keep that folder in place. Save important work before trying window operations.
+To test the source checkout directly, load its `extension/` folder through `chrome://extensions/` → Developer mode → Load unpacked. For a generated Runtime build, run `npm run build:runtime` and load `dist/runtime/`, or extract `dist/clean-window-v<version>.zip` and load the extracted folder whose root contains `manifest.json`. Do not load the repository root. The extension itself needs no build or Node.js at runtime; Node.js 20+ is needed only to generate the package. Keep the selected folder in place. Save important work before trying window operations.
 
 1. Open test windows A and B, with two tabs in A. Record B's appearance, size, position, and tab contents.
 2. In A, select level 1 and use `Alt + Shift + W`. Confirm the two-row toolbar and managed-window list appear. Restore and select level 2 to confirm the URL bar remains but the dock is gone.
@@ -22,6 +22,32 @@ The drawn address field is not Chrome's trusted native omnibox. The toolbar cann
 The level-1 window manager and expandable list inside the normal extension popup identify only still-open Clean Window managed popups, with focus, L1–L3 change, and individual Restore. Titles/Emoji are cached in session storage for this list, not synchronized or uploaded. Permission for bookmarks can be declined without affecting other controls.
 
 Legacy DOM dimming is retired from the selector.
+
+## Edge mode preview
+
+Hover or keyboard-focus a stop on the actual page-edge rail for about 150ms to preview. A dashed outline marks the preview while the committed selection stays unchanged. Only clicking/activating the stop saves the mode. Leaving the entire rail, moving focus outside, or pressing Escape restores the committed layout and the scroll position from before the preview. The decorative popup example does not preview the active page.
+
+The live player changes position/scale over about 200ms, returning page content fades in, and the URL bar retains its entrance/exit fades. No video is cloned and no old-frame screenshot is used. Reduced-motion preferences disable the transition. Rapid movement cancels obsolete previews and keeps the latest target.
+
+Dragging the handle, viewport resizing, navigation start, video fullscreen changes and window focus loss cancel previews. Preview does not move tabs, resize the outer window or save the level. Failed commits restore the committed layout. Re-enable existing clean windows after an extension update to load the preview scripts.
+
+## YouTube watch pages
+
+On desktop YouTube `/watch` pages, the existing three levels also select the player layout:
+
+| Level | YouTube layout |
+| --- | --- |
+| 1 | Preserve the native layout; remove any special player styles. |
+| 2 | Remove the site header and original player height cap. Size the player using the video aspect ratio, capped by the visible height below the measured URL bar; retain scrollable titles, comments, recommendations and their colors. |
+| 3 | Fix the player to the content viewport, hiding other website content while keeping video, player controls and the extension edge control visible. Use a black background and no page scrolling. |
+
+Video preserves its aspect ratio without cropping. The player follows manual window resizing; this feature does not automatically resize the outer window. Match the content area to the video aspect ratio for edge-to-edge video, allowing for the actual toolbar height in level 2. Native title bars and window borders remain.
+
+Sizing uses the current viewport and the toolbar's rendered height in CSS pixels, rather than a saved monitor resolution or fixed 48px deduction. Viewport/toolbar resize events update the layout; dynamic viewport units are used when supported, with a `vh` fallback. This allows layout to respond to browser zoom and display scaling without mixing physical pixels with CSS coordinates. Tests emulate several viewport sizes and device pixel ratios; physical multi-monitor/DPI transitions still require manual acceptance.
+
+Same-document video navigation retains the effect. Search/home routes suspend it; returning to a watch page resumes it. Native video fullscreen temporarily suspends the styles. Level 1 and Restore remove styles and observers. Shorts, embeds, YouTube Music and other websites are outside scope; mobile pages without the desktop player structure remain unchanged. Full document reloads retain the existing Chrome injection-permission limitations.
+
+When updating, restore existing clean windows, reload the extension in `chrome://extensions/`, then enable it on the target page. Reload pages containing the earlier DevTools demonstration styles before using these modes.
 
 ## Emoji icon and quick editor
 

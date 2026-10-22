@@ -9,6 +9,12 @@
   function isWebPage() {
     return /^https?:$/.test(location.protocol) && !!document.documentElement;
   }
+  // AI chat workspaces own their viewport and navigation layout. Avoid shifting
+  // the document root: fixed-height sidebars and sticky controls can clip.
+  function isWorkspaceLayout() {
+    return ['gemini.google.com', 'claude.ai', 'www.claude.ai',
+      'chatgpt.com', 'www.chatgpt.com', 'chat.openai.com'].includes(location.hostname.toLowerCase());
+  }
   function addressURL(value) {
     if (typeof value !== 'string') throw new Error('請輸入網址。');
     const raw = value.trim();
@@ -54,21 +60,51 @@
     if (bar?.isConnected && bar.dataset.cwDock === String(withDock)) return;
     if (bar?.isConnected) stopBar();
     const html = document.documentElement;
-    originalPadding = { value: html.style.getPropertyValue('padding-top') };
-    originalPriority = html.style.getPropertyPriority('padding-top');
+    const workspace = isWorkspaceLayout();
+    originalPadding = workspace ? null : { value: html.style.getPropertyValue('padding-top') };
+    originalPriority = workspace ? '' : html.style.getPropertyPriority('padding-top');
     const height = withDock ? 86 : BAR_HEIGHT;
-    const currentPadding = getComputedStyle(html).paddingTop || '0px';
-    html.style.setProperty('padding-top', `calc(${currentPadding} + ${height}px)`, 'important');
+    if (!workspace) {
+      const currentPadding = getComputedStyle(html).paddingTop || '0px';
+      html.style.setProperty('padding-top', `calc(${currentPadding} + ${height}px)`, 'important');
+    }
     bar = document.createElement('div');
     bar.id = BAR_ID;
     bar.dataset.cwDock = withDock ? 'true' : 'false';
     bar.dataset.cwHeight = String(height);
+    bar.dataset.cwWorkspace = String(workspace);
+    if (workspace) {
+      bar.tabIndex = 0;
+      bar.setAttribute('aria-label', 'Clean Window 工具列；聚焦或移至視窗上緣中央可展開');
+      bar.title = '將滑鼠移至視窗上緣中央，即可展開 Clean Window 工具列';
+    }
     bar.style.cssText = 'all:initial!important;position:fixed!important;inset:0 0 auto 0!important;height:'+height+'px!important;z-index:2147483647!important;';
     const shadow = bar.attachShadow({mode:'closed'});
     const style = document.createElement('style');
     style.textContent = `
       :host { color-scheme:light; animation:cw-bar-enter .18s cubic-bezier(.16,1,.3,1) both; }
       @keyframes cw-bar-enter {from {opacity:0;transform:translateY(-4px);} to {opacity:1;transform:none;}}
+      /* Workspace-safe mode: peek from the top without mutating the app's root
+         layout. Only the small center handle can intercept native top controls. */
+      :host([data-cw-workspace="true"]) {
+        animation:none!important;transform:translateY(calc(-100% + 6px))!important;
+        clip-path:inset(0 calc(50% - 38px))!important;
+        transition:transform .2s ease,clip-path .2s ease!important;
+      }
+      :host([data-cw-workspace="true"]:hover),
+      :host([data-cw-workspace="true"]:focus-within) {
+        transform:none!important;clip-path:inset(0)!important;
+      }
+      :host([data-cw-workspace="true"])::after {
+        content:'⌄';position:absolute;bottom:0;left:calc(50% - 38px);
+        width:76px;height:6px;border-radius:0 0 6px 6px;
+        background:#a9b1bc;color:transparent;pointer-events:none;
+      }
+      :host([data-cw-workspace="true"]:hover)::after,
+      :host([data-cw-workspace="true"]:focus-within)::after {opacity:0;}
+      @media (prefers-reduced-motion:reduce) {
+        :host([data-cw-workspace="true"]) {transition:none!important;}
+      }
       :host([data-theme="dark"]) { color-scheme:dark; }
       *,*::before,*::after { box-sizing:border-box; }
       .strip { display:flex; align-items:center; gap:8px; height:48px; padding:0 12px;
@@ -337,5 +373,6 @@
     catch(error) {respond({ok:false,error:error?.message || String(error)});}
     return false;
   });
-  globalThis.__cleanWindowPageUI = true;
+  // Shared only inside this extension's isolated world; preview never calls the background worker.
+  globalThis.__cleanWindowPageUI = { apply };
 })();

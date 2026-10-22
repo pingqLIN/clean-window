@@ -8,32 +8,126 @@
   <script type="module" src="popup.js"></script>
 </head>
 <body>
-  <header><img src="icons/icon48.png" width="34" height="34" alt=""><div><h1>乾淨視窗</h1><p>CLEAN WINDOW</p></div><span class="version">0.1</span></header>
-  <main>
-    <div class="scope"><span class="dot"></span><span id="target-status">正在確認目標視窗…</span></div>
-    <button type="button" class="choice primary" data-action="toggle-clean" disabled>
-      <span class="button-title" id="clean-label">套用此簡化等級</span>
-      <span class="description" id="clean-description">將目前分頁移至選擇的視窗模式。</span>
-      <kbd>Alt + Shift + W</kbd>
+  <header>
+    <span id="scope" class="sr-only" data-state="loading"><span id="target-status">正在確認目標視窗…</span></span>
+    <span id="feedback-icon" class="fb" data-kind="error" hidden aria-hidden="true">
+      <svg class="k-info" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 7.4v3.6"/><path d="M8 5v.01"/></svg>
+      <svg class="k-warn" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.2l6 10.6H2z"/><path d="M8 6.6v3"/><path d="M8 11.5v.01"/></svg>
+      <svg class="k-error" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4"/></svg>
+    </span>
+    <span class="hdr-tools">
+      <button type="button" id="restore" class="secondary" data-action="restore" disabled title="還原目前視窗" aria-label="還原目前視窗">
+        <svg class="revert-icon" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2.5 7.5a5.5 5.5 0 1 1 1.6 3.9"/>
+          <path d="M2.5 3.5v4h4"/>
+        </svg>
+        <kbd class="sr-only"></kbd>
+      </button>
+      <button type="button" id="theme-toggle" class="ghost" aria-label="切換主題" title="切換明暗主題">
+      <svg class="theme-icon sun" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="8" r="3.2"/>
+        <path d="M8 1.5v1.5M8 13v1.5M1.5 8h1.5M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/>
+      </svg>
+      <svg class="theme-icon moon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13.5 9.5a5.5 5.5 0 1 1-7-7 6.5 6.5 0 0 0 7 7z"/>
+      </svg>
     </button>
+    </span>
+  </header>
+
+  <main>
+    <!-- Primary action sits above the level picker (kept in this order on purpose). -->
+    <div class="actions" hidden>
+      <button type="button" class="choice primary" data-action="toggle-clean" disabled title="套用 / 還原簡化模式">
+        <svg class="flow" width="72" height="28" viewBox="0 0 72 28" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <g class="flow-source">
+            <rect x="2" y="4" width="24" height="20" rx="3"/>
+            <path d="M2 9.5h24"/>
+            <path d="M6 6.75h.01M9 6.75h.01"/>
+          </g>
+          <g class="flow-arrow" id="diagram-arrow">
+            <path d="M32 14h10M38.5 10.5L42 14l-3.5 3.5"/>
+          </g>
+          <g class="flow-target" id="diagram-target" data-level="1">
+            <rect x="46" y="4" width="24" height="20" rx="3"/>
+            <g class="t1"><path d="M46 9.5h24M46 14h24"/></g>
+            <g class="t2"><path d="M46 9.5h24"/><path d="M53 12.1h10" stroke-width="1.2"/></g>
+            <g class="t3"></g>
+          </g>
+        </svg>
+        <kbd class="sr-only"></kbd>
+        <!-- Required accessible elements -->
+        <div class="sr-only">
+          <span class="button-title" id="clean-label">套用此簡化等級</span>
+          <span class="description" id="clean-description">將目前分頁移至選擇的視窗模式。</span>
+        </div>
+      </button>
+
+
+    </div>
+
+    <!-- Level picker: one window that morphs; three pips show which level is selected. -->
     <section class="level-picker" aria-label="簡化等級">
-      <div class="level-heading"><label for="clean-level">簡化程度</label><output id="level-number" for="clean-level">1 / 3</output></div>
-      <input id="clean-level" type="range" min="1" max="3" step="1" value="1" disabled aria-describedby="level-title level-limit">
-      <div class="steps" aria-hidden="true"><span>1</span><span>2</span><span>3</span></div>
-      <div class="level-preview">
-        <strong id="level-title">1 · 自繪網址欄＋擴充欄</strong>
-        <p id="level-detail">精簡 Popup 加上自繪網址欄與 Clean Window 專屬擴充工具列。</p>
-        <p id="level-limit" class="limit"></p>
+      <div class="morph-stage" id="morph-stage" data-preview-level="1" data-selected-level="1">
+        <!-- 三模式視窗上緣：同位置疊放，共用一個 MASK 當底圖；預覽等級決定顯示哪一張 -->
+        <div class="shots" aria-hidden="true"><svg viewBox="0 0 360 164" preserveAspectRatio="xMidYMin slice"><rect class="w f" x="20" y="8" width="320" height="260" rx="14"/><circle class="d" cx="36" cy="22" r="3.2"/><circle class="d" cx="45" cy="22" r="3.2"/><circle class="d" cx="54" cy="22" r="3.2"/><rect class="d" x="36" y="35" width="10" height="10" rx="3"/><rect class="d" x="50" y="35" width="10" height="10" rx="3"/><rect class="s o" x="68" y="33" width="256" height="14" rx="7"/><rect class="d" x="77" y="40" width="5" height="4" rx="1"/><path class="dl" d="M78 40v-1.2a1.5 1.5 0 0 1 3 0V40"/><text class="u" x="88" y="43.4"><tspan class="h">github.com</tspan><tspan class="p">/pingqLIN</tspan></text><circle class="dl" cx="312" cy="40" r="2.6"/><rect class="s" x="36" y="54" width="20" height="7" rx="3.5"/><rect class="s" x="60" y="54" width="20" height="7" rx="3.5"/><rect class="s" x="84" y="54" width="44" height="7" rx="3.5"/><rect class="s" x="132" y="54" width="20" height="7" rx="3.5"/><rect class="l" x="36" y="76" width="110" height="8" rx="4"/><rect class="s" x="36" y="93" width="288" height="5" rx="2.5"/><rect class="s" x="36" y="105" width="200" height="5" rx="2.5"/><rect class="s" x="36" y="120" width="288" height="36" rx="8"/></svg><svg viewBox="0 0 360 164" preserveAspectRatio="xMidYMin slice"><rect class="w f" x="20" y="8" width="320" height="260" rx="14"/><circle class="d" cx="36" cy="22" r="3.2"/><circle class="d" cx="45" cy="22" r="3.2"/><circle class="d" cx="54" cy="22" r="3.2"/><rect class="s o" x="72" y="33" width="216" height="14" rx="7"/><rect class="d" x="81" y="40" width="5" height="4" rx="1"/><path class="dl" d="M82 40v-1.2a1.5 1.5 0 0 1 3 0V40"/><text class="u" x="92" y="43.4"><tspan class="h">github.com</tspan><tspan class="p">/pingqLIN</tspan></text><circle class="dl" cx="276" cy="40" r="2.6"/><rect class="l" x="36" y="62" width="110" height="8" rx="4"/><rect class="s" x="36" y="79" width="288" height="5" rx="2.5"/><rect class="s" x="36" y="91" width="200" height="5" rx="2.5"/><rect class="s" x="36" y="106" width="288" height="36" rx="8"/></svg><svg viewBox="0 0 360 164" preserveAspectRatio="xMidYMin slice"><rect class="w f" x="20" y="8" width="320" height="260" rx="14"/><circle class="d" cx="36" cy="22" r="3.2"/><circle class="d" cx="45" cy="22" r="3.2"/><circle class="d" cx="54" cy="22" r="3.2"/><rect class="l" x="36" y="40" width="110" height="8" rx="4"/><rect class="s" x="36" y="57" width="288" height="5" rx="2.5"/><rect class="s" x="36" y="69" width="200" height="5" rx="2.5"/><rect class="s" x="36" y="84" width="288" height="36" rx="8"/></svg></div>
+
+        <div class="morph-wrap">
+          <div class="morph-zones" role="radiogroup" aria-label="模式選擇">
+            <button type="button" class="morph-zone" role="radio" aria-checked="true" data-level="1" aria-label="模式 1: 輕量工具列" title="輕量工具列"><svg width="28" height="22" viewBox="0 0 28 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="25" height="19" rx="3"/><path d="M1.5 6.5h25M1.5 10.5h25"/></svg></button>
+            <button type="button" class="morph-zone" role="radio" aria-checked="false" data-level="2" aria-label="模式 2: 自繪網址欄" title="自繪網址欄"><svg width="28" height="22" viewBox="0 0 28 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="25" height="19" rx="3"/><path d="M1.5 6.5h25"/></svg></button>
+            <button type="button" class="morph-zone" role="radio" aria-checked="false" data-level="3" aria-label="模式 3: 純精簡內容" title="純精簡內容"><svg width="28" height="22" viewBox="0 0 28 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="25" height="19" rx="3"/></svg></button>
+            <i class="glow" aria-hidden="true"></i>
+          </div>
+        </div>
+
+        <!-- 模式英文說明：滑鼠移到下方圓點區時取代中央按鈕 -->
+        <div class="morph-caption" aria-hidden="true"><strong></strong><span></span></div>
+
+        <div class="pips level-pips" role="radiogroup" aria-label="選擇簡化等級，不會立即套用"><button type="button" class="pip" role="radio" data-level="1" aria-checked="true" aria-label="選擇第 1 級"></button><button type="button" class="pip" role="radio" data-level="2" aria-checked="false" aria-label="選擇第 2 級"></button><button type="button" class="pip" role="radio" data-level="3" aria-checked="false" aria-label="選擇第 3 級"></button></div>
+      </div>
+
+      <!-- Required accessible elements -->
+      <div class="sr-only">
+        <output id="level-number" for="clean-level">1 / 3</output>
+        <input id="clean-level" type="range" min="1" max="3" step="1" value="1" disabled aria-describedby="level-title level-limit">
+        <div class="level-preview">
+          <strong id="level-title">1 · 自繪網址欄＋擴充欄</strong>
+          <p id="level-detail">精簡 Popup 加上自繪網址欄與 Clean Window 專屬擴充工具列。</p>
+          <p id="level-limit" class="limit"></p>
+        </div>
       </div>
     </section>
-    <button type="button" id="restore" data-action="restore" disabled><span>還原目前視窗</span><kbd>Alt + Shift + R</kbd></button>
+
+    <!-- Managed windows: show each actual title, then its edit, level and restore actions. -->
     <details id="managed-windows">
-      <summary>已啟用乾淨視窗 <span id="managed-count"></span></summary>
+      <summary title="已啟用乾淨視窗" aria-label="已啟用乾淨視窗">
+        <span class="summary-glyph" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4.75" y="1.75" width="9.5" height="8" rx="1.75"/>
+            <path d="M3.25 4.75h-.5a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h7.5a1 1 0 0 0 1-1v-.5"/>
+          </svg>
+        </span>
+        <span id="managed-count" class="pips" aria-hidden="true"></span>
+        <span class="grow"></span>
+        <span class="summary-arrow" aria-hidden="true">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6l4 4 4-4"/>
+          </svg>
+        </span>
+        <span class="sr-only">已啟用乾淨視窗</span>
+      </summary>
       <div id="managed-list" aria-live="polite"></div>
     </details>
+
     <p id="feedback" role="status" aria-live="polite" hidden></p>
-    <p class="note">第 1 級提供輕量瀏覽器工具列、乾淨視窗清單與選用書籤功能；第 2 級只有網址欄，第 3 級純內容。自繪網址欄不是 Chrome 原生安全介面。</p>
   </main>
-  <footer><span>本機處理 · 不傳送頁面內容</span><span>僅影響指定視窗</span></footer>
+  <!-- Decorative edge-tab preview; the real page tab supports hover-to-restore and level switching. -->
+  <div class="edge-tab" id="edge-tab">
+    <button type="button" class="et-handle" aria-label="預覽乾淨視窗側邊標籤" aria-describedby="edge-tooltip"></button>
+    <span class="et-tooltip" id="edge-tooltip" aria-hidden="true">側邊標籤：切換模式或關閉乾淨視窗</span>
+    <div class="et-rail" aria-hidden="true"><span class="et-stop" data-level="1"><span class="et-tick"></span></span><span class="et-stop" data-level="2"><span class="et-tick"></span></span><span class="et-stop" data-level="3"><span class="et-tick"></span></span></div>
+  </div>
+
 </body>
 </html>

@@ -10,7 +10,7 @@
 
 以單一三級滑桿選擇「輕量瀏覽器工具列」、「自繪網址欄」或「純精簡 Popup」；全螢幕為獨立操作。不變更其他視窗的介面設定。操作綁定指定視窗與分頁，不修改 Chrome 全域外觀設定。
 
-**狀態：原始碼預覽版。** 68 項模擬 Chrome API 與 Popup 互動的自動化測試通過；真實 Chrome 視窗外觀、快捷鍵及 Windows 瀏覽器操作仍**尚未驗收**。擴充介面目前使用繁體中文，文件提供英文與繁體中文。頁首圖片是概念插畫，不是實機截圖。
+**狀態：原始碼預覽版。** 77 項模擬 Chrome API 與 Popup 互動的自動化測試通過；真實 Chrome 視窗外觀、快捷鍵及 Windows 瀏覽器操作仍**尚未驗收**。擴充介面目前使用繁體中文，文件提供英文與繁體中文。頁首圖片是概念插畫，不是實機截圖。
 
 ## 快速開始
 
@@ -49,6 +49,10 @@
 
 **乾淨模式標題**：進入精簡 Popup 後，預設顯示「◈ ＋原始網頁標題」。可用 `Alt + Shift + T` 或頁面右鍵選單開啟輕量編輯面板，從內建 Unicode Symbol 字元選擇圖示並修改文字，或一鍵恢復原始網頁標題；切回普通視窗時也會還原。僅作用於可注入的 HTTP(S) 頁面，第 3 級雖無自繪工具列，仍會在可行時按需注入標題處理腳本。標題字元不是網站 favicon 或 Chrome 安全標誌，且原生 Windows 標題列外觀尚未經 GUI 驗收。
 
+**YouTube 播放頁：**第 1 級保持網站版面；第 2 級依影片比例安排播放器高度，以網址欄下方的可視高度為上限，保留標題、留言、推薦內容與原有配色，可往下捲動；第 3 級讓播放器占滿內容區，隱藏其餘網站內容，以黑色背景呈現並停止頁面捲動。影片維持原比例、完整顯示；視窗比例不同時會留黑邊。切回第 1 級或還原即移除專用樣式。詳見[使用說明](docs/usage.zh-TW.md#youtube-播放頁)。
+
+**側邊模式預覽：**移入模式檔位約 150ms 可預覽，播放器以約 200ms 平順變化；點擊才儲存，移出整個模式列或按 Esc 還原。遵循「減少動態效果」設定。詳見[預覽說明](docs/usage.zh-TW.md#側邊模式列預覽)。
+
 ## 快捷鍵
 
 | 操作 | 預設快捷鍵 |
@@ -82,24 +86,27 @@
 | `contextMenus` | 新增網頁及擴充圖示的切換／還原選單 |
 | 選用 `bookmarks` | 第 1 級自願授權後才能顯示、加入或移除 Chrome 書籤；沒有自動授權 |
 
-沒有廣泛網站存取權限、常駐 content script、原生主機、分析追蹤或對外網路請求。擴充未要求可讀取敏感分頁資料的 `tabs` 權限；只用分頁 ID 與視窗資訊，不讀取網頁內容。README 的遠端徽章不屬於擴充執行時的網路行為。詳見 [PRIVACY.md](PRIVACY.md) 與 [manifest](extension/manifest.json)。
+沒有廣泛網站存取權限、常駐 content script、原生主機、分析追蹤或對外網路請求。擴充未要求可讀取敏感分頁資料的 `tabs` 權限；YouTube 專用版面只在已啟用的分頁內檢查網域、路徑與播放器元素，不擷取影片、留言或推薦內容。README 的遠端徽章不屬於擴充執行時的網路行為。詳見 [PRIVACY.md](PRIVACY.md) 與 [manifest](extension/manifest.json)。
 
 ## 開發
 
-`package.json` 宣告 Node.js **20+**。沒有 npm 相依套件，不需要安裝或建置步驟。
+`package.json` 宣告 Node.js **20+**。沒有 npm 相依套件，也不需要安裝相依套件。`extension/` 是 Runtime 唯一原始碼；不要手動修改自動產生的產物。
 
 ```sh
 # From the repository root
 npm test
 npm run check
+npm run smoke:dom
+npm run build:runtime
 ```
 
-`npm test` 透過可重現的 Chrome API 模擬與 Popup 互動測試執行 68 項測試；`npm run check` 檢查 JavaScript 語法、MV3 結構、版本一致性、權限、圖示及 inline handler 限制。這些結果**不能取代實際瀏覽器驗收**。
+`npm test` 執行 77 項可重現的 Chrome API 模擬與 Popup 互動測試。`npm run build:runtime` 會產生可載入的 `dist/runtime/`，以及檔案直接位於 ZIP 根目錄的 `dist/clean-window-v<version>.zip`。`dist/` 由 Git 忽略。自動化結果**不能取代實際瀏覽器驗收**。詳見[Runtime／Development 分離檢核表](docs/runtime-development-checklist.zh-TW.md)。
 
 | 文件 | 用途 |
 | --- | --- |
 | [驗證紀錄](docs/verification.md) | 已通過項目、瀏覽器測試阻塞與剩餘驗收 |
 | [架構](docs/architecture.md) | 面板、背景工作者、控制器與瀏覽器的責任邊界 |
+| [Runtime／Development 檢核表](docs/runtime-development-checklist.zh-TW.md) | 產物打包、檔案分層與發布驗收 |
 | [貢獻說明](CONTRIBUTING.md) | 本機檢查、修改範圍及安全回報方式 |
 | [版本紀錄](CHANGELOG.md) | 版本變更 |
 | [Issues](https://github.com/pingqLIN/clean-window/issues) | 可重現的錯誤及功能需求；請勿張貼敏感瀏覽資料 |

@@ -6,7 +6,9 @@
   "description": "A cleaner Chrome window, without changing the others.",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node scripts/check.mjs",
+    "check": "node scripts/check.mjs && node scripts/package-runtime.mjs --check",
+    "check:runtime": "node scripts/package-runtime.mjs --check",
+    "build:runtime": "node scripts/package-runtime.mjs",
     "smoke:dom": "node tests/page-ui.chrome-smoke.mjs"
   },
   "engines": {

@@ -8,6 +8,10 @@ The manifest requests `storage`, `contextMenus`, `activeTab`, and `scripting` as
 
 `chrome.tabs` can still be used for non-sensitive identifiers and tab operations without requesting the sensitive `tabs` permission. Clean Window uses those identifiers to manipulate the explicitly selected tab and window; it does not scrape page body content. The optional title tool reads the selected page's `document.title` locally, without uploading or persisting that string.
 
+The on-demand YouTube layout checks only the selected document's hostname/path, player element availability and fullscreen state. It applies local CSS in levels 2 and 3 and observes local DOM changes for player replacement. It does not extract video, comment or recommendation content, change playback, transmit data or persist the page URL. Level 1 and Restore remove its styles and observers.
+
+Mode previews keep the committed level, temporary target and original scroll position/page URL only in the current document's memory, for cancellation and restoration. Hovering does not save the mode or send a mode-change command to the background worker. The same live player is animated; no screenshot, copied video or network request is used. Clicking commits through the existing managed-window validation.
+
 ## Session data
 
 | Data | Why it exists | Where it lives |

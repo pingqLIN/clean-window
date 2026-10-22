@@ -10,7 +10,7 @@
 
 Choose one of three simplification levels: a lightweight two-row browser toolbar, a drawn address bar only, or a bare popup. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
 
-**Status: source preview.** 68 automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
+**Status: source preview.** 77 automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
 
 ## Quick Start
 
@@ -49,6 +49,10 @@ The former DOM masking experiment and levels 4–6 are removed from the selector
 
 **Editable clean-mode title:** A clean popup initially displays the standard Unicode symbol `◈` followed by the original webpage title. Press `Alt + Shift + T`, or use the page context menu, to select another built-in Symbol glyph, edit the text, or reset it. Normal-window restoration restores the native webpage title. This adjusts `document.title`, **not** Chrome's native favicon/security identity. It is limited to eligible HTTP(S) pages; the headless DOM behavior has passed, but actual Windows popup titlebar rendering needs GUI acceptance.
 
+**YouTube watch pages:** level 1 preserves the website layout. Level 2 sizes the player using the video aspect ratio, capped by the visible height below the drawn URL bar, preserving scrollable titles, comments, recommendations and their colors. Level 3 fills the content viewport with the player on a black background, hides other website content and disables page scrolling. Video keeps its original aspect ratio without cropping; mismatched window proportions produce letterboxing. Level 1 or Restore removes the special styles. See the [usage guide](docs/usage.md#youtube-watch-pages).
+
+**Edge mode preview:** hover a stop for about 150ms to preview, with a roughly 200ms live-player transition. Click saves; leaving the rail or Escape restores the committed layout. Reduced-motion preferences are respected. See [preview usage](docs/usage.md#edge-mode-preview).
+
 ## Shortcuts
 
 | Action | Default shortcut |
@@ -85,20 +89,23 @@ No broad host permissions, persistent content scripts, native host, analytics, o
 
 ## Development
 
-Node.js **20+** is declared in `package.json`. There are no npm dependencies, and no install or build step is required.
+Node.js **20+** is declared in `package.json`. There are no npm dependencies or install step. `extension/` is the canonical Runtime source; do not edit generated output manually.
 
 ```sh
 # From the repository root
 npm test
 npm run check
+npm run smoke:dom
+npm run build:runtime
 ```
 
-`npm test` runs 67 tests against deterministic Chrome API simulations and popup interactions. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
+`npm test` runs 77 tests against deterministic Chrome API simulations and popup interactions. `npm run build:runtime` creates `dist/runtime/` for Load unpacked and `dist/clean-window-v<version>.zip` with extension files at the archive root. Generated `dist/` output is ignored by Git. Automated checks do **not** prove actual browser behavior. See the [Runtime / Development separation checklist](docs/runtime-development-checklist.md).
 
 | Resource | Purpose |
 | --- | --- |
 | [Verification record](docs/verification.md) | Passed checks, blocked browser tests, and remaining acceptance work |
 | [Architecture](docs/architecture.md) | Popup, worker, controller, and browser responsibility boundaries |
+| [Runtime / Development checklist](docs/runtime-development-checklist.md) | Runtime packaging, file separation and release acceptance |
 | [Contributing](CONTRIBUTING.md) | Local checks, scope, and safe bug reports |
 | [Changelog](CHANGELOG.md) | Version history |
 | [Issues](https://github.com/pingqLIN/clean-window/issues) | Reproducible bugs and feature requests; do not post sensitive browser data |
