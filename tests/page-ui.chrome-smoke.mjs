@@ -576,6 +576,69 @@ try{
  assert.equal(await run('globalThis.__cwPopupMsgs.find(m=>m.action==="edit-title")?.anchor?.screenY>0'),true);
  console.log('PASS: popup EDIT opens anchored sidecar before focusing its managed window');
  console.log('SMOKE PASS: popup managed-list title, marquee and edit actions; real MV3 reload remains unverified');
+ // Synthetic viewport-locked AI layouts: sidebar bottom controls must survive.
+ const fixtureHTML='<!doctype html><html><head><style>html,body{margin:0;padding:0}#app{display:flex;height:100vh}#side{width:200px;height:100%;display:flex;flex-direction:column}#main{flex:1;height:100%;display:flex;flex-direction:column}.bottom{height:48px;margin-top:auto}</style></head><body><div id="app"><nav id="side"><button>menu</button><button class="bottom">settings</button></nav><main id="main"><button>new chat</button><button class="bottom">send</button></main></div></body></html>';
+ const workspaceFixture=async (hostname,height=650)=>{
+   const expr=`(() => {
+     const frame=document.createElement('iframe');
+     frame.style.cssText='position:absolute;top:0;left:0;width:900px;height:650px;border:0';
+     frame.style.height=${height}+'px';
+     document.body.append(frame);
+     const d=frame.contentDocument;d.open();d.write(${JSON.stringify(fixtureHTML)});d.close();
+     const w=frame.contentWindow;
+     w.chrome={storage:{local:{async get(){return{}},async set(){}}},runtime:{onMessage:{addListener(){}}}};
+     w.__cwLocation={protocol:'https:',hostname:${JSON.stringify(hostname)},href:'https://'+${JSON.stringify(hostname)}+'/',origin:'https://'+${JSON.stringify(hostname)}};
+     w.eval(${JSON.stringify('((location)=>{'+source+'})(globalThis.__cwLocation)')});
+     const before=d.documentElement.style.paddingTop;
+     w.__cleanWindowPageUI.apply('address-dock');
+     const bar=d.getElementById('clean-window-address-ui');
+     const result={
+       workspace:bar.dataset.cwWorkspace,
+       before,after:d.documentElement.style.paddingTop,
+       height:w.innerHeight,scroll:d.documentElement.scrollHeight,
+       side:d.querySelector('#side .bottom').getBoundingClientRect().bottom,
+       send:d.querySelector('#main .bottom').getBoundingClientRect().bottom,
+       leftClear:d.elementFromPoint(12,2)!==bar,
+       peek:d.elementFromPoint(450,2)===bar
+     };
+     bar.focus();result.focused=bar.matches(':focus-within');bar.blur();
+     w.__cleanWindowPageUI.apply('address');
+     result.addressHeight=d.getElementById('clean-window-address-ui').dataset.cwHeight;
+     result.addressPadding=d.documentElement.style.paddingTop;
+     w.__cleanWindowPageUI.apply('off');
+     result.restored=d.documentElement.style.paddingTop;
+     frame.remove();
+     return result;
+   })()`;
+   return run(expr);
+ };
+ for(const host of ['gemini.google.com','claude.ai','www.claude.ai',
+                    'chatgpt.com','www.chatgpt.com','chat.openai.com']){
+   const r=await workspaceFixture(host);
+   assert.equal(r.workspace,'true',host);
+   assert.equal(r.after,r.before,host+' must not shift document root');
+   assert.equal(r.addressPadding,r.before,host+' level 2 must not shift root');
+   assert.equal(r.restored,r.before,host+' restore must preserve original padding');
+   assert.equal(r.addressHeight,'48');
+   assert.ok(r.side<=r.height+1 && r.send<=r.height+1,host+' bottom controls visible');
+   assert.ok(r.scroll<=r.height+1,host+' no unwanted root scroll');
+   assert.equal(r.leftClear,true,host+' native left controls accessible');
+   assert.equal(r.peek,true,host+' toolbar handle accessible');
+   assert.equal(r.focused,true,host+' keyboard toolbar expansion');
+ }
+ for(const height of [360,500,780]) {
+   for(const host of ['gemini.google.com','claude.ai','chatgpt.com']) {
+     const r=await workspaceFixture(host,height);
+     assert.equal(r.after,r.before,host+' '+height+'px root unchanged');
+     assert.ok(r.side<=r.height+1 && r.send<=r.height+1,host+' '+height+'px bottom actions');
+     assert.ok(r.scroll<=r.height+1,host+' '+height+'px no overflow');
+   }
+ }
+ const lookalike=await workspaceFixture('gemini.google.com.example.com');
+ assert.equal(lookalike.workspace,'false');
+ assert.notEqual(lookalike.after,lookalike.before);
+ assert.equal(lookalike.restored,lookalike.before);
+ console.log('PASS: Gemini/Claude/ChatGPT preserve viewport-locked navigation, bottom actions and accessible toolbar handle');
 
 } finally {
  try{ws?.close();}catch{}
