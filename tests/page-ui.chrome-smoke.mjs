@@ -83,6 +83,16 @@ try{
  assert.equal(full.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'86');
+ assert.equal(await run('document.documentElement.style.paddingTop'), '', 'level 1 should not reserve a permanent blank gap');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 starts collapsed');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','only the center handle is exposed while collapsed');
+ const dockHandle=await run('(() => {const r=document.getElementById("clean-window-address-ui").getBoundingClientRect();return{x:r.left+r.width/2,y:r.bottom-3};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:dockHandle.x,y:dockHandle.y});
+ await sleep(240);
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','hovering the top handle expands level 1');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
+ await sleep(250);
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 collapses again after pointer leaves');
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelectorAll(".ribbon button").length'),7);
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".brand")===null'),true);
  const initialTheme=await run('document.getElementById("clean-window-address-ui").dataset.theme');
@@ -92,7 +102,12 @@ try{
  assert.notEqual(toggledTheme,initialTheme);
  assert.equal(await run('globalThis.__cwTheme'),toggledTheme);
  await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".ribbon button[title=\'管理乾淨視窗\']").click();true');
+ await sleep(240);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwMenuOpen'),'true','opening the extension menu keeps level 1 expanded');
+ assert.ok(await run('Math.abs(document.getElementById("clean-window-address-ui").getBoundingClientRect().top)')<1,'the menu remains reachable after the pointer leaves the toolbar');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
  await sleep(40);
+ assert.ok(await run('Math.abs(document.getElementById("clean-window-address-ui").getBoundingClientRect().top)')<1,'open menu prevents accidental collapse');
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelectorAll(".menu-row").length'),1);
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".menu-row .name").textContent'),'🎨 研究視窗');
  await run('(() => {const r=document.getElementById("clean-window-address-ui").shadowRoot;const s=r.querySelector(".menu-row select");s.value="2";s.dispatchEvent(new Event("change"));return true;})()');
@@ -104,11 +119,19 @@ try{
  await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".menu-action").click();true');
  await sleep(40);
  assert.equal(await run('globalThis.__hubCalls.some(m=>m.action==="bookmarks-grant")'),true);
+ await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".menu-header button").click();true');
+ await sleep(240);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwMenuOpen'),undefined,'closing the menu releases the expanded state');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 collapses again when its menu closes and the pointer is outside');
  console.log('PASS: level 1 draws two-row toolbar, manager list and optional bookmark permission entry');
  const switched=await invoke('address');
  assert.equal(switched.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'48');
+ await sleep(220);
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 2 stays visible rather than inheriting level 1 collapse');
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','level 2 is not clipped to a small handle');
+ assert.equal(await run('getComputedStyle(document.documentElement).paddingTop'),'48px','level 2 reserves its visible address-bar height on ordinary pages');
  await sleep(30);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.theme'),toggledTheme,'theme persists to level 2');
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".theme-toggle")!==null'),true);
@@ -116,6 +139,8 @@ try{
  const returned=await invoke('address-dock');
  assert.equal(returned.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','switching back to level 1 restores the collapsed state');
+ assert.equal(await run('document.documentElement.style.paddingTop'),'','switching to level 1 removes the address-bar layout gap');
  await invoke('off');
  assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
  const address=await invoke('address');
@@ -627,6 +652,7 @@ try{
      w.__cleanWindowPageUI.apply('address');
      result.addressHeight=d.getElementById('clean-window-address-ui').dataset.cwHeight;
      result.addressPadding=d.documentElement.style.paddingTop;
+     result.addressClip=w.getComputedStyle(d.getElementById('clean-window-address-ui')).clipPath;
      w.__cleanWindowPageUI.apply('off');
      result.restored=d.documentElement.style.paddingTop;
      frame.remove();
@@ -642,6 +668,7 @@ try{
    assert.equal(r.addressPadding,r.before,host+' level 2 must not shift root');
    assert.equal(r.restored,r.before,host+' restore must preserve original padding');
    assert.equal(r.addressHeight,'48');
+   assert.equal(r.addressClip,'none',host+' level 2 remains visible instead of collapsing to the level-1 handle');
    assert.ok(r.side<=r.height+1 && r.send<=r.height+1,host+' bottom controls visible');
    assert.ok(r.scroll<=r.height+1,host+' no unwanted root scroll');
    assert.equal(r.leftClear,true,host+' native left controls accessible');
@@ -658,7 +685,8 @@ try{
  }
  const lookalike=await workspaceFixture('gemini.google.com.example.com');
  assert.equal(lookalike.workspace,'false');
- assert.notEqual(lookalike.after,lookalike.before);
+ assert.equal(lookalike.after,lookalike.before,'level 1 overlay should not reserve an empty page gap on ordinary pages');
+ assert.notEqual(lookalike.addressPadding,lookalike.before,'level 2 should reserve its visible address bar on ordinary pages');
  assert.equal(lookalike.restored,lookalike.before);
  console.log('PASS: Gemini/Claude/ChatGPT preserve viewport-locked navigation, bottom actions and accessible toolbar handle');
 
