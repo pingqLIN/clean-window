@@ -4,11 +4,11 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 ## Current local verification — 2026-10-22
 
-Level 1 initial-hover regression fix is isolated on `fix/level1-initial-hover-guard-20261022`. Runtime rebuilt with 20 files; ZIP size is 63,535 bytes.
+Level 1 initial-hover regression fix is isolated on `fix/level1-initial-hover-guard-20261022`. Runtime rebuilt with 20 files; ZIP size is 63,643 bytes.
 
 - `npm test`: **PASS, 94/94** simulated Chrome API and Popup tests, including level-3 hidden URL navigation and reapplying the recorded level when the page UI has drifted.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
-- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (63,535 bytes).
+- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (63,643 bytes).
 - `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover level-1 startup with the pointer already over the handle (remains collapsed until actual pointer movement), hover expansion/menu persistence, level-2 persistent visibility and spacing, level-3 hidden URL bar reveal/re-collapse with no layout reservation, same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
 - The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
 

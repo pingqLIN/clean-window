@@ -88,9 +88,15 @@ try{
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwArmed'),'false');
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'86');
  assert.equal(await run('document.documentElement.style.paddingTop'), '', 'level 1 should not reserve a permanent blank gap');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 remains collapsed even if the pointer is already over the handle when it is created');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 starts collapsed');
  assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','only the center handle is exposed while collapsed');
  const dockHandle=await run('(() => {const r=document.getElementById("clean-window-address-ui").getBoundingClientRect();return{x:r.left+r.width/2,y:r.bottom-3};})()');
+ // Force a zero-delta pointer event at the handle, as when a popup appears under a stationary cursor.
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:dockHandle.x,y:dockHandle.y});
+ await sleep(40);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").matches(":hover")'),true,'the pointer is hovering the newly created toolbar handle');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwArmed'),'false','stationary hover must not arm level 1');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','stationary hover cannot reveal level 1');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
  await sleep(40);
  assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','moving away from the initial pointer position keeps level 1 collapsed');

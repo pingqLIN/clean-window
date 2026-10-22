@@ -80,9 +80,14 @@
     if (withDock) {
       bar.dataset.cwArmed = 'false';
       const dockBar = bar;
-      dockBar.addEventListener('pointermove', () => {
+      const armOnMovement = event => {
+        // A zero-delta pointer event can occur when a new popup is placed under
+        // a stationary cursor. Only actual pointer travel may reveal level 1.
+        if (event.movementX === 0 && event.movementY === 0) return;
         if (dockBar.isConnected) dockBar.dataset.cwArmed = 'true';
-      }, { once: true });
+        dockBar.removeEventListener('pointermove', armOnMovement);
+      };
+      dockBar.addEventListener('pointermove', armOnMovement);
     }
     bar.dataset.cwHeight = String(height);
     bar.dataset.cwWorkspace = String(workspace);
