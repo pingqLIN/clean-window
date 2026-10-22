@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — 2026-10-22 (Level 1 UI reconciliation)
+
+- Made selecting a level reapply the requested page UI even when the session journal already records that level, repairing stale or drifted toolbars instead of returning early.
+- Made the edge-level control send the selected level on repeated clicks, so clicking level 1 again can restore its URL bar plus extension toolbar if the visible page UI has fallen back to level 2.
+- Added regression coverage for journal/UI mismatch and repeated selection of the already-selected level.
+
 ## Unreleased — 2026-10-22 (Level 1 collapsed toolbar)
 
 - Made level 1's two-row drawn toolbar collapse by default to a small top-center handle; hover or keyboard focus expands it.

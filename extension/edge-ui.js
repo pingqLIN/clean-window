@@ -276,7 +276,8 @@
         event.stopPropagation();
         const level = index + 1;
         clearTimeout(previewTimer);
-        if (currentLevel === level) {cancelPreview();return;}
+        // A repeated click is also a repair action: the page toolbar may have
+        // drifted even when this rail still marks the same level as selected.
         committing = true;
         status('');
         buttons.forEach(item => { item.disabled = true; });

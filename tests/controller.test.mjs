@@ -253,6 +253,23 @@ test('edge rail is available at all three levels and switches in the same popup'
  await f.ctl.run('restore',detached);
  assert.equal(f.edgeModes.get(11),'off');
 });
+test('reselecting the recorded level reconciles a drifted page toolbar',async()=>{
+ const f=setup();f.preferences.cleanLevel=1;
+ const opened=await f.ctl.run('toggle-clean',target);
+ const detached={tabId:11,windowId:opened.windowId};
+ assert.equal(f.db['clean:11'].cleanLevel,1);
+ assert.equal(f.pageModes.get(11),'address-dock');
+ // Simulate a stale page UI with a still-correct session journal and selected level.
+ f.pageModes.set(11,'address');
+ f.edgeModes.set(11,2);
+ const result=await f.ctl.run('set-level',detached,{level:1});
+ assert.equal(result.level,1);
+ assert.equal(f.pageModes.get(11),'address-dock');
+ assert.equal(f.edgeModes.get(11),1);
+ assert.equal(f.db['clean:11'].cleanLevel,1);
+ await f.ctl.run('restore',detached);
+});
+
 test('level selection is limited to matching managed popup and valid integers',async()=>{
  const f=setup();
  await assert.rejects(f.ctl.run('set-level',target,{level:2}),/僅能調整/);

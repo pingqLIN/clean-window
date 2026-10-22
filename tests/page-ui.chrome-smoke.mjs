@@ -175,7 +175,7 @@ try{
 
  // The edge control has no text on the handle, but exposes an accessible
  // three-stop rail, hover-only explanations, instant switching, and edge drag.
- await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}if(message.type==="clean-window:edge-restore"){globalThis.__edgeRestoreRequests=(globalThis.__edgeRestoreRequests||0)+1;return{ok:true};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
+ await run('globalThis.chrome.storage={local:{async get(){return{};},async set(value){globalThis.__edgeSaved=value;}}};globalThis.chrome.runtime.sendMessage=async message=>{if(message.type==="clean-window:edge-title"){globalThis.__edgeTitleRequests=(globalThis.__edgeTitleRequests||0)+1;return{ok:true};}if(message.type==="clean-window:edge-restore"){globalThis.__edgeRestoreRequests=(globalThis.__edgeRestoreRequests||0)+1;return{ok:true};}if(message.type==="clean-window:edge-level"){globalThis.__edgeLevelRequests=(globalThis.__edgeLevelRequests||0)+1;return{ok:true,level:message.level};}return{ok:true,level:message.level};};globalThis.chrome.runtime.onMessage.addListener=fn=>{globalThis.__cwEdgeListener=fn;};'+edgeSource);
  const edgeCommand=level=>run('new Promise(resolve=>globalThis.__cwEdgeListener({type:"clean-window:edge-ui",level:'+JSON.stringify(level)+'}, {},resolve))');
  const edgeCloseAlignment=()=>run('(() => {const root=document.querySelector("#clean-window-edge-control").shadowRoot;const a=root.querySelector(".handle").getBoundingClientRect();const b=root.querySelector(".close").getBoundingClientRect();return {dx:Math.abs(a.left+a.width/2-b.left-b.width/2),dy:(b.top+b.height/2)-(a.top+a.height/2),inside:root.querySelector(".handle-anchor")?.contains(root.querySelector(".close"))};})()');
  const edgeLayout=()=>run('(() => {const root=document.querySelector("#clean-window-edge-control").shadowRoot;const a=root.querySelector(".handle-anchor").getBoundingClientRect();const b=root.querySelector(".rail").getBoundingClientRect();return {width:a.width,height:a.height,gap:root.host.dataset.side==="right"?a.left-b.right:b.left-a.right};})()');
@@ -202,7 +202,14 @@ try{
  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:stop.x,y:stop.y,button:'left',clickCount:1});
  await sleep(40);
  assert.equal(await run('document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".stop.selected").dataset.level'),'2');
- console.log('PASS: real pointer click switches edge level; simulated page clicks are ignored');
+ assert.equal(await run('globalThis.__edgeLevelRequests'),1,'a real level change requests controller reconciliation');
+ const sameStop=await run('(() => {const r=document.querySelector("#clean-window-edge-control").shadowRoot.querySelectorAll(".stop")[1].getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:sameStop.x,y:sameStop.y});
+ await send('Input.dispatchMouseEvent',{type:'mousePressed',x:sameStop.x,y:sameStop.y,button:'left',clickCount:1});
+ await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:sameStop.x,y:sameStop.y,button:'left',clickCount:1});
+ await sleep(40);
+ assert.equal(await run('globalThis.__edgeLevelRequests'),2,'clicking the selected level still requests reconciliation');
+ console.log('PASS: real pointer click switches edge level and reselecting a level can repair stale UI; simulated page clicks are ignored');
  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:grip.x,y:grip.y});
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".rail")).display'),'flex');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-edge-control").shadowRoot.querySelector(".handle"),"::after").visibility'),'visible');

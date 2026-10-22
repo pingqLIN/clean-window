@@ -4,11 +4,17 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 ## Current local verification — 2026-10-22
 
-- `npm test`: **PASS, 92/92** simulated Chrome API and Popup tests.
+- `npm test`: **PASS, 93/93** simulated Chrome API and Popup tests, including reapplying the recorded level when the page UI has drifted.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
-- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (62,903 bytes).
+- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (63,039 bytes).
 - `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover level-1 default collapse/hover expansion/menu persistence, level-2 persistent visibility and spacing, same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
 - The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
+
+## Level 1 UI reconciliation — 2026-10-22
+
+- `controller.run('set-level')` no longer treats a matching session-journal level as proof that the injected UI is correct. Reapplying a selected level now restores the matching page toolbar and edge rail.
+- Clicking the already-selected edge stop now sends a reconciliation request instead of silently doing nothing. This provides a recovery path if level 1's two-row toolbar has drifted to level 2's URL-only interface.
+- Regression tests simulate the journal saying level 1 while the page UI is in address-only mode, then verify selecting level 1 restores `address-dock`. Chrome Headless DOM verifies a repeated click sends a controller request.
 
 ## Level 1 / Level 2 distinction — 2026-10-22
 

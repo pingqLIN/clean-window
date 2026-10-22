@@ -233,7 +233,9 @@ export function createController(api) {
           throw new Error('僅能調整 Clean Window 建立的乾淨 Popup。');
         }
         const previous = validLevel(record.cleanLevel) ? record.cleanLevel : 1;
-        if (previous === requested) return {windowId:win.id,mode:'clean',level:requested};
+        // The session journal is authoritative for the selected level, but the
+        // injected page UI can drift after navigation, reinjection, or DOM changes.
+        // Always reconcile the requested UI, even when the journal already matches.
         if (requested === 3) await clearPageUI(tab);
         else await pageUI(tab, levelMode(requested));
         try {
