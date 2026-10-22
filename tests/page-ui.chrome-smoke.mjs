@@ -17,6 +17,8 @@ const popupHTML = await readFile(new URL('../extension/popup.html', import.meta.
 const popupCSS = await readFile(new URL('../extension/popup.css', import.meta.url),'utf8');
 const edgeSource = await readFile(new URL('../extension/edge-ui.js', import.meta.url),'utf8');
 const youtubeSource = await readFile(new URL('../extension/youtube-ui.js', import.meta.url),'utf8');
+const siteAccessHTML = await readFile(new URL('../extension/site-access.html', import.meta.url),'utf8');
+const siteAccessSource = await readFile(new URL('../extension/site-access.js', import.meta.url),'utf8');
 const server=createServer((req,res)=>{
   res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
   res.end('<!doctype html><title>Clean Window Test</title><header>Outside main</header><main style="width:75vw;height:72vh;background:#e1e8f2;margin:20px"><h1>Main Content</h1><p>Smoke Fixture</p></main><footer>Outside main</footer>');
@@ -74,7 +76,7 @@ try{
   await sleep(100);
  }
  assert.equal(ready,true,'test page ready');
- await run('globalThis.chrome={storage:{local:{async get(key){return {[key]:globalThis.__cwTheme};},async set(value){globalThis.__cwTheme=value.cleanWindowUiTheme;}}},runtime:{onMessage:{addListener(fn){globalThis.__cwListener=fn;}},async sendMessage(message){globalThis.__hubCalls=(globalThis.__hubCalls||[]).concat(message);if(message.action==="list")return {ok:true,items:[{tabId:11,windowId:5,title:"🎨 研究視窗",level:1}]};if(message.action==="bookmarks-recent")return{ok:true,granted:false,items:[]};if(message.action==="bookmarks-status")return {ok:true,granted:false};return{ok:true,level:message.level};}}};'+source);
+ await run('globalThis.__navigationRequests=[];globalThis.__cwNavigationMode="prompt";globalThis.chrome={storage:{local:{async get(key){return {[key]:globalThis.__cwTheme};},async set(value){globalThis.__cwTheme=value.cleanWindowUiTheme;}}},runtime:{onMessage:{addListener(fn){globalThis.__cwListener=fn;}},async sendMessage(message){if(message.type==="clean-window:navigate"){globalThis.__navigationRequests.push(message);return {ok:true,action:globalThis.__cwNavigationMode};}globalThis.__hubCalls=(globalThis.__hubCalls||[]).concat(message);if(message.action==="list")return {ok:true,items:[{tabId:11,windowId:5,title:"🎨 研究視窗",level:1}]};if(message.action==="bookmarks-recent")return{ok:true,granted:false,items:[]};if(message.action==="bookmarks-status")return {ok:true,granted:false};return{ok:true,level:message.level};}}};'+source);
  const invoke=(mode)=>run('new Promise(resolve=>globalThis.__cwListener({type:"clean-window:page-ui",mode:"'+mode+'"}, {},resolve))');
 
  const full=await invoke('address-dock');
@@ -120,6 +122,26 @@ try{
  assert.equal(address.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
  console.log('PASS: URL-only mode without extension dock');
+ await run(`(() => {const root=document.getElementById('clean-window-address-ui').shadowRoot;const input=root.querySelector('input');input.value=location.origin+'/#cw-same-origin';root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));return true;})()`);
+ await sleep(25);
+ assert.equal(await run('location.hash'),'#cw-same-origin','same-origin URL-bar navigation proceeds without a permission prompt');
+ assert.equal(await run('globalThis.__navigationRequests.length'),0,'same-origin navigation must not request host access');
+ const crossOriginTarget='https://cross-origin.example/path?case=activeTab';
+ await run(`(() => {const root=document.getElementById('clean-window-address-ui').shadowRoot;const input=root.querySelector('input');input.value=${JSON.stringify(crossOriginTarget)};root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));return true;})()`);
+ await sleep(45);
+ assert.deepEqual(await run('globalThis.__navigationRequests[0]'),{type:'clean-window:navigate',url:crossOriginTarget});
+ assert.equal(await run('location.hostname'),'127.0.0.1','cross-origin target must not navigate before the access choice');
+ assert.match(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".feedback").textContent'),/存取選擇視窗/);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".feedback").hidden'),false);
+ await run('globalThis.__cwNavigationMode="error";true');
+ await run(`(() => {const root=document.getElementById('clean-window-address-ui').shadowRoot;const input=root.querySelector('input');input.value='https://fallback.example/';root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));return true;})()`);
+ await sleep(35);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelectorAll(".feedback-actions button").length'),2);
+ assert.equal(await run('location.hostname'),'127.0.0.1','fallback must not navigate without a second explicit choice');
+ await run(`document.getElementById('clean-window-address-ui').shadowRoot.querySelector('.feedback-actions button:last-child').click();true`);
+ assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".feedback").hidden'),true);
+ await run('globalThis.__cwNavigationMode="prompt";true');
+ console.log('PASS: same-origin navigation stays immediate; cross-origin prompts and permission-flow failures offer explicit safe choices');
  await invoke('off');
  assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
  assert.equal(await run('document.documentElement.style.paddingTop'), '');
@@ -576,6 +598,40 @@ try{
  assert.equal(await run('globalThis.__cwPopupMsgs.find(m=>m.action==="edit-title")?.anchor?.screenY>0'),true);
  console.log('PASS: popup EDIT opens anchored sidecar before focusing its managed window');
  console.log('SMOKE PASS: popup managed-list title, marquee and edit actions; real MV3 reload remains unverified');
+
+ // Exercise the real site-access page script in Chrome's DOM with a bounded API stub.
+ const siteAccessBody=siteAccessHTML.split('<body>')[1]?.split('</body>')[0];
+ assert.ok(siteAccessBody,'site-access page body fixture missing');
+ const initSiteAccess=(grant,patterns=['https://destination.example/*'])=>`document.body.innerHTML=${JSON.stringify(siteAccessBody)};globalThis.__cwSiteAccessMessages=[];globalThis.__cwSiteAccessClosed=false;globalThis.__cwPermissionGrant=${grant};globalThis.__cwRequestedOrigins=[];globalThis.__cwAccessPatterns=${JSON.stringify(patterns)};window.close=()=>{globalThis.__cwSiteAccessClosed=true;};globalThis.chrome={runtime:{async sendMessage(message){globalThis.__cwSiteAccessMessages.push(message);if(message.type==='clean-window:site-access-info')return {ok:true,host:'destination.example',originPatterns:globalThis.__cwAccessPatterns};return {ok:true};}},permissions:{async request(query){globalThis.__cwRequestedOrigins=query.origins;return globalThis.__cwPermissionGrant;}}};true`;
+ const runSiteAccess=()=>run('(function(location){'+siteAccessSource+'})({href:'+JSON.stringify('chrome-extension://abcdefghijklmnopabcdefghijklmnop/site-access.html?token=12345678-1234-4234-8234-123456789abc')+'});true');
+ await run(initSiteAccess(true));await runSiteAccess();await sleep(25);
+ assert.equal(await run('document.querySelector("#target-host").textContent'),'destination.example');
+ await run('document.querySelector("#allow").click();true');await sleep(35);
+ assert.deepEqual(await run('globalThis.__cwRequestedOrigins'),['https://destination.example/*']);
+ assert.equal(await run('globalThis.__cwSiteAccessMessages.some(m=>m.type==="clean-window:site-access-complete")'),true);
+ assert.equal(await run('globalThis.__cwSiteAccessClosed'),true);
+ console.log('PASS: site-access UI requests only the displayed hostname and continues after explicit approval');
+ const httpUpgradePatterns=['http://destination.example/*','https://destination.example/*'];
+ await run(initSiteAccess(true,httpUpgradePatterns));await runSiteAccess();await sleep(25);
+ assert.match(await run('document.querySelector("#scope-note").textContent'),/HTTP 與 HTTPS/);
+ await run('document.querySelector("#allow").click();true');await sleep(35);
+ assert.deepEqual(await run('globalThis.__cwRequestedOrigins'),httpUpgradePatterns);
+ assert.equal(await run('globalThis.__cwSiteAccessMessages.some(m=>m.type==="clean-window:site-access-complete")'),true);
+ assert.equal(await run('globalThis.__cwSiteAccessClosed'),true);
+ console.log('PASS: HTTP targets explicitly request the same host over HTTP and HTTPS for common scheme-upgrade redirects');
+ await run(initSiteAccess(false));await runSiteAccess();await sleep(25);
+ await run('document.querySelector("#allow").click();true');await sleep(25);
+ assert.match(await run('document.querySelector("#status").textContent'),/尚未授權/);
+ assert.equal(await run('document.querySelector("#continue").disabled'),false);
+ await run('document.querySelector("#continue").click();true');await sleep(25);
+ assert.equal(await run('globalThis.__cwSiteAccessMessages.some(m=>m.type==="clean-window:site-access-continue")'),true);
+ assert.equal(await run('globalThis.__cwSiteAccessClosed'),true);
+ console.log('PASS: denied site access does not navigate automatically; explicit no-permission continuation works');
+ await run(initSiteAccess(true));await runSiteAccess();await sleep(25);
+ await run('document.querySelector("#cancel").click();true');await sleep(25);
+ assert.equal(await run('globalThis.__cwSiteAccessMessages.some(m=>m.type==="clean-window:site-access-cancel")'),true);
+ assert.equal(await run('globalThis.__cwSiteAccessClosed'),true);
+ console.log('PASS: cancel closes the access prompt without issuing a navigation');
 
 } finally {
  try{ws?.close();}catch{}

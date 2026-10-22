@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>跨網站導覽｜Clean Window</title>
+  <link rel="stylesheet" href="site-access.css">
+  <script src="site-access.js" defer></script>
+</head>
+<body>
+  <main class="panel">
+    <div class="eyebrow">CLEAN WINDOW · SITE ACCESS</div>
+    <h1>跨網站導覽</h1>
+    <p class="host" id="target-host">正在確認目標網站…</p>
+    <p class="description">如果要在下一個網站繼續顯示 Clean Window 的精簡工具列，需要你另外授權這個網站。授權只會針對目前顯示的網域，不會自動授權其他網站。</p>
+    <p id="scope-note" class="scope-note"></p>
+    <div class="actions">
+      <button id="allow" class="primary" type="button" disabled>允許此網站並繼續</button>
+      <button id="continue" type="button" disabled>不授權，仍然前往</button>
+      <button id="cancel" class="quiet" type="button" disabled>取消</button>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <p class="note">不授權仍可正常開啟網頁，但自繪工具列可能消失。你可以在頁面右鍵選單選擇「重新啟用目前網站的精簡介面」，或使用還原快捷鍵。</p>
+  </main>
+</body>
+</html>

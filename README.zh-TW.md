@@ -10,7 +10,9 @@
 
 以單一三級滑桿選擇「輕量瀏覽器工具列」、「自繪網址欄」或「純精簡 Popup」；全螢幕為獨立操作。不變更其他視窗的介面設定。操作綁定指定視窗與分頁，不修改 Chrome 全域外觀設定。
 
-**狀態：原始碼預覽版。** 77 項模擬 Chrome API 與 Popup 互動的自動化測試通過；真實 Chrome 視窗外觀、快捷鍵及 Windows 瀏覽器操作仍**尚未驗收**。擴充介面目前使用繁體中文，文件提供英文與繁體中文。頁首圖片是概念插畫，不是實機截圖。
+**主打示範｜YouTube 專注觀看：**第 2 級保留標題、留言與推薦內容，依可視高度調整播放器；第 3 級讓播放器填滿內容區並隱藏其他網站內容，影片維持原比例、不裁切。可透過側邊控制器預覽切換，再一鍵還原。
+
+**狀態：原始碼預覽版。** 92 項模擬 Chrome API 與 Popup 互動的自動化測試通過；Chrome Dev Headless DOM 測試涵蓋同來源導覽、跨來源單站授權選擇、拒絕／取消回復、YouTube 版面及 Popup 互動。完整 MV3 實機安裝、原生 Popup 外觀、快捷鍵及 Windows 瀏覽器操作仍**尚未驗收**。擴充介面目前使用繁體中文，文件提供英文與繁體中文。頁首圖片是概念插畫，不是實機截圖。
 
 ## 快速開始
 
@@ -35,7 +37,7 @@
 | 2 | 自繪網址欄 | Popup 加網址輸入、上一頁／下一頁／重新整理、明暗主題切換，不顯示擴充欄 |
 | 3 | 全無 | 純精簡 Popup，不注入網站工具列 |
 
-自繪網址欄不是 Chrome 原生網址列，不能替代網站身分與安全指示。第 1 級是擴充自行繪製的常用瀏覽器快捷工具列，不是 Chrome 原生工具列；無法執行其他擴充的圖示按鈕，也不會要求 `management` 權限。書籤讀寫只有在使用者於獨立授權頁按下允許後才會啟用（`optional_permissions: ["bookmarks"]`），不用時不要求。前兩級只對允許注入的 HTTP(S) 網頁有效，跨頁導覽可能使自繪欄位消失。第三級不要求成功注入，仍可開啟純精簡 Popup；可注入的頁面會保留邊緣等級控制。
+自繪網址欄不是 Chrome 原生網址列，不能替代網站身分與安全指示。第 1 級是擴充自行繪製的常用瀏覽器快捷工具列，不是 Chrome 原生工具列；無法執行其他擴充的圖示按鈕，也不會要求 `management` 權限。書籤讀寫只有在使用者於獨立授權頁按下允許後才會啟用。前兩級只對允許注入的 HTTP(S) 網頁有效。透過自繪網址欄前往另一來源時，會先開啟單站授權選擇；允許後 Clean Window 可在該網域繼續注入，不授權仍可直接前往，但工具列可能消失。若是網站連結或重新導向造成跨來源，未曾授權時可在頁面按右鍵選「Clean Window · 重新啟用目前網站的精簡介面」，以 `activeTab` 暫時啟用，不必授權所有網站。第三級不要求成功注入，仍可開啟純精簡 Popup；可注入的頁面會保留邊緣等級控制。
 
 **管理清單：**一般 Chrome 視窗中的擴充 Popup 下方可展開「已啟用乾淨視窗」，逐筆聚焦、選擇 L1/L2/L3 或還原。第一級工具列的「☷」亦可直接開啟相同清單。紀錄以本次瀏覽器工作階段的 Clean Window 視窗為準，關閉或還原後不再列出；標題編輯後同步快取清單名稱。
 
@@ -85,8 +87,9 @@
 | `activeTab`／`scripting` | 使用者主動操作時，按需注入自繪網址欄、Clean Window 專屬操作欄或標題編輯器，不要求全網站權限 |
 | `contextMenus` | 新增網頁及擴充圖示的切換／還原選單 |
 | 選用 `bookmarks` | 第 1 級自願授權後才能顯示、加入或移除 Chrome 書籤；沒有自動授權 |
+| 選用 HTTP(S) 網站權限 | 只有使用者從自繪網址欄主動跨來源導覽時，才詢問該目標網域；不會自動授予所有網站 |
 
-沒有廣泛網站存取權限、常駐 content script、原生主機、分析追蹤或對外網路請求。擴充未要求可讀取敏感分頁資料的 `tabs` 權限；YouTube 專用版面只在已啟用的分頁內檢查網域、路徑與播放器元素，不擷取影片、留言或推薦內容。README 的遠端徽章不屬於擴充執行時的網路行為。詳見 [PRIVACY.md](PRIVACY.md) 與 [manifest](extension/manifest.json)。
+沒有必要的全站 host permission、常駐 content script、原生主機、分析追蹤或對外網路請求。`http://*/*` 與 `https://*/*` 只宣告為選用網站權限，不會在安裝時授予；只有使用者透過自繪網址欄主動前往其他來源時，才會提供該網域的授權選擇。擴充未要求可讀取敏感分頁資料的 `tabs` 權限；YouTube 專用版面只在已啟用的分頁內檢查網域、路徑與播放器元素，不擷取影片、留言或推薦內容。README 的遠端徽章不屬於擴充執行時的網路行為。詳見 [PRIVACY.md](PRIVACY.md) 與 [manifest](extension/manifest.json)。
 
 ## 開發
 
@@ -100,7 +103,7 @@ npm run smoke:dom
 npm run build:runtime
 ```
 
-`npm test` 執行 77 項可重現的 Chrome API 模擬與 Popup 互動測試。`npm run build:runtime` 會產生可載入的 `dist/runtime/`，以及檔案直接位於 ZIP 根目錄的 `dist/clean-window-v<version>.zip`。`dist/` 由 Git 忽略。自動化結果**不能取代實際瀏覽器驗收**。詳見[Runtime／Development 分離檢核表](docs/runtime-development-checklist.zh-TW.md)。
+`npm test` 執行 92 項可重現的 Chrome API 模擬與 Popup 互動測試。`npm run build:runtime` 會產生可載入的 `dist/runtime/`，以及檔案直接位於 ZIP 根目錄的 `dist/clean-window-v<version>.zip`。`dist/` 由 Git 忽略。自動化結果**不能取代實際瀏覽器驗收**。詳見[Runtime／Development 分離檢核表](docs/runtime-development-checklist.zh-TW.md)。
 
 | 文件 | 用途 |
 | --- | --- |

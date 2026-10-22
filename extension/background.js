@@ -26,6 +26,97 @@ async function perform(action, target, options = {}) {
 // Management and bookmark actions are exposed only to the extension popup or
 // an authenticated top-frame content script in one of OUR managed popups.
 const webURL = value => { try {const u=new URL(value);return ['https:','http:'].includes(u.protocol) ? u.href : null;}catch{return null;} };
+const pendingNavigationKey = token => `pending-navigation:${token}`;
+const safeNavigationTarget = value => {
+  if (typeof value !== 'string' || value.length > 8192) throw new Error('網址無效。');
+  let url;
+  try { url = new URL(value); } catch { throw new Error('請輸入完整的 HTTP(S) 網址。'); }
+  if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) {
+    throw new Error('只支援不含帳號密碼的 HTTP(S) 網址。');
+  }
+  return url;
+};
+// Chrome host patterns do not scope access by port or path. Request only the
+// destination hostname. An explicit HTTP destination also requests HTTPS for the
+// same hostname because many sites automatically upgrade HTTP to HTTPS.
+const hostPatterns = url => url.protocol === 'http:'
+  ? [`http://${url.hostname}/*`, `https://${url.hostname}/*`]
+  : [`https://${url.hostname}/*`];
+async function managedWebSender(sender) {
+  if (sender.frameId !== 0 || !Number.isInteger(sender.tab?.id) ||
+      !Number.isInteger(sender.tab?.windowId) || !webURL(sender.url)) {
+    throw new Error('只允許由乾淨視窗的主頁面發起導覽。');
+  }
+  const item = (await controller.listManaged()).find(row =>
+    row.tabId === sender.tab.id && row.windowId === sender.tab.windowId);
+  if (!item || ![1, 2].includes(item.level)) throw new Error('此頁不是可導覽的第一或第二級乾淨視窗。');
+  return item;
+}
+function siteAccessToken(sender) {
+  try {
+    const actual = new URL(sender.url);
+    const expected = new URL(chrome.runtime.getURL('site-access.html'));
+    return actual.origin === expected.origin && actual.pathname === expected.pathname
+      ? actual.searchParams.get('token') : null;
+  } catch { return null; }
+}
+async function readPendingNavigation(token) {
+  if (typeof token !== 'string' || !/^[0-9a-f-]{36}$/i.test(token)) throw new Error('網站授權請求無效。');
+  const key = pendingNavigationKey(token);
+  const pending = (await chrome.storage.session.get(key))[key];
+  if (!pending) throw new Error('網站授權請求已取消或逾時。');
+  if (!Number.isFinite(pending.createdAt) || Date.now() - pending.createdAt > 10 * 60 * 1000) {
+    await chrome.storage.session.remove(key).catch(() => {});
+    throw new Error('網站授權請求已逾時，請重新提交網址。');
+  }
+  return { key, pending };
+}
+async function prepareNavigation(message, sender) {
+  await managedWebSender(sender);
+  const target = safeNavigationTarget(message.url);
+  const source = new URL(sender.url);
+  if (target.origin === source.origin) return { ok: true, action: 'navigate' };
+  const patterns = hostPatterns(target);
+  if (await chrome.permissions.contains({ origins: patterns })) return { ok: true, action: 'navigate' };
+
+  const token = crypto.randomUUID();
+  const key = pendingNavigationKey(token);
+  const pending = {
+    tabId: sender.tab.id, windowId: sender.tab.windowId,
+    incognito: sender.tab.incognito === true,
+    url: target.href, originPatterns: patterns, createdAt: Date.now()
+  };
+  await chrome.storage.session.set({ [key]: pending });
+  try {
+    const prompt = await chrome.windows.create({
+      url: chrome.runtime.getURL(`site-access.html?token=${encodeURIComponent(token)}`),
+      type: 'popup', width: 430, height: 330, focused: true, incognito: pending.incognito
+    });
+    await chrome.storage.session.set({ [key]: { ...pending, promptWindowId: prompt.id } });
+    return { ok: true, action: 'prompt', host: target.host };
+  } catch (error) {
+    await chrome.storage.session.remove(key).catch(() => {});
+    throw error;
+  }
+}
+async function resolvePendingNavigation(message, sender, action) {
+  const token = siteAccessToken(sender);
+  if (!token || token !== message.token) throw new Error('未授權的網站授權視窗。');
+  const { key, pending } = await readPendingNavigation(token);
+  const managed = (await controller.listManaged()).some(item =>
+    item.tabId === pending.tabId && item.windowId === pending.windowId);
+  if (!managed) {
+    await chrome.storage.session.remove(key).catch(() => {});
+    throw new Error('原本的乾淨視窗已不存在；請重新開啟目標頁面。');
+  }
+  if (action === 'complete') {
+    const granted = await chrome.permissions.contains({ origins: pending.originPatterns });
+    if (!granted) throw new Error('尚未取得此網站的存取權；可以重新授權或不授權直接前往。');
+  }
+  await chrome.tabs.update(pending.tabId, { url: pending.url, active: true });
+  await chrome.storage.session.remove(key);
+  return { ok: true };
+}
 async function hub(message,sender) {
   const operation = message.action;
   if (operation === 'list') return {ok:true,items:await controller.listManaged()};
@@ -82,6 +173,34 @@ async function hub(message,sender) {
 
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   if (sender.id !== chrome.runtime.id) return false;
+  if (message?.type === 'clean-window:navigate') {
+    if (!sender.tab || sender.frameId !== 0) return false;
+    prepareNavigation(message, sender).then(respond, error =>
+      respond({ ok: false, error: error?.message || String(error) }));
+    return true;
+  }
+  if (['clean-window:site-access-info','clean-window:site-access-complete',
+       'clean-window:site-access-continue','clean-window:site-access-cancel'].includes(message?.type)) {
+    if (!siteAccessToken(sender) || siteAccessToken(sender) !== message.token) return false;
+    const run = async () => {
+      if (message.type === 'clean-window:site-access-info') {
+        const { pending } = await readPendingNavigation(message.token);
+        const managed = (await controller.listManaged()).some(item =>
+          item.tabId === pending.tabId && item.windowId === pending.windowId);
+        if (!managed) throw new Error('原本的乾淨視窗已不存在。');
+        return { ok: true, host: new URL(pending.url).host, originPatterns: pending.originPatterns };
+      }
+      if (message.type === 'clean-window:site-access-cancel') {
+        const { key } = await readPendingNavigation(message.token);
+        await chrome.storage.session.remove(key);
+        return { ok: true };
+      }
+      return resolvePendingNavigation(message, sender,
+        message.type === 'clean-window:site-access-complete' ? 'complete' : 'continue');
+    };
+    run().then(respond, error => respond({ ok: false, error: error?.message || String(error) }));
+    return true;
+  }
   // Only the page's own top-frame content script can use the tiny extension dock.
   // A web page and another extension cannot invoke these internal actions.
   if (message?.type === 'clean-window:dock') {
@@ -161,6 +280,7 @@ chrome.runtime.onInstalled.addListener(() => {
       ['toggle-clean', '套用簡化等級／還原'],
       ['toggle-fullscreen', '整個視窗：切換全螢幕'],
       ['restore', '還原目前視窗'],
+      ['reapply-clean', '重新啟用目前網站的精簡介面'],
       ['edit-title', '編輯乾淨模式標題（Symbol＋文字）']
     ];
     for (const [id, title] of entries) {
@@ -171,16 +291,37 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (actionIds.includes(info.menuItemId) && tab?.id !== undefined) {
+  if (tab?.id === undefined) return;
+  if (info.menuItemId === 'reapply-clean') {
+    void controller.refresh(tab.id, tab.windowId).then(active => {
+      if (!active) throw new Error('目前分頁不是受管理的乾淨視窗。');
+      return feedback(tab.id, '');
+    }).catch(error => feedback(tab.id, error?.message || String(error)));
+    return;
+  }
+  if (actionIds.includes(info.menuItemId)) {
     void perform(info.menuItemId, { tabId: tab.id, windowId: tab.windowId });
   }
 });
 chrome.tabs.onRemoved.addListener(tabId => {
-  void chrome.storage.session.remove([`clean:${tabId}`, `feedback:${tabId}`]).catch(() => {});
+  void (async () => {
+    const saved = await chrome.storage.session.get(null);
+    const pendingKeys = Object.entries(saved)
+      .filter(([key, value]) => key.startsWith('pending-navigation:') && value?.tabId === tabId)
+      .map(([key]) => key);
+    await chrome.storage.session.remove([`clean:${tabId}`, `feedback:${tabId}`, ...pendingKeys]);
+  })().catch(() => {});
 });
 chrome.windows.onRemoved.addListener(windowId => {
   // Do NOT delete tab restoration records when the origin window closes.
-  void chrome.storage.session.remove(`full:${windowId}`).catch(() => {});
+  void (async () => {
+    const saved = await chrome.storage.session.get(null);
+    const pendingKeys = Object.entries(saved)
+      .filter(([key, value]) => key.startsWith('pending-navigation:') &&
+        (value?.windowId === windowId || value?.promptWindowId === windowId))
+      .map(([key]) => key);
+    await chrome.storage.session.remove([`full:${windowId}`, ...pendingKeys]);
+  })().catch(() => {});
 });
 chrome.tabs.onReplaced.addListener((addedTabId, removedTabId) => {
   void (async () => {
@@ -191,8 +332,9 @@ chrome.tabs.onReplaced.addListener((addedTabId, removedTabId) => {
   })().catch(() => {});
 });
 
-/* Re-attach the per-page UI after same-origin navigations when activeTab still permits it.
-   Cross-origin/restricted pages remain unsupported; no broad host permission is requested. */
+/* Re-attach after same-origin navigation or when this destination's optional host
+   permission was previously granted. Otherwise a user-invoked context-menu action can
+   reapply the UI using activeTab, without granting persistent access. */
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   if (change.status !== 'complete' || !Number.isInteger(tab?.windowId)) return;
   void controller.refresh(tabId, tab.windowId).catch(() => {});

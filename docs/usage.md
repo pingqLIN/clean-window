@@ -2,6 +2,8 @@
 
 [README](../README.md) · [繁體中文](usage.zh-TW.md)
 
+**Featured demo — YouTube Focus View:** level 2 keeps titles, comments and recommendations visible while fitting the player below the drawn address bar; level 3 fills the content viewport with the player and hides other site content without cropping the video. The edge rail previews the layout before committing, and Restore returns the page to its normal layout.
+
 ## Install and first check
 
 To test the source checkout directly, load its `extension/` folder through `chrome://extensions/` → Developer mode → Load unpacked. For a generated Runtime build, run `npm run build:runtime` and load `dist/runtime/`, or extract `dist/clean-window-v<version>.zip` and load the extracted folder whose root contains `manifest.json`. Do not load the repository root. The extension itself needs no build or Node.js at runtime; Node.js 20+ is needed only to generate the package. Keep the selected folder in place. Save important work before trying window operations.
@@ -17,7 +19,7 @@ To test the source checkout directly, load its `extension/` folder through `chro
 
 Level 1 draws a two-row (86px) browser-like toolbar with navigation, a bookmark star, recent bookmarks, a current-session managed-window list, Chrome history and downloads shortcuts, extension management, and Restore. Level 2 draws an address bar without the secondary dock. Both levels include a `☾`/`☀` switch for the self-drawn interface's light/dark colors (saved locally; Chrome's native theme and the website are unchanged). The URL bar brand text has been removed. Level 3 opens a bare popup without an address or extension dock, but can still show the edge-level controller and title-only injection on eligible HTTP(S) pages. All retain the OS titlebar.
 
-The drawn address field is not Chrome's trusted native omnibox. The toolbar cannot activate third-party extension actions. It needs no extension-management permission. Bookmarks need optional user approval via the extension's separate permission page, never automatically. Levels 1 and 2 inject only when the user activates the extension on an eligible HTTP(S) page, and the bar may vanish on navigation. The Popup Apply button is positioned above its slider. On eligible sites a blank, neutral-gray edge tab shows instructions and expands into a vertical three-stop rail on hover or keyboard focus; labels show only when a stop is hovered or focused. Drag to snap it to either edge and set its height (saved locally). Level changes keep the existing popup and tab; restricted and cross-origin pages may lose the control. `Alt + Shift + R` remains available.
+The drawn address field is not Chrome's trusted native omnibox. The toolbar cannot activate third-party extension actions. It needs no extension-management permission. Bookmarks need optional user approval via the extension's separate permission page, never automatically. Levels 1 and 2 inject only on eligible HTTP(S) pages. When a user submits a cross-origin URL in the drawn address bar, Clean Window opens a per-site access choice; granting access to that hostname lets the toolbar reattach after navigation. HTTPS targets request HTTPS access; HTTP targets request both HTTP and HTTPS for that hostname to survive common automatic upgrades. Declining still allows navigation, but the toolbar may disappear. Links and redirects that cross origins without prior access can also remove the controls; use the page context menu's **Clean Window · 重新啟用目前網站的精簡介面** action to reinject on demand with temporary `activeTab` access. No all-sites permission is granted automatically. The Popup Apply button is positioned above its slider. On eligible sites a blank, neutral-gray edge tab shows instructions and expands into a vertical three-stop rail on hover or keyboard focus; labels show only when a stop is hovered or focused. Drag to snap it to either edge and set its height (saved locally). Level changes keep the existing popup and tab; restricted pages may lose the control. `Alt + Shift + R` remains available.
 
 The level-1 window manager and expandable list inside the normal extension popup identify only still-open Clean Window managed popups, with focus, L1–L3 change, and individual Restore. Titles/Emoji are cached in session storage for this list, not synchronized or uploaded. Permission for bookmarks can be declined without affecting other controls.
 
@@ -59,6 +61,14 @@ When a clean popup is created on an eligible HTTP(S) page, its document title in
 
 This changes the webpage's `document.title`, not its native favicon or Chrome identity/security UI. Native Windows popup titlebar rendering is not yet GUI-verified. On restricted pages or after cross-origin navigation, the feature may be unavailable; bare popup mode still works.
 
+## Cross-origin navigation and re-enabling
+
+- **Same-origin navigation:** changing paths on the same origin does not trigger a site-access prompt.
+- **Submitting a different origin in the drawn URL bar:** a small Clean Window window explains the destination. Choose **Allow this site and continue** to request only that destination hostname. An HTTPS target requests HTTPS access; an HTTP target requests both HTTP and HTTPS for that same hostname to survive common automatic HTTPS upgrades. The grant is optional and is not made for all sites at installation. Chrome host patterns do not separately scope paths or ports.
+- **Continue without access:** the target page still opens, but the drawn toolbar may disappear. **Cancel** keeps the current page open.
+- **Cross-origin links, login redirects or website redirects:** without a previous grant, Chrome revokes the source page's `activeTab` access and the toolbar may disappear. Right-click the page and select **Clean Window · 重新啟用目前網站的精簡介面** to reinject on demand using temporary `activeTab` access, without a persistent site grant. You can also restore with `Alt + Shift + R`.
+- **Restricted Chrome pages:** `chrome://`, the Chrome Web Store and other restricted pages cannot use ordinary page injection; use a normal window or Restore.
+
 ## Recovering without the toolbar
 
 Use `Alt + Shift + R`, or the page context-menu entry **Clean Window · 還原目前視窗**. A site can suppress the ordinary context menu; internal browser pages may not offer it. Closing the popup with **X closes its tab**; it is not a restore action.
@@ -70,6 +80,8 @@ Session restoration records may disappear after a browser restart or extension r
 Chrome's native fullscreen exit can also leave fullscreen. A later restore command avoids applying stale fullscreen bounds when fullscreen has already ended.
 
 ## Keyboard and privacy boundaries
+
+Required permissions are `storage`, `contextMenus`, `activeTab` and `scripting`. `bookmarks` and HTTP(S) host access are optional. Host patterns are declared as optional and only requested for the target hostname after the user explicitly submits a cross-origin URL in the drawn address bar. The pending destination URL is kept in `chrome.storage.session` only while the access choice is open, then removed after navigation, cancellation or relevant window closure; an expired record is removed the next time it is accessed. No URL is written to `storage.local` or sync storage, and no browsing data is sent externally.
 
 The default commands are `Alt + Shift + W`, `Alt + Shift + F`, `Alt + Shift + R`, and `Alt + Shift + T`. OS language-switch shortcuts or other extensions may conflict; the popup displays what Chrome registered rather than promising that defaults are available.
 

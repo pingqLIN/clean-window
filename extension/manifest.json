@@ -2,10 +2,11 @@
   "manifest_version": 3,
   "name": "Clean Window｜乾淨視窗",
   "version": "0.1.0",
-  "description": "三級視窗精簡：輕量瀏覽器工具列、自繪網址欄、純內容 Popup；支援視窗清單與按需授權書籤。",
+  "description": "三級視窗精簡與 YouTube 專注觀看；按需導覽、快速還原與最小權限。",
   "minimum_chrome_version": "102",
   "permissions": ["storage", "contextMenus", "activeTab", "scripting"],
   "optional_permissions": ["bookmarks"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "incognito": "split",
   "background": {"service_worker": "background.js", "type": "module"},
   "action": {

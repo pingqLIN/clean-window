@@ -14,6 +14,7 @@ export function fakeChrome() {
   ]);
   let nextWindow=3;
   const bookmarks=new Map(),permissionState={bookmarks:false};
+  const originPermissions = new Set();
   let nextBookmark=1;
   const clone=x=>structuredClone(x);
   const get=(map,id)=> { if(!map.has(id))throw new Error('Not found '+id); return map.get(id); };
@@ -85,8 +86,16 @@ export function fakeChrome() {
       }
     },
     permissions:{
-      async contains(query){return query.permissions.every(p=>!!permissionState[p]);},
-      async request(query){query.permissions.forEach(p=>{permissionState[p]=true;});return true;}
+      async contains(query){
+        return (query.permissions??[]).every(p=>!!permissionState[p]) &&
+          (query.origins??[]).every(origin=>originPermissions.has(origin));
+      },
+      async request(query){
+        if (api.permissionRequestResult === false) return false;
+        (query.permissions??[]).forEach(p=>{permissionState[p]=true;});
+        (query.origins??[]).forEach(origin=>originPermissions.add(origin));
+        return true;
+      }
     },
     bookmarks:{
       async getRecent(n){return [...bookmarks.values()].slice(-n).reverse().map(clone);},
@@ -121,5 +130,5 @@ export function fakeChrome() {
       async remove(key){for(const item of Array.isArray(key)?key:[key])delete db[item];}
     }}
   };
-  return {api,wins,tabs,db,preferences,pageModes,titleModes,edgeModes,calls,bookmarks,permissionState};
+  return {api,wins,tabs,db,preferences,pageModes,titleModes,edgeModes,calls,bookmarks,permissionState,originPermissions};
 }

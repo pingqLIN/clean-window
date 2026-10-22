@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — 2026-10-22 (Cross-origin navigation and YouTube positioning)
+
+- Added optional HTTP(S) host permission patterns; they are not granted at installation and are requested only for the destination hostname after an explicit cross-origin URL-bar submission. HTTPS targets request HTTPS; HTTP targets request both schemes for that hostname to support common automatic upgrades.
+- Added an extension-owned site-access prompt with three explicit choices: grant this site and continue, continue without persistent site access, or cancel. Pending destination URLs are held in session storage only while the choice is pending and are cleaned up after resolution, cancellation, relevant window closure, or expiry on next access.
+- Added a context-menu action to re-enable Clean Window on the current site after a cross-origin link or redirect, using temporary `activeTab` access rather than persistent host access.
+- Added a visible no-permission fallback if the site-access prompt cannot be opened; navigation only proceeds after the user explicitly chooses to continue.
+- Elevated YouTube Focus View in the README as the featured demonstration: level 2 preserves surrounding page content; level 3 fills the content viewport with the uncropped player. The existing YouTube behavior is unchanged.
+- Validation: 92/92 Node tests pass; Chrome Dev Headless DOM smoke covers same-origin/cross-origin navigation choices, site-access allow/deny/cancel, and existing YouTube layout regressions. Full installed-MV3 GUI and native Chrome permission prompt acceptance remain outstanding.
+
 ## Unreleased — 2026-10-21 (Edge mode previews)
 
 - Hover or keyboard-focus a real edge mode stop for 150ms to preview without saving the mode. Click commits; leaving the rail or Escape restores the committed mode and original scroll position.
