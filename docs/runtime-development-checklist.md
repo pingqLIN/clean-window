@@ -32,11 +32,11 @@ The Runtime folder is generated output. Edit `extension/`, then rebuild; never h
 Runtime is **not** a second or reduced-feature product variant. The generated package must contain the same runtime code as `extension/`; packaging may remove development files but must not change behavior.
 
 - [ ] Level 1 lightweight toolbar, managed-window list and optional bookmarks entry are present.
-- [ ] Level 2 persistent address-only toolbar and level 3 hidden URL-only bar remain available.
+- [ ] Level 1 persistent two-row toolbar, level 2 collapsed URL-only bar, and level 3 toolbar-free Popup remain available.
 - [ ] Restore, fullscreen, title editing and documented keyboard commands remain wired.
 - [ ] Edge handle drag, level preview/commit, reduced-motion handling and Restore cleanup remain present.
 - [ ] Symbol/Emoji title editing, original-title restoration and SPA title tracking remain present.
-- [ ] YouTube level-specific layouts and cleanup on Restore/navigation remain present.
+- [ ] YouTube level-1 toolbar offset, level-2 collapsed/expanded URL-bar layout, level-3 focus view and cleanup on Restore/navigation remain present.
 - [ ] Optional bookmarks permission remains explicit; declining it does not disable unrelated features.
 - [ ] Manifest permissions and content-security policy are unchanged by packaging.
 

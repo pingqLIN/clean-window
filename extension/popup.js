@@ -20,17 +20,17 @@ const managedCount = document.querySelector('#managed-count');
 const levels = {
   1: {
     name: '輕量瀏覽器工具列',
-    detail: '雙列工具列包含網址導覽、書籤、乾淨視窗清單、歷史紀錄、下載與還原入口。',
+    detail: '雙列工具列持續顯示，包含網址導覽、書籤、乾淨視窗清單、歷史紀錄、下載與還原入口。',
     limit: '這些是 Clean Window 自繪快捷功能，非 Chrome 原生網址欄或第三方擴充按鈕；書籤需另外授權。'
   },
   2: {
-    name: '自繪網址欄',
-    detail: '精簡 Popup 顯示可輸入的自繪網址欄，不顯示擴充工具列。',
+    name: '隱藏式網址欄',
+    detail: '只保留自繪網址欄，預設收闔在頂部中央把手後方；移至把手或使用鍵盤聚焦即可展開，不顯示擴充工具列。',
     limit: '非 Chrome 原生網址列；跨頁導覽可能使欄位消失。'
   },
   3: {
-    name: '隱藏式網址欄',
-    detail: '只顯示自繪網址欄，預設收闔；移至視窗上緣中央或使用鍵盤聚焦即可展開，不顯示擴充工具列。',
+    name: '純精簡 Popup',
+    detail: '不顯示自繪網址欄或頁面頂部工具列，讓網頁保持最精簡的顯示狀態。',
     limit: ''
   }
 };
@@ -260,9 +260,9 @@ const describeLevel = () => {
   if (!isRestoring) {
     cleanLabel.textContent = '套用此簡化等級';
     cleanDescription.textContent = level === 1
-      ? '精簡 Popup，搭配預設收闔的輕量雙列工具列。'
-      : level === 2 ? '精簡 Popup，搭配持續顯示的自繪網址欄。'
-        : '精簡 Popup，搭配預設隱藏的自繪網址欄。';
+      ? '精簡 Popup，搭配常駐顯示的輕量雙列工具列。'
+      : level === 2 ? '精簡 Popup，搭配預設收闔的自繪網址欄。'
+        : '純精簡 Popup，不顯示頁面頂部工具列或自繪網址欄。';
   }
   const stage = document.querySelector?.('#morph-stage');
   if (stage) {

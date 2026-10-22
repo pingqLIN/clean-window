@@ -138,22 +138,21 @@ test('level 1 shows the URL and Clean Window extension dock',async()=>{
  assert.equal(f.tabs.get(11).windowId,1);
  assert.equal(f.pageModes.get(11),'off');
 });
-test('level 2 shows the URL bar without extension dock',async()=>{
+test('level 2 shows a collapsed URL-only bar without extension dock',async()=>{
  const f=setup();f.preferences.cleanLevel=2;
  const result=await f.ctl.run('toggle-clean',target);
  assert.equal(result.level,2);
  assert.equal(f.wins.get(result.windowId).type,'popup');
- assert.equal(f.pageModes.get(11),'address');
+ assert.equal(f.pageModes.get(11),'address-hidden');
 });
-test('level 3 shows a hidden URL-only bar without the extension dock',async()=>{
+test('level 3 opens a pure Popup without a page toolbar',async()=>{
  const f=setup();f.preferences.cleanLevel=3;
  const other=structuredClone(f.wins.get(2));
  const result=await f.ctl.run('toggle-clean',target);
  assert.equal(result.level,3);
  assert.equal(result.mode,'clean');
  assert.equal(f.wins.get(result.windowId).type,'popup');
- assert.equal(f.pageModes.get(11),'address-hidden');
- assert.notEqual(f.pageModes.get(11),'address-dock');
+ assert.equal(f.pageModes.has(11),false,'level 3 does not inject a page toolbar just to hide it');
  assert.deepEqual(f.wins.get(2),other);
 });
 test('injection denial is fail closed for level 1 and 2, level 3 still works',async()=>{
@@ -218,11 +217,11 @@ test('recovery after clean mode window-create failure removes title override',as
  assert.equal(f.titleModes.get(11),'off');
  assert.equal(f.tabs.get(11).windowId,1);
 });
-test('level 3 stays available without content-script permission and reports the hidden URL-bar fallback',async()=>{
+test('level 3 opens without content-script permission and needs no page toolbar injection',async()=>{
  const f=setup();f.preferences.cleanLevel=3;f.api.failInject=true;
  const result=await f.ctl.run('toggle-clean',target);
  assert.equal(f.wins.get(result.windowId).type,'popup');
- assert.match(result.warning,/無法顯示自繪網址列/);
+ assert.doesNotMatch(result.warning || '',/網址列/);
  assert.equal(f.pageModes.has(11),false);
  await assert.rejects(f.ctl.run('edit-title',{tabId:11,windowId:result.windowId}),/Injection blocked/);
  await f.ctl.run('restore',{tabId:11,windowId:result.windowId});
@@ -238,13 +237,13 @@ test('edge rail is available at all three levels and switches in the same popup'
  assert.equal(f.pageModes.get(11),'address-dock');
  const second=await f.ctl.run('set-level',detached,{level:2});
  assert.equal(second.level,2);
- assert.equal(f.pageModes.get(11),'address');
+ assert.equal(f.pageModes.get(11),'address-hidden');
  assert.equal(f.edgeModes.get(11),2);
  assert.equal(f.db['clean:11'].cleanLevel,2);
  assert.equal(f.preferences.cleanLevel,2);
  const third=await f.ctl.run('set-level',detached,{level:3});
  assert.equal(third.level,3);
- assert.equal(f.pageModes.get(11),'address-hidden');
+ assert.equal(f.pageModes.get(11),'off','switching to level 3 removes the page toolbar');
  assert.equal(f.edgeModes.get(11),3);
  const first=await f.ctl.run('set-level',detached,{level:1});
  assert.equal(first.level,1);
@@ -294,8 +293,8 @@ test('failed injected level upgrade retains the previous hidden URL mode and pop
  assert.equal(f.preferences.cleanLevel,3);
  assert.equal(f.wins.get(opened.windowId).type,'popup');
 });
-test('navigation recovery restores the selected URL mode only to its matching popup',async()=>{
- for (const [level,mode] of [[2,'address'],[3,'address-hidden']]) {
+test('navigation recovery restores the selected toolbar mode only to its matching popup',async()=>{
+ for (const [level,mode] of [[1,'address-dock'],[2,'address-hidden']]) {
    const f=setup();f.preferences.cleanLevel=level;
    const opened=await f.ctl.run('toggle-clean',target);
    f.edgeModes.delete(11);f.pageModes.delete(11);f.titleModes.delete(11);
@@ -306,6 +305,13 @@ test('navigation recovery restores the selected URL mode only to its matching po
    assert.equal(await f.ctl.refresh(21,2),false);
    assert.equal(f.edgeModes.get(21),undefined);
  }
+ const f=setup();f.preferences.cleanLevel=3;
+ const opened=await f.ctl.run('toggle-clean',target);
+ f.edgeModes.delete(11);f.pageModes.delete(11);f.titleModes.delete(11);
+ assert.equal(await f.ctl.refresh(11,opened.windowId),true);
+ assert.equal(f.edgeModes.get(11),3);
+ assert.equal(f.pageModes.has(11),false,'level 3 recovery does not recreate a page toolbar');
+ assert.equal(f.titleModes.get(11),'active');
 });
 
 
@@ -318,7 +324,7 @@ test('edge and title controllers are prepared before moving: post-move injection
  assert.equal(f.edgeModes.get(11),1);
  assert.equal(f.pageModes.get(11),'address-dock');
  await f.ctl.run('set-level',detached,{level:2});
- assert.equal(f.pageModes.get(11),'address');
+ assert.equal(f.pageModes.get(11),'address-hidden');
  assert.equal(f.edgeModes.get(11),2);
  await f.ctl.run('set-level',detached,{level:1});
  assert.equal(f.pageModes.get(11),'address-dock');

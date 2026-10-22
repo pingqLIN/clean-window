@@ -4,38 +4,27 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 ## Current local verification — 2026-10-22
 
-Level 1 initial-hover regression fix is isolated on `fix/level1-initial-hover-guard-20261022`. Runtime rebuilt with 20 files; ZIP size is 63,643 bytes.
+Final three-mode contract is isolated on `fix/final-mode-behavior-20261022`. Runtime rebuild and publication status will be recorded after final verification.
 
-- `npm test`: **PASS, 94/94** simulated Chrome API and Popup tests, including level-3 hidden URL navigation and reapplying the recorded level when the page UI has drifted.
+- `npm test`: **PASS, 94/94** simulated Chrome API and Popup tests, including the final level-1/2/3 mapping, no-toolbar level-3 fallback, and page UI reconciliation.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
 - `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (63,643 bytes).
-- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover level-1 startup with the pointer already over the handle (remains collapsed until actual pointer movement), hover expansion/menu persistence, level-2 persistent visibility and spacing, level-3 hidden URL bar reveal/re-collapse with no layout reservation, same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
+- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover the permanently visible level-1 toolbar and 86px ordinary-page reservation, level-2 collapsed URL bar with hover/focus reveal and no reserved space, level-3 removal of all page-top toolbar UI, same-origin/cross-origin navigation, site-access allow/deny/cancel, YouTube mode-specific layouts and popup interactions.
 - The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
 
-## Level 1 initial hover guard — 2026-10-22
+## Final three-mode contract — 2026-10-22
 
-- A newly created popup can inherit the pointer position from the extension icon; CSS `:hover` must not immediately reveal the two-row toolbar in that state.
-- Level 1 now starts with `data-cw-armed=false`. The first real pointer movement over the clipped handle arms hover expansion; keyboard focus and an open extension menu remain supported.
-- Chrome Headless regression places the pointer at the future handle before injection, confirms the toolbar remains collapsed, then verifies pointer movement onto the handle expands it.
-
-## Level 3 hidden URL bar — 2026-10-22
-
-- Level 3 now uses the same 48px self-drawn address bar as level 2, but starts translated above the viewport with only a 76×6px top-center handle exposed. Hover or keyboard focus expands the URL bar; pointer leave collapses it again.
-- Level 3 does not reserve document padding when hidden or expanded. Level 2 remains persistently visible and reserves 48px on ordinary pages; level 1 retains its separate two-row URL + extension dock behavior.
-- Controller startup, level switching, navigation recovery and the YouTube mode preview all use the explicit `address-hidden` page mode. Restricted pages still open in level 3 when injection is denied, with a warning that the drawn URL bar is unavailable.
-- Chrome Headless DOM smoke verifies hidden/revealed CSS, pointer-triggered expansion, re-collapse, absence of layout padding, transition back to persistent level 2, and YouTube level-3 behavior.
+- **MODE1 (`address-dock`)**: the full 86px two-row URL + extension toolbar is visible immediately and never collapses. Ordinary pages reserve 86px; AI chat workspaces retain their app-owned root layout.
+- **MODE2 (`address-hidden`)**: a 48px URL-only bar starts collapsed behind a 76×6px top-center handle. Hover or keyboard focus reveals it; it never reserves page space and has no extension dock.
+- **MODE3 (`off`)**: no page-top URL bar or toolbar. The controller clears an existing bar without injecting page UI solely to hide it; the independent edge mode/restore control remains separate.
+- YouTube level 1 shifts the native layout below the persistent toolbar. Level 2 uses an effective toolbar height of 0 while collapsed and its rendered height while revealed; level 3 keeps the full-viewport player without a top bar.
+- Popup mode labels and preview artwork now match this contract. Chrome Headless regression coverage verifies all three modes and the YouTube layout transitions.
 
 ## Level 1 UI reconciliation — 2026-10-22
 
 - `controller.run('set-level')` no longer treats a matching session-journal level as proof that the injected UI is correct. Reapplying a selected level now restores the matching page toolbar and edge rail.
 - Clicking the already-selected edge stop now sends a reconciliation request instead of silently doing nothing. This provides a recovery path if level 1's two-row toolbar has drifted to level 2's URL-only interface.
 - Regression tests simulate the journal saying level 1 while the page UI is in address-only mode, then verify selecting level 1 restores `address-dock`. Chrome Headless DOM verifies a repeated click sends a controller request.
-
-## Level 1 / Level 2 distinction — 2026-10-22
-
-- Level 1 (`address-dock`) now starts collapsed to a 76px-wide, 6px-high top-center handle; hover or keyboard focus expands the full two-row toolbar. An open extension menu pins the toolbar open.
-- Level 1 no longer reserves a permanent 86px document padding gap; its expanded toolbar overlays the page's top edge. Level 2 (`address`) stays visible and reserves 48px on ordinary pages; AI workspace pages retain their app-owned document layout without padding mutation.
-- Chrome Headless DOM smoke asserts default collapse, hover expansion, pointer-leave collapse, menu persistence, level-2 visibility and layout spacing.
 
 ## Cross-origin navigation and YouTube positioning — 2026-10-22
 
@@ -71,7 +60,7 @@ Isolated Chrome Headless DOM checks cover pointer clicks, right/left viewport al
 
 ## Level-1 lightweight toolbar and managed-window list — 2026-10-18
 
-Implementation adds an 86px two-row toolbar for level 1, while level 2 remains a 48px address bar and level 3 remains a bare popup. The level-1 toolbar provides authenticated session-scoped window management, Restore, bookmark permission entry, local recent bookmarks, and Chrome history/download/extension-management shortcuts. The extension popup has a collapsible managed-window list. Bookmark access is optional, explicitly granted on a separate extension page. No broad host, `tabs`, `management`, or downloads/history permissions were introduced. Session storage caches a display title only for managed popups and revalidates tab-window relationships.
+The final three-mode contract uses an 86px always-visible two-row toolbar for level 1, a 48px URL-only bar collapsed by default for level 2, and no page-top URL bar or toolbar for level 3. The level-1 toolbar provides authenticated session-scoped window management, Restore, bookmark permission entry, local recent bookmarks, and Chrome history/download/extension-management shortcuts. The extension popup has a collapsible managed-window list. Bookmark access is optional, explicitly granted on a separate extension page. No broad host, `tabs`, `management`, or downloads/history permissions were introduced. Session storage caches a display title only for managed popups and revalidates tab-window relationships.
 
 At the 2026-10-18 checkpoint, **68/68** simulated API/popup tests and **15/15** isolated Chrome Dev Headless DOM checks passed, along with `npm run check`. Actual installed MV3 extension interaction, permission prompt, Chrome native popup appearance, and source-window recovery still required GUI acceptance.
 
@@ -90,7 +79,7 @@ The original extension runtime files were preserved for publication. Public docu
 
 ## Automated coverage
 
-The current 94 automated tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, cleanup isolation, cross-origin permission gating (including level 3), pending-navigation cleanup, level-3 hidden URL-bar recovery and temporary reapplication.
+The current 94 automated tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, cleanup isolation, level-2 cross-origin URL-bar permission gating, level-3 no-toolbar fallback, pending-navigation cleanup and temporary reapplication.
 
 ## Re-run the accepted checks
 

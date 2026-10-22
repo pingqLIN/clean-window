@@ -79,34 +79,16 @@ try{
  await run('globalThis.__navigationRequests=[];globalThis.__cwNavigationMode="prompt";globalThis.chrome={storage:{local:{async get(key){return {[key]:globalThis.__cwTheme};},async set(value){globalThis.__cwTheme=value.cleanWindowUiTheme;}}},runtime:{onMessage:{addListener(fn){globalThis.__cwListener=fn;}},async sendMessage(message){if(message.type==="clean-window:navigate"){globalThis.__navigationRequests.push(message);return {ok:true,action:globalThis.__cwNavigationMode};}globalThis.__hubCalls=(globalThis.__hubCalls||[]).concat(message);if(message.action==="list")return {ok:true,items:[{tabId:11,windowId:5,title:"🎨 研究視窗",level:1}]};if(message.action==="bookmarks-recent")return{ok:true,granted:false,items:[]};if(message.action==="bookmarks-status")return {ok:true,granted:false};return{ok:true,level:message.level};}}};'+source);
  const invoke=(mode)=>run('new Promise(resolve=>globalThis.__cwListener({type:"clean-window:page-ui",mode:"'+mode+'"}, {},resolve))');
 
- const dockX=await run('window.innerWidth/2');
- // Simulate opening a popup while the pointer is already over its future handle.
- await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:dockX,y:3});
  const full=await invoke('address-dock');
  assert.equal(full.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
- assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwArmed'),'false');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHidden'),'false');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwArmed'),undefined,'level 1 has no hover arming gate');
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'86');
- assert.equal(await run('document.documentElement.style.paddingTop'), '', 'level 1 should not reserve a permanent blank gap');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 starts collapsed');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','only the center handle is exposed while collapsed');
- const dockHandle=await run('(() => {const r=document.getElementById("clean-window-address-ui").getBoundingClientRect();return{x:r.left+r.width/2,y:r.bottom-3};})()');
- // Force a zero-delta pointer event at the handle, as when a popup appears under a stationary cursor.
- await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:dockHandle.x,y:dockHandle.y});
- await sleep(40);
- assert.equal(await run('document.getElementById("clean-window-address-ui").matches(":hover")'),true,'the pointer is hovering the newly created toolbar handle');
- assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwArmed'),'false','stationary hover must not arm level 1');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','stationary hover cannot reveal level 1');
- await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
- await sleep(40);
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','moving away from the initial pointer position keeps level 1 collapsed');
- await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:dockHandle.x,y:dockHandle.y});
+ assert.equal(await run('getComputedStyle(document.documentElement).paddingTop'),'86px','level 1 reserves space for its permanently visible toolbar');
  await sleep(240);
- assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwArmed'),'true');
- assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','a real pointer move onto the top handle expands level 1');
- await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
- await sleep(250);
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 collapses again after pointer leaves');
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 starts fully open');
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','level 1 is not clipped to a handle');
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelectorAll(".ribbon button").length'),7);
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".brand")===null'),true);
  const initialTheme=await run('document.getElementById("clean-window-address-ui").dataset.theme');
@@ -135,32 +117,51 @@ try{
  assert.equal(await run('globalThis.__hubCalls.some(m=>m.action==="bookmarks-grant")'),true);
  await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".menu-header button").click();true');
  await sleep(240);
- assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwMenuOpen'),undefined,'closing the menu releases the expanded state');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 collapses again when its menu closes and the pointer is outside');
- console.log('PASS: level 1 draws two-row toolbar, manager list and optional bookmark permission entry');
- const switched=await invoke('address');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwMenuOpen'),undefined,'closing the menu clears its open state');
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 stays visible when its menu closes and the pointer is outside');
+ console.log('PASS: level 1 keeps its full two-row toolbar visible, including menu actions');
+ const switched=await invoke('address-hidden');
  assert.equal(switched.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHidden'),'true');
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'48');
+ assert.equal(await run('document.documentElement.style.paddingTop'),'','level 2 collapsed URL bar does not reserve page space');
  await sleep(220);
- assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 2 stays visible rather than inheriting level 1 collapse');
- assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','level 2 is not clipped to a small handle');
- assert.equal(await run('getComputedStyle(document.documentElement).paddingTop'),'48px','level 2 reserves its visible address-bar height on ordinary pages');
- await sleep(30);
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 2 starts collapsed');
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','level 2 exposes only a small handle');
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.theme'),toggledTheme,'theme persists to level 2');
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".theme-toggle")!==null'),true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".ribbon")===null'),true);
  const returned=await invoke('address-dock');
  assert.equal(returned.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'true');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','switching back to level 1 restores the collapsed state');
- assert.equal(await run('document.documentElement.style.paddingTop'),'','switching to level 1 removes the address-bar layout gap');
+ await sleep(220);
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','switching back to level 1 restores the always-open toolbar');
+ assert.equal(await run('getComputedStyle(document.documentElement).paddingTop'),'86px','switching to level 1 restores its 86px layout reservation');
  await invoke('off');
  assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
- const address=await invoke('address');
+ const address=await invoke('address-hidden');
  assert.equal(address.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
- console.log('PASS: URL-only mode without extension dock');
+ assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHidden'),'true');
+ assert.equal(await run('document.documentElement.style.paddingTop'),'');
+ await sleep(220);
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 2 starts collapsed');
+ const hiddenHandle=await run('(() => {const r=document.getElementById("clean-window-address-ui").getBoundingClientRect();return{x:r.left+r.width/2,y:r.bottom-3};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:hiddenHandle.x,y:hiddenHandle.y});
+ await sleep(240);
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','hovering the handle reveals the level 2 URL bar');
+ assert.equal(await run('document.documentElement.style.paddingTop'),'','revealing level 2 does not push page content down');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
+ await sleep(240);
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 2 hides the URL bar after pointer leave');
+ await run('document.getElementById("clean-window-address-ui").focus();true');
+ await sleep(240);
+ assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','keyboard focus reveals level 2');
+ await run('document.getElementById("clean-window-address-ui").blur();true');
+ await sleep(240);
+ assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 2 collapses again after blur');
+ console.log('PASS: collapsed URL-only mode without extension dock');
  await run(`(() => {const root=document.getElementById('clean-window-address-ui').shadowRoot;const input=root.querySelector('input');input.value=location.origin+'/#cw-same-origin';root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));return true;})()`);
  await sleep(25);
  assert.equal(await run('location.hash'),'#cw-same-origin','same-origin URL-bar navigation proceeds without a permission prompt');
@@ -184,33 +185,10 @@ try{
  await invoke('off');
  assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
  assert.equal(await run('document.documentElement.style.paddingTop'), '');
- const hidden=await invoke('address-hidden');
- assert.equal(hidden.ok,true);
- assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
- assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHidden'),'true');
- assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHeight'),'48');
- assert.equal(await run('document.documentElement.style.paddingTop'),'','level 3 must not reserve permanent page space');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 3 URL bar starts hidden');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'none','level 3 exposes only the small top-center handle');
- assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector("input")!==null'),true);
- assert.equal(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector(".ribbon")===null'),true);
- const hiddenHandle=await run('(() => {const r=document.getElementById("clean-window-address-ui").getBoundingClientRect();return{x:r.left+r.width/2,y:r.bottom-3};})()');
- await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:hiddenHandle.x,y:hiddenHandle.y});
- await sleep(240);
- assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','hovering the handle reveals the level 3 URL bar');
- assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).clipPath'),'inset(0px)');
- assert.equal(await run('document.documentElement.style.paddingTop'),'','revealing level 3 does not push page content down');
- await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:12,y:140});
- await sleep(240);
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 3 hides the URL bar again after pointer leaves');
- await invoke('address');
- assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHidden'),'false','level 2 clears the hidden-mode state');
- assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none');
- assert.equal(await run('getComputedStyle(document.documentElement).paddingTop'),'48px');
  await invoke('off');
- assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true);
- assert.equal(await run('document.documentElement.style.paddingTop'),'');
- console.log('PASS: level 3 URL bar stays hidden by default, reveals on top-edge hover, and overlays without reserving space');
+ assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true,'level 3 has no drawn URL bar or extension toolbar');
+ assert.equal(await run('document.documentElement.style.paddingTop'),'','level 3 leaves no toolbar layout gap');
+ console.log('PASS: level 3 is a pure Popup with no page toolbar or URL bar');
  console.log('SMOKE PASS: 5/5 drawn-bar Chrome Headless DOM checks');
 
  // The edge control has no text on the handle, but exposes an accessible
@@ -405,7 +383,7 @@ try{
  })()`);
  await run('(function(location){'+youtubeSource+'})(globalThis.__youtubeLocation);true');
  const youtubeLevel=async level=>{
-   const mode=level===3?'address-hidden':level===2?'address':'address-dock';
+   const mode=level===3?'off':level===2?'address-hidden':'address-dock';
    assert.equal((await invoke(mode)).ok,true,'the controller applies the selected URL mode before updating the edge rail');
    assert.equal((await edgeCommand(level)).ok,true);
    await sleep(45);
@@ -425,8 +403,7 @@ try{
  })()`);
  await youtubeLevel(3);
  let yt=await youtubeLayout();
- assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwHidden'),'true','YouTube level 3 retains its hidden URL-only bar');
- assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','YouTube level 3 URL bar starts collapsed');
+ assert.equal(await run('!!document.getElementById("clean-window-address-ui")'),false,'YouTube level 3 has no page toolbar or URL bar');
  assert.equal(yt.mode,'3');
  assert.deepEqual(yt.player,{x:0,y:0,w:yt.inner[0],h:yt.inner[1]});
  assert.equal(yt.video.w,yt.inner[0]);assert.equal(yt.video.h,yt.inner[1]);
@@ -437,15 +414,18 @@ try{
  await sleep(45);yt=await youtubeLayout();
  assert.deepEqual(yt.player,{x:0,y:0,w:900,h:500});
  console.log('PASS: YouTube level 3 fills the viewport and follows resize without the theater height cap');
- await invoke('address');
  await youtubeLevel(2);yt=await youtubeLayout();
- assert.equal(yt.mode,'2');assert.equal(yt.player.h,452);
+ assert.equal(yt.mode,'2');assert.equal(yt.player.y,0);assert.ok(Math.abs(yt.player.h-Math.min(500,yt.player.w*9/16))<1,'collapsed level 2 must not reserve hidden toolbar height');
  assert.ok(yt.columnsTop>=yt.player.y+yt.player.h,'metadata and recommendations must start below the resized theater player');
- assert.equal(yt.player.y,48,'site header spacing must not remain below the drawn bar');
  assert.equal(yt.comments,'rgb(220, 230, 240)');assert.notEqual(yt.overflow,'hidden');
  assert.ok(yt.scrollHeight>yt.inner[1]);
- // Layout uses CSS coordinates, not physical pixels or a captured monitor's DPI.
- await run(`document.querySelector('#clean-window-address-ui').style.setProperty('height','72px','important');true`);
+ const youtubeHandle=await run('(() => {const r=document.getElementById("clean-window-address-ui").getBoundingClientRect();return{x:r.left+r.width/2,y:r.bottom-3};})()');
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:youtubeHandle.x,y:youtubeHandle.y});
+ await sleep(90);yt=await youtubeLayout();
+ assert.equal(yt.player.y,48,'revealing level 2 moves the YouTube app below the visible URL bar');
+ assert.equal(yt.player.h,452,'visible URL bar height is removed from the available player viewport');
+ // Layout uses CSS coordinates, not physical pixels or a captured monitor DPI.
+ await run("document.querySelector('#clean-window-address-ui').style.setProperty('height','72px','important');true");
  await sleep(80);yt=await youtubeLayout();
  assert.equal(yt.player.y,72,'measure the rendered toolbar instead of assuming 48px');
  assert.equal(yt.player.h,428);
@@ -462,14 +442,17 @@ try{
    assert.equal(yt.columnsVisibility,'visible');
    assert.ok(yt.columnsTop>=yt.player.y+yt.player.h);
  }
- await run(`document.querySelector('#clean-window-address-ui').style.setProperty('display','none','important');true`);
+ await run("document.querySelector('#clean-window-address-ui').style.setProperty('display','none','important');true");
  await sleep(80);yt=await youtubeLayout();
  assert.equal(yt.player.y,0,'a hidden toolbar must not reserve phantom space');
  assert.ok(Math.abs(yt.player.h-Math.min(1080,yt.player.w*9/16))<1);
- await run(`document.querySelector('#clean-window-address-ui').style.removeProperty('display');true`);
- await run(`document.querySelector('#clean-window-address-ui').style.setProperty('height','48px','important');true`);
+ await run("document.querySelector('#clean-window-address-ui').style.removeProperty('display');true");
+ await run("document.querySelector('#clean-window-address-ui').style.setProperty('height','48px','important');true");
  await send('Emulation.setDeviceMetricsOverride',{width:900,height:500,deviceScaleFactor:1,mobile:false});
- await sleep(80);
+ await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:450,y:3});
+ await sleep(80);yt=await youtubeLayout();
+ assert.equal(yt.player.y,48);
+ assert.equal(yt.player.h,452);
  console.log('PASS: player follows measured toolbar height and multiple viewport sizes/device pixel ratios');
  await run(`document.querySelector('ytd-watch-flexy').removeAttribute('theater');document.querySelector('#full-bleed-container').style.display='none';document.querySelector('#player-container-outer').append(document.querySelector('#player-container'));true`);
  await sleep(45);yt=await youtubeLayout();
@@ -478,7 +461,7 @@ try{
  assert.equal(yt.columnsVisibility,'hidden');
  assert.equal(yt.videoVisibility,'visible','normal-mode player remains visible inside the hidden columns');
  await youtubeLevel(2);
- console.log('PASS: YouTube level 2 reserves the rendered toolbar and preserves scrollable comments and page colors');
+ console.log('PASS: YouTube level 2 preserves surrounding content and adapts to collapsed/expanded URL-bar height');
  // Trusted pointer events exercise preview separately from persisted mode commands.
  await invoke('address');
  await run(`globalThis.__previewCommands=[];globalThis.__previewWrites=[];globalThis.__previewFail=false;
@@ -519,7 +502,7 @@ try{
  assert.equal(preview.preview,null);assert.equal(preview.mode,'2');assert.equal(preview.scrollY,originalScroll);
  console.log('PASS: hover previews with live-player animation, no mode writes, and leave restores mode/scroll');
  await hoverMode(1);await sleep(190);
- assert.equal((await previewState()).mode,null);
+ assert.equal((await previewState()).mode,'1','level 1 preview keeps the persistent toolbar layout active');
  assert.equal(await run('document.querySelector("#clean-window-address-ui").dataset.cwDock'),'true');
  await leaveModes();await sleep(60);
  await hoverMode(1);await sleep(40);await hoverMode(3);await sleep(190);
@@ -560,11 +543,12 @@ try{
  await hoverMode(3);await sleep(190);
  await invoke('off');await edgeCommand('off');
  assert.equal(await run('!!document.querySelector("#clean-window-address-ui")'),false,'Restore must not resurrect a preview toolbar');
- await invoke('address');await youtubeLevel(2);await leaveModes();
+ await invoke('off');await youtubeLevel(2);await leaveModes();
  console.log('PASS: reduced motion, resize cancellation and Restore during preview leave no stale UI');
  await youtubeLevel(1);yt=await youtubeLayout();
- assert.equal(yt.mode,null);assert.notEqual(yt.header,'none');
- assert.equal(await run('!!document.getElementById("clean-window-youtube-style")'),false);
+ assert.equal(yt.mode,'1');assert.notEqual(yt.header,'none');
+ assert.equal(yt.player.y,198,'level 1 shifts the original YouTube layout below the always-visible toolbar while retaining site header spacing');
+ assert.equal(await run('!!document.getElementById("clean-window-youtube-style")'),true);
  await youtubeLevel(3);
  await run(`globalThis.__youtubeLocation.pathname='/results';document.dispatchEvent(new Event('yt-navigate-finish'));true`);
  await sleep(45);assert.equal((await youtubeLayout()).mode,null);
@@ -696,14 +680,18 @@ try{
        height:w.innerHeight,scroll:d.documentElement.scrollHeight,
        side:d.querySelector('#side .bottom').getBoundingClientRect().bottom,
        send:d.querySelector('#main .bottom').getBoundingClientRect().bottom,
+       dockHeight:bar.dataset.cwHeight,
+       dockTransform:w.getComputedStyle(bar).transform,
+       dockClip:w.getComputedStyle(bar).clipPath,
        leftClear:d.elementFromPoint(12,2)!==bar,
        peek:d.elementFromPoint(450,2)===bar
      };
      bar.focus();result.focused=bar.matches(':focus-within');bar.blur();
-     w.__cleanWindowPageUI.apply('address');
+     w.__cleanWindowPageUI.apply('address-hidden');
      result.addressHeight=d.getElementById('clean-window-address-ui').dataset.cwHeight;
      result.addressPadding=d.documentElement.style.paddingTop;
      result.addressClip=w.getComputedStyle(d.getElementById('clean-window-address-ui')).clipPath;
+     result.addressTransform=w.getComputedStyle(d.getElementById('clean-window-address-ui')).transform;
      w.__cleanWindowPageUI.apply('off');
      result.restored=d.documentElement.style.paddingTop;
      frame.remove();
@@ -718,12 +706,16 @@ try{
    assert.equal(r.after,r.before,host+' must not shift document root');
    assert.equal(r.addressPadding,r.before,host+' level 2 must not shift root');
    assert.equal(r.restored,r.before,host+' restore must preserve original padding');
+   assert.equal(r.dockHeight,'86');
+   assert.equal(r.dockTransform,'none',host+' level 1 toolbar remains fully visible');
+   assert.equal(r.dockClip,'none',host+' level 1 toolbar is not clipped');
    assert.equal(r.addressHeight,'48');
-   assert.equal(r.addressClip,'none',host+' level 2 remains visible instead of collapsing to the level-1 handle');
+   assert.notEqual(r.addressClip,'none',host+' level 2 URL bar starts collapsed');
+   assert.notEqual(r.addressTransform,'none',host+' level 2 exposes only the top-center handle');
    assert.ok(r.side<=r.height+1 && r.send<=r.height+1,host+' bottom controls visible');
    assert.ok(r.scroll<=r.height+1,host+' no unwanted root scroll');
-   assert.equal(r.leftClear,true,host+' native left controls accessible');
-   assert.equal(r.peek,true,host+' toolbar handle accessible');
+   assert.equal(r.leftClear,false,host+' persistent level 1 toolbar occupies the top strip');
+   assert.equal(r.peek,true,host+' level 1 toolbar remains present at the top edge');
    assert.equal(r.focused,true,host+' keyboard toolbar expansion');
  }
  for(const height of [360,500,780]) {
@@ -736,10 +728,10 @@ try{
  }
  const lookalike=await workspaceFixture('gemini.google.com.example.com');
  assert.equal(lookalike.workspace,'false');
- assert.equal(lookalike.after,lookalike.before,'level 1 overlay should not reserve an empty page gap on ordinary pages');
- assert.notEqual(lookalike.addressPadding,lookalike.before,'level 2 should reserve its visible address bar on ordinary pages');
+ assert.notEqual(lookalike.after,lookalike.before,'level 1 permanently visible toolbar reserves its 86px height on ordinary pages');
+ assert.equal(lookalike.addressPadding,lookalike.before,'level 2 collapsed URL bar does not reserve page space on ordinary pages');
  assert.equal(lookalike.restored,lookalike.before);
- console.log('PASS: Gemini/Claude/ChatGPT preserve viewport-locked navigation, bottom actions and accessible toolbar handle');
+ console.log('PASS: Gemini/Claude/ChatGPT preserve viewport layout with persistent level 1 and collapsed level 2 controls');
 
  // Exercise the real site-access page script in Chrome's DOM with a bounded API stub.
  const siteAccessBody=siteAccessHTML.split('<body>')[1]?.split('</body>')[0];

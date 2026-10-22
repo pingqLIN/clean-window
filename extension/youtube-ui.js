@@ -8,7 +8,9 @@
   const html = document.documentElement;
   const originalAttribute = html.getAttribute(ATTRIBUTE);
   const scope = value => `html[${ATTRIBUTE}="${value}"]`;
-  const active = `html[${ATTRIBUTE}]`;
+  // The shared focus-view rules apply only to levels 2 and 3. Level 1 only
+  // shifts YouTube's app below its permanently visible toolbar.
+  const active = `:is(${scope(2)}, ${scope(3)})`;
   const css = `
     ${active} { --cw-youtube-viewport-height:100vh; }
     @supports (height:100dvh) {
@@ -31,6 +33,7 @@
       transform:none!important;object-fit:contain!important;
     }
     /* The app is normally absolute at top:0, bypassing the drawn bar's root padding. */
+    ${scope(1)} ytd-app,
     ${scope(2)} ytd-app {
       position:relative!important;top:var(--cw-youtube-top-offset)!important;
     }
@@ -77,7 +80,7 @@
     const watch = youtube && location.pathname === '/watch' &&
       document.querySelector('ytd-watch-flexy:not([hidden]) #movie_player video');
     // Native fullscreen owns its own sizing and controls until the user exits it.
-    if (![2, 3].includes(level) || !watch || document.fullscreenElement) {
+    if (![1, 2, 3].includes(level) || !watch || document.fullscreenElement) {
       clearStyle();
       return;
     }
@@ -95,12 +98,17 @@
         resizeObserver.observe(toolbar);
       }
     }
+    // The level-2 URL bar is a collapsed overlay until hover or keyboard focus.
+    // Measure its effective layout contribution, not its transformed box height.
+    const hiddenBarCollapsed = toolbar?.dataset.cwHidden === 'true'
+      && !toolbar.matches(':hover, :focus-within')
+      && toolbar.dataset.cwMenuOpen !== 'true';
     // Both measurements are CSS pixels, so browser zoom and monitor DPI need no conversion.
-    const barHeight = toolbar ? toolbar.getBoundingClientRect().height : 0;
+    const barHeight = toolbar && !hiddenBarCollapsed ? toolbar.getBoundingClientRect().height : 0;
     const rootPadding = parseFloat(getComputedStyle(html).paddingTop) || 0;
     const pageWidth = html.getBoundingClientRect().width;
     const aspect = watch.videoWidth && watch.videoHeight ? watch.videoWidth / watch.videoHeight : 16 / 9;
-    const rules = css + `${active} { --cw-youtube-toolbar-height:${barHeight}px;` +
+    const rules = css + `${scope(level)} { --cw-youtube-toolbar-height:${barHeight}px;` +
       `--cw-youtube-top-offset:${barHeight - rootPadding}px;` +
       `--cw-youtube-page-width:${pageWidth}px;--cw-youtube-aspect:${aspect}; }`;
     // Avoid a mutation-observer loop when a layout notification changes no measurements.
@@ -112,7 +120,7 @@
   }
   function apply(next) {
     level = next;
-    const enabled = [2, 3].includes(level) &&
+    const enabled = [1, 2, 3].includes(level) &&
       ['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(location.hostname);
     if (!enabled) {
       observer?.disconnect();
@@ -122,6 +130,9 @@
       if (listening) {
         for (const name of ['yt-navigate-finish', 'yt-page-data-updated', 'fullscreenchange']) {
           document.removeEventListener(name, schedule);
+        }
+        for (const name of ['pointerover', 'pointerout', 'focusin', 'focusout']) {
+          document.removeEventListener(name, schedule, true);
         }
         window.removeEventListener('popstate', schedule);
         window.removeEventListener('resize', schedule);
@@ -136,6 +147,9 @@
     if (!listening) {
       for (const name of ['yt-navigate-finish', 'yt-page-data-updated', 'fullscreenchange']) {
         document.addEventListener(name, schedule);
+      }
+      for (const name of ['pointerover', 'pointerout', 'focusin', 'focusout']) {
+        document.addEventListener(name, schedule, true);
       }
       window.addEventListener('popstate', schedule);
       window.addEventListener('resize', schedule);

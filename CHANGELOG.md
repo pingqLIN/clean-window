@@ -1,12 +1,19 @@
 # Changelog
 
-## Unreleased — 2026-10-22 (Level 1 initial hover guard)
+## Unreleased — 2026-10-22 (Final three-mode contract)
+
+- MODE1 is a permanently expanded 86px two-row URL + extension toolbar. It reserves space on ordinary pages; AI chat workspaces keep their app-owned root layout.
+- MODE2 is a 48px URL-only bar, collapsed behind a 76×6px top-center handle. Hover or keyboard focus reveals it without reserving page space or showing extension tools.
+- MODE3 is a pure minimal Popup with no page-top URL bar or toolbar; the controller removes an existing bar without injecting page UI just to hide it.
+- Updated the Popup's mode descriptions and preview artwork, controller mode mapping, and Chrome Headless regressions. YouTube now tracks the effective visible height of MODE2's URL bar and offsets MODE1 content below its persistent toolbar.
+
+## Superseded — 2026-10-22 (Level 1 initial hover guard)
 
 - Prevented level 1 from expanding merely because the pointer is already over the toolbar handle when the clean popup is created.
 - Level 1 stays collapsed until real pointer movement reaches the handle, while deliberate keyboard focus and an open extension menu can still reveal the toolbar.
 - Added a Chrome Headless regression that positions the pointer over the future handle before creating the toolbar; level 2 and level 3 behavior is unchanged.
 
-## Unreleased — 2026-10-22 (Level 3 hidden URL bar)
+## Superseded — 2026-10-22 (Level 3 hidden URL bar)
 
 - Added a URL-only bar to level 3. It starts hidden behind a 76×6px top-center handle and expands on hover or keyboard focus; unlike level 2, it never reserves page layout space.
 - Kept level 1's hidden two-row URL + extension dock and level 2's persistent URL-only bar as distinct behaviors.
@@ -20,7 +27,7 @@
 - Made the edge-level control send the selected level on repeated clicks, so clicking level 1 again can restore its URL bar plus extension toolbar if the visible page UI has fallen back to level 2.
 - Added regression coverage for journal/UI mismatch and repeated selection of the already-selected level.
 
-## Unreleased — 2026-10-22 (Level 1 collapsed toolbar)
+## Superseded — 2026-10-22 (Level 1 collapsed toolbar)
 
 - Made level 1's two-row drawn toolbar collapse by default to a small top-center handle; hover or keyboard focus expands it.
 - Kept level 2's 48px drawn address bar persistently visible, including AI workspace pages, so levels 1 and 2 remain visibly distinct.
@@ -33,7 +40,7 @@
 - Added an extension-owned site-access prompt with three explicit choices: grant this site and continue, continue without persistent site access, or cancel. Pending destination URLs are held in session storage only while the choice is pending and are cleaned up after resolution, cancellation, relevant window closure, or expiry on next access.
 - Added a context-menu action to re-enable Clean Window on the current site after a cross-origin link or redirect, using temporary `activeTab` access rather than persistent host access.
 - Added a visible no-permission fallback if the site-access prompt cannot be opened; navigation only proceeds after the user explicitly chooses to continue.
-- Elevated YouTube Focus View in the README as the featured demonstration: level 2 preserves surrounding page content; level 3 fills the content viewport with the uncropped player. The existing YouTube behavior is unchanged.
+- Elevated YouTube Focus View in the README as the featured demonstration: level 2 preserves surrounding page content; level 3 fills the content viewport with the uncropped player. The current final mode contract also offsets level-1 content below its persistent toolbar and tracks level-2 bar visibility.
 - Validation: 92/92 Node tests pass; Chrome Dev Headless DOM smoke covers same-origin/cross-origin navigation choices, site-access allow/deny/cancel, and existing YouTube layout regressions. Full installed-MV3 GUI and native Chrome permission prompt acceptance remain outstanding.
 
 ## Unreleased — 2026-10-21 (Edge mode previews)

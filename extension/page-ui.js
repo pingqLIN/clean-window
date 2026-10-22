@@ -62,12 +62,12 @@
     if (bar?.isConnected) stopBar();
     const html = document.documentElement;
     const workspace = isWorkspaceLayout();
-    // Level 1's two-row dock and level 3's URL-only bar are collapsed overlays.
-    // Only level 2 reserves space for its persistently visible 48px address bar.
-    originalPadding = (workspace || withDock || hiddenByDefault) ? null : { value: html.style.getPropertyValue('padding-top') };
-    originalPriority = (workspace || withDock || hiddenByDefault) ? '' : html.style.getPropertyPriority('padding-top');
+    // Level 1 stays fully visible; level 2's URL-only bar is a hidden overlay.
+    // The collapsed level-2 bar must never reserve page layout space.
+    originalPadding = (workspace || hiddenByDefault) ? null : { value: html.style.getPropertyValue('padding-top') };
+    originalPriority = (workspace || hiddenByDefault) ? '' : html.style.getPropertyPriority('padding-top');
     const height = withDock ? 86 : BAR_HEIGHT;
-    if (!workspace && !withDock && !hiddenByDefault) {
+    if (!workspace && !hiddenByDefault) {
       const currentPadding = getComputedStyle(html).paddingTop || '0px';
       html.style.setProperty('padding-top', `calc(${currentPadding} + ${height}px)`, 'important');
     }
@@ -75,30 +75,16 @@
     bar.id = BAR_ID;
     bar.dataset.cwDock = withDock ? 'true' : 'false';
     bar.dataset.cwHidden = hiddenByDefault ? 'true' : 'false';
-    // A newly opened popup can inherit the pointer position from the extension
-    // icon. Do not let that initial :hover reveal level 1 until real pointer input.
-    if (withDock) {
-      bar.dataset.cwArmed = 'false';
-      const dockBar = bar;
-      const armOnMovement = event => {
-        // A zero-delta pointer event can occur when a new popup is placed under
-        // a stationary cursor. Only actual pointer travel may reveal level 1.
-        if (event.movementX === 0 && event.movementY === 0) return;
-        if (dockBar.isConnected) dockBar.dataset.cwArmed = 'true';
-        dockBar.removeEventListener('pointermove', armOnMovement);
-      };
-      dockBar.addEventListener('pointermove', armOnMovement);
-    }
     bar.dataset.cwHeight = String(height);
     bar.dataset.cwWorkspace = String(workspace);
     if (withDock || hiddenByDefault) {
       bar.tabIndex = 0;
       bar.setAttribute('aria-label', withDock
-        ? 'Clean Window 第一級工具列；聚焦或移至視窗上緣中央可展開'
-        : 'Clean Window 第三級網址列；聚焦或移至視窗上緣中央可展開');
+        ? 'Clean Window 第一級雙列工具列'
+        : 'Clean Window 第二級隱藏式網址列；聚焦或移至視窗上緣中央可展開');
       bar.title = withDock
-        ? '第一級雙列工具列預設收闔；將滑鼠移至視窗上緣中央或使用鍵盤聚焦即可展開'
-        : '第三級網址列預設隱藏；將滑鼠移至視窗上緣中央或使用鍵盤聚焦即可展開';
+        ? '第一級雙列工具列持續顯示'
+        : '第二級網址列預設收闔；將滑鼠移至視窗上緣中央或使用鍵盤聚焦即可展開';
     }
     bar.style.cssText = 'all:initial!important;position:fixed!important;inset:0 0 auto 0!important;height:'+height+'px!important;z-index:2147483647!important;';
     const shadow = bar.attachShadow({mode:'closed'});
@@ -106,34 +92,26 @@
     style.textContent = `
       :host { color-scheme:light; animation:cw-bar-enter .18s cubic-bezier(.16,1,.3,1) both; }
       @keyframes cw-bar-enter {from {opacity:0;transform:translateY(-4px);} to {opacity:1;transform:none;}}
-      /* Level 1 hides its two-row toolbar; level 3 hides only the URL bar.
-         Level 2 remains visible and reserves space on ordinary pages. */
-      :host([data-cw-dock="true"]),
+      /* Only level 2 uses a collapsed, URL-only overlay. Level 1 stays open. */
       :host([data-cw-hidden="true"]) {
         animation:none!important;transform:translateY(calc(-100% + 6px))!important;
         clip-path:inset(0 calc(50% - 38px))!important;
         transition:transform .2s ease,clip-path .2s ease!important;
       }
-      :host([data-cw-dock="true"][data-cw-armed="true"]:hover),
-      :host([data-cw-dock="true"]:focus-within),
       :host([data-cw-hidden="true"]:hover),
       :host([data-cw-hidden="true"]:focus-within),
       :host([data-cw-menu-open="true"]) {
         transform:none!important;clip-path:inset(0)!important;
       }
-      :host([data-cw-dock="true"])::after,
       :host([data-cw-hidden="true"])::after {
         content:'⌄';position:absolute;bottom:0;left:calc(50% - 38px);
         width:76px;height:6px;border-radius:0 0 6px 6px;
         background:#a9b1bc;color:transparent;pointer-events:none;
       }
-      :host([data-cw-dock="true"][data-cw-armed="true"]:hover)::after,
-      :host([data-cw-dock="true"]:focus-within)::after,
       :host([data-cw-hidden="true"]:hover)::after,
       :host([data-cw-hidden="true"]:focus-within)::after,
       :host([data-cw-menu-open="true"])::after {opacity:0;}
       @media (prefers-reduced-motion:reduce) {
-        :host([data-cw-dock="true"]),
         :host([data-cw-hidden="true"]) {transition:none!important;}
       }
       :host([data-theme="dark"]) { color-scheme:dark; }

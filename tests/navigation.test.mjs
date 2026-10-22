@@ -85,22 +85,22 @@ test('cross-origin address navigation opens a per-host prompt without granting a
   assert.equal(f.originPermissions.size, 0, 'opening the prompt must not grant a permission');
 });
 
-test('level 3 hidden URL bar can request per-host access for cross-origin navigation', async () => {
+test('level 2 hidden URL bar can request per-host access for cross-origin navigation', async () => {
   const f = await setup();
-  f.preferences.cleanLevel = 3;
+  f.preferences.cleanLevel = 2;
   const clean = await openClean(f);
-  assert.equal(f.db['clean:11'].cleanLevel, 3);
-  const target = 'https://level-three-destination.example/work';
+  assert.equal(f.db['clean:11'].cleanLevel, 2);
+  const target = 'https://level-two-destination.example/work';
   const result = await send(f, {
     type: 'clean-window:navigate', url: target
   }, webSender(f, clean.windowId));
   assert.equal(result.ok, true);
   assert.equal(result.action, 'prompt');
-  assert.equal(result.host, 'level-three-destination.example');
+  assert.equal(result.host, 'level-two-destination.example');
   const [, pending] = pendingRows(f)[0];
   assert.equal(pending.url, target);
   assert.equal(pending.windowId, clean.windowId);
-  assert.deepEqual(pending.originPatterns, ['https://level-three-destination.example/*']);
+  assert.deepEqual(pending.originPatterns, ['https://level-two-destination.example/*']);
 });
 
 test('HTTP destinations request both schemes for the same hostname to survive common HTTPS upgrades', async () => {
@@ -126,7 +126,7 @@ test('HTTP destinations request both schemes for the same hostname to survive co
   f.pageModes.delete(11); f.edgeModes.delete(11); f.titleModes.delete(11);
   f.api.tabs.onUpdated.listeners[0](11, { status: 'complete' }, { id: 11, windowId: clean.windowId });
   await new Promise(resolve => setTimeout(resolve, 25));
-  assert.equal(f.pageModes.get(11), 'address');
+  assert.equal(f.pageModes.get(11), 'address-hidden');
   assert.equal(f.edgeModes.get(11), 2);
   assert.equal(f.originPermissions.size, 2, 'only the exact hostname is granted across the two schemes');
   assert.equal(f.db[key], undefined);
@@ -207,7 +207,7 @@ test('a granted destination host automatically reattaches controls after navigat
   f.pageModes.delete(11); f.edgeModes.delete(11); f.titleModes.delete(11);
   f.api.tabs.onUpdated.listeners[0](11, { status: 'complete' }, { id: 11, windowId: clean.windowId });
   await new Promise(resolve => setTimeout(resolve, 25));
-  assert.equal(f.pageModes.get(11), 'address');
+  assert.equal(f.pageModes.get(11), 'address-hidden');
   assert.equal(f.edgeModes.get(11), 2);
   assert.equal(f.titleModes.get(11), 'active');
 });
@@ -326,7 +326,7 @@ test('reapply context-menu action restores page controls after an ungranted cros
     id: 11, windowId: clean.windowId
   });
   await new Promise(resolve => setTimeout(resolve, 25));
-  assert.equal(f.pageModes.get(11), 'address');
+  assert.equal(f.pageModes.get(11), 'address-hidden');
   assert.equal(f.edgeModes.get(11), 2);
   assert.equal(f.titleModes.get(11), 'active');
   assert.equal(f.tabs.get(21).windowId, 2);

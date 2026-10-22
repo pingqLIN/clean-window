@@ -53,13 +53,15 @@ test('new popup initializes at level 1 of 3',async()=>{
  assert.equal(p.nodes.get('#clean-level').value,'1');
  assert.equal(p.nodes.get('#level-number').textContent,'1 / 3');
  assert.match(p.nodes.get('#level-title').textContent,/輕量瀏覽器工具列/);
+ assert.match(p.nodes.get('#level-detail').textContent,/持續顯示/);
  assert.equal(p.nodes.get('#clean-level').disabled,false);
 });
-test('setting level 2 persists and advertises URL only',async()=>{
+test('setting level 2 persists and advertises a collapsed URL-only bar',async()=>{
  const p=panel();await flush();
  const slider=p.nodes.get('#clean-level');slider.value='2';
  slider.listeners.input();
- assert.match(p.nodes.get('#level-detail').textContent,/網址欄/);
+ assert.match(p.nodes.get('#level-title').textContent,/隱藏式網址欄/);
+ assert.match(p.nodes.get('#level-detail').textContent,/預設收闔/);
  assert.match(p.nodes.get('#level-detail').textContent,/不顯示擴充工具列/);
  await slider.listeners.change();
  assert.equal(p.prefs.cleanLevel,2);
@@ -67,12 +69,12 @@ test('setting level 2 persists and advertises URL only',async()=>{
  assert.equal(p.messages[0].action,'toggle-clean');
  assert.equal(p.closed,1);
 });
-test('level 3 advertises a URL bar that is hidden until requested',async()=>{
+test('level 3 advertises a pure Popup without page toolbar or URL bar',async()=>{
  const p=panel({cleanLevel:3});await flush();
  assert.equal(p.nodes.get('#clean-level').value,'3');
- assert.match(p.nodes.get('#level-title').textContent,/隱藏式網址欄/);
- assert.match(p.nodes.get('#level-detail').textContent,/預設收闔/);
- assert.match(p.nodes.get('#level-detail').textContent,/不顯示擴充工具列/);
+ assert.match(p.nodes.get('#level-title').textContent,/純精簡 Popup/);
+ assert.match(p.nodes.get('#level-detail').textContent,/不顯示自繪網址欄/);
+ assert.match(p.nodes.get('#level-detail').textContent,/頂部工具列/);
  assert.equal(p.nodes.get('#level-limit').hidden,true);
 });
 test('invalid saved level falls back to level one of three',async()=>{
