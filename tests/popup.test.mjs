@@ -98,6 +98,7 @@ test('level 1 advertises a lightweight toolbar and a collapsible managed list',a
  assert.match(html,/id="managed-windows"/);
  assert.match(html,/id="managed-list"/);
  assert.equal(manifest.optional_permissions.includes('bookmarks'),true);
+ assert.deepEqual([...manifest.optional_host_permissions].sort(),['http://*/*','https://*/*']);
  assert.equal(manifest.permissions.includes('bookmarks'),false);
  assert.equal(manifest.permissions.includes('tabs'),false);
  assert.equal(manifest.permissions.includes('management'),false);

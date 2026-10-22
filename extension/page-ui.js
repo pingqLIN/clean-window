@@ -148,6 +148,11 @@
       .feedback { position:absolute;top:87px;right:10px;max-width:85%;
         padding:7px 11px;border-radius:8px;color:#fff;background:#8d3434;
         font:12px system-ui;box-shadow:0 2px 8px #0005; }
+      .feedback[data-kind="info"] { background:#315c4c; }
+      .feedback[data-kind="warning"] { background:#705326; }
+      .feedback .feedback-actions { display:flex;gap:6px;margin-top:7px; }
+      .feedback .feedback-actions button { width:auto;height:auto;padding:5px 8px;border-radius:6px;
+        background:#fff;color:#28332d;font:12px system-ui; }
       .feedback {transition:opacity .14s ease,display .14s allow-discrete;}
       .feedback[hidden] { display:none;opacity:0; }
       @starting-style {.feedback:not([hidden]) {opacity:0;}}
@@ -215,16 +220,59 @@
     address.title='僅供網址導覽；Chrome 網站身分與安全狀態請在普通視窗檢查';
     address.value=location.href;
     form.append(address);
-    form.addEventListener('submit',event=>{
+    let navigationBusy = false;
+    form.addEventListener('submit', async event => {
       event.preventDefault();event.stopPropagation();
-      try {location.assign(addressURL(address.value));}
-      catch(error) {address.setCustomValidity(error.message); address.reportValidity();address.setCustomValidity('');}
+      let target;
+      try { target = addressURL(address.value); }
+      catch(error) {address.setCustomValidity(error.message); address.reportValidity();address.setCustomValidity('');return;}
+      // Same-origin navigation keeps activeTab access and needs no extra prompt.
+      if (new URL(target).origin === location.origin) { location.assign(target); return; }
+      if (navigationBusy) return;
+      navigationBusy = true;
+      address.disabled = true;
+      feedback.hidden = true;
+      try {
+        const result = await chrome.runtime.sendMessage({ type: 'clean-window:navigate', url: target });
+        if (!result?.ok) throw new Error(result?.error || '無法準備跨網站導覽。');
+        if (result.action === 'navigate') { location.assign(target); return; }
+        if (result.action === 'prompt') {
+          feedback.dataset.kind = 'info';
+          feedback.textContent = `已開啟「${new URL(target).host}」的存取選擇視窗。允許後可保留工具列；不授權也可直接前往。`;
+          feedback.hidden = false;
+          return;
+        }
+        throw new Error('無法辨識導覽狀態。');
+      } catch(error) {
+        showNavigationFallback(target, error?.message || String(error));
+      } finally {
+        navigationBusy = false;
+        address.disabled = false;
+      }
     });
     strip.addEventListener('pointerdown',event=>event.stopPropagation());
     strip.addEventListener('click',event=>event.stopPropagation());
     strip.append(back,forward,reload,form,themeButton);
     const feedback=document.createElement('div');
     feedback.className='feedback';feedback.hidden=true;feedback.setAttribute('role','status');
+    const showNavigationFallback = (target, reason) => {
+      feedback.replaceChildren();
+      const message = document.createElement('div');
+      message.textContent = `無法開啟網站授權選擇（${String(reason).slice(0,180)}）。可留在此頁，或不授權直接前往；跨來源後工具列可能消失。`;
+      const actions = document.createElement('div');
+      actions.className = 'feedback-actions';
+      const proceed = document.createElement('button');
+      proceed.type = 'button'; proceed.textContent = '不授權，仍然前往';
+      proceed.addEventListener('click', event => { event.stopPropagation(); location.assign(target); });
+      const stay = document.createElement('button');
+      stay.type = 'button'; stay.textContent = '留在此頁';
+      stay.addEventListener('click', event => {
+        event.stopPropagation(); feedback.hidden = true; feedback.replaceChildren(); address.value = location.href;
+      });
+      actions.append(proceed, stay);
+      feedback.append(message, actions);
+      feedback.dataset.kind = 'warning'; feedback.hidden = false;
+    };
     let ribbon=null, menu=null;
     if (withDock) {
       ribbon=document.createElement('div');ribbon.className='ribbon';

@@ -4,11 +4,21 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 ## Current local verification — 2026-10-22
 
-- `npm test`: **PASS, 77/77** simulated Chrome API and Popup tests.
+- `npm test`: **PASS, 92/92** simulated Chrome API and Popup tests.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
-- `npm run build:runtime`: **PASS**; 17 files copied into `dist/runtime/`, and the ZIP was verified against the generated files with decompression and CRC checks.
-- `npm run smoke:dom`: **PASS**; 16/16 Chrome Headless DOM checks, plus popup managed-list/title-editor interaction checks.
+- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (61,974 bytes).
+- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
 - The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
+
+## Cross-origin navigation and YouTube positioning — 2026-10-22
+
+- Added `optional_host_permissions` for HTTP(S) only; these are not granted at installation. A cross-origin URL submitted in the drawn address bar opens an extension-owned choice page that requests only the target hostname after an explicit click. HTTPS targets request HTTPS; HTTP targets request both schemes for that hostname to handle common upgrades.
+- Approval navigates the original managed tab and allows `tabs.onUpdated` to reattach the drawn UI. Declining permission requires a separate explicit choice to continue; Cancel leaves the source page in place. Same-origin navigation remains immediate and does not prompt.
+- Cross-origin links or redirects without a prior host grant can still remove injected controls. The new `reapply-clean` context-menu action requests reinjection through a user-initiated `activeTab` grant without persistent host access.
+- Pending destination URLs are kept only in `chrome.storage.session` while the choice is pending; tests cover cancellation, denial, timeout-on-next-access, target/prompt window closure, unsafe URLs, untrusted senders, unrelated-tab isolation, HTTP-to-HTTPS upgrades and keeping incognito prompts in the matching context.
+- `npm test`: **92/92 PASS**. `npm run check`: **PASS**. `npm run smoke:dom`: **PASS**, including same-origin/cross-origin address-bar flow, permission-page allow/deny/cancel, fallback choice UI and YouTube layout regressions.
+- YouTube Focus View is now a featured README demo; the existing level-2 page-preserving and level-3 player-focused behavior is retained.
+- **REMAINING:** the permission request UI and full navigation/reattachment flow have not yet been accepted in an installed MV3 extension on a live Chrome profile. Headless DOM tests use bounded API stubs; they do not prove the real Chrome permission prompt or native window behavior.
 
 ## Three-level update — developed 2026-10-12, committed 2026-10-17
 
@@ -53,7 +63,7 @@ The original extension runtime files were preserved for publication. Public docu
 
 ## Automated coverage
 
-The current 77 automated tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, and cleanup isolation.
+The current 92 automated tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, cleanup isolation, cross-origin permission gating, pending-navigation cleanup and temporary reapplication.
 
 ## Re-run the accepted checks
 

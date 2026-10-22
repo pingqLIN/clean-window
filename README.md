@@ -10,7 +10,9 @@
 
 Choose one of three simplification levels: a lightweight two-row browser toolbar, a drawn address bar only, or a bare popup. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
 
-**Status: source preview.** 77 automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
+**Featured demo — YouTube Focus View:** level 2 keeps titles, comments and recommendations visible while sizing the player to the available viewport; level 3 fills the content area with the player and hides other site content. The video keeps its original aspect ratio without cropping. Preview levels from the edge control, then restore with one action.
+
+**Status: source preview.** 92 automated API-simulation and popup-interaction tests pass. Chrome Dev Headless DOM checks cover same-origin navigation, per-site cross-origin access choices, denial/cancel fallbacks, YouTube layouts and popup interactions. Full live MV3 installation, native popup appearance, keyboard operation and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
 
 ## Quick Start
 
@@ -35,7 +37,7 @@ The single slider offers three modes, all implemented as a resizable Chrome popu
 | 2 | Address only | URL input, navigation and a light/dark toggle, without the extension dock |
 | 3 | None | Bare popup with no injected toolbar |
 
-The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security indicator. The drawn toolbar cannot invoke other extensions' action buttons. No `management` or broad host permission was introduced. Bookmarks use an **optional** `bookmarks` permission, requested only from a separate extension page after an explicit user click; they do not require a sensitive `tabs` permission. Levels 1–2 only inject after the user activates the extension on an eligible HTTP(S) site, and the bar can disappear after cross-document navigation. Level 3 does not require injection to open, but keeps the edge control when eligible.
+The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security indicator. The drawn toolbar cannot invoke other extensions' action buttons. No required broad host permission or `management` permission is used. Bookmarks use an **optional** `bookmarks` permission, requested only from a separate extension page after an explicit user click. Levels 1–2 only inject on eligible HTTP(S) sites. When a user submits a cross-origin URL in the drawn address bar, Clean Window opens a per-site access choice: an HTTPS destination requests HTTPS access for that hostname; an HTTP destination requests both HTTP and HTTPS for that same hostname to survive common automatic HTTPS upgrades. Declining still allows navigation, but the toolbar may disappear. For links or redirects that cross origins without prior permission, use the page context menu's **Re-enable Clean Window on this site** action to reinject on demand with temporary `activeTab` access. No all-sites access is granted automatically. Level 3 does not require injection to open, but keeps the edge control when eligible.
 
 **Managed windows:** Open the expandable managed-window list in the extension popup (or the level-1 toolbar). Only live Clean Window popups from the current session are listed; focus, change L1/L2/L3, or restore individual windows. Edited Emoji titles are reflected in the session-scoped list.
 
@@ -83,9 +85,10 @@ The public Windows API supports creating a popup and updating window state, but 
 | --- | --- |
 | `storage` | Session restoration records plus a persistent level preset and edge position |
 | `activeTab` and `scripting` | On-demand injection for self-drawn URL navigation and optional extension-owned dock |
-| `contextMenus` | Page and extension-action menu entries for switching and restoration |
+| `contextMenus` | Page and extension-action menu entries for switching, re-enabling on the current site and restoration |
+| Optional HTTP(S) host access | Requested for the destination hostname only after the user submits a cross-origin URL; never granted to all sites at install |
 
-No broad host permissions, persistent content scripts, native host, analytics, or external network requests are implemented. The extension does not request the sensitive `tabs` permission; it uses tab IDs and window metadata, not page content. The README's remote badges are separate from extension runtime behavior. See [PRIVACY.md](PRIVACY.md) and the [manifest](extension/manifest.json).
+No required broad host permissions, persistent content scripts, native host, analytics, or external network requests are implemented. `http://*/*` and `https://*/*` are declared only as optional host permissions; they are not granted at install and a site-specific request is offered only when the user submits a cross-origin destination in the drawn address bar. The extension does not request the sensitive `tabs` permission; it uses tab IDs and window metadata, not page content. The README's remote badges are separate from extension runtime behavior. See [PRIVACY.md](PRIVACY.md) and the [manifest](extension/manifest.json).
 
 ## Development
 
@@ -99,7 +102,7 @@ npm run smoke:dom
 npm run build:runtime
 ```
 
-`npm test` runs 77 tests against deterministic Chrome API simulations and popup interactions. `npm run build:runtime` creates `dist/runtime/` for Load unpacked and `dist/clean-window-v<version>.zip` with extension files at the archive root. Generated `dist/` output is ignored by Git. Automated checks do **not** prove actual browser behavior. See the [Runtime / Development separation checklist](docs/runtime-development-checklist.md).
+`npm test` runs 92 tests against deterministic Chrome API simulations and popup interactions. `npm run build:runtime` creates `dist/runtime/` for Load unpacked and `dist/clean-window-v<version>.zip` with extension files at the archive root. Generated `dist/` output is ignored by Git. Automated checks do **not** prove actual browser behavior. See the [Runtime / Development separation checklist](docs/runtime-development-checklist.md).
 
 | Resource | Purpose |
 | --- | --- |

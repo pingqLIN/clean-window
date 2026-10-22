@@ -7,11 +7,15 @@ const pkg=JSON.parse(await readFile(new URL('../package.json',import.meta.url)))
 assert.equal(manifest.version,pkg.version);
 assert.equal(manifest.manifest_version,3);
 assert.deepEqual([...manifest.permissions].sort(),['activeTab','contextMenus','scripting','storage']);
+assert.deepEqual([...manifest.optional_host_permissions].sort(),['http://*/*','https://*/*']);
 for(const key of ['host_permissions','content_scripts','externally_connectable','web_accessible_resources']) assert.equal(manifest[key],undefined,`${key} not needed`);
 for(const file of await readdir(new URL('../extension/',import.meta.url))){
  if(file.endsWith('.js'))execFileSync(process.execPath,['--check',fileURLToPath(new URL(`../extension/${file}`,import.meta.url))],{stdio:'inherit'});
 }
 for(const path of Object.values(manifest.icons))await access(new URL(`../extension/${path}`,import.meta.url));
 const html=await readFile(new URL('../extension/popup.html',import.meta.url),'utf8');
+const siteAccessHtml=await readFile(new URL('../extension/site-access.html',import.meta.url),'utf8');
 assert.equal(/\son\w+\s*=/i.test(html),false);
-console.log('PASS: JavaScript syntax, MV3 manifest, version consistency, minimal permissions, icons, no inline handlers.');
+assert.equal(/\son\w+\s*=/i.test(siteAccessHtml),false);
+for(const id of ['target-host','scope-note','allow','continue','cancel','status']) assert.match(siteAccessHtml,new RegExp('id="'+id+'"'));
+console.log('PASS: JavaScript syntax, MV3 manifest, version consistency, required/optional permission boundary, icons, site-access controls and no inline handlers.');
