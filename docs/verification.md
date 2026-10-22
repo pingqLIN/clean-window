@@ -6,7 +6,7 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 - `npm test`: **PASS, 92/92** simulated Chrome API and Popup tests.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
-- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (61,974 bytes).
+- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (62,618 bytes).
 - `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
 - The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
 
