@@ -167,23 +167,22 @@
         border-radius:10px;background:var(--cw-soft);white-space:nowrap;overflow:hidden;
         text-overflow:ellipsis;font-size:12px;color:var(--cw-ink);}
       .buttons {display:flex;align-items:center;gap:7px;}
+      .buttons button {width:36px;height:36px;padding:0;display:grid;place-items:center;font-size:20px;line-height:1;}
       button.primary {background:var(--cw-pill);color:var(--cw-pill-ink);border-color:var(--cw-pill);
-        border-radius:999px;min-width:76px;font-weight:600;}
-      button.reset {margin-right:auto;}
+        border-radius:50%;min-width:36px;width:36px;font-size:20px;font-weight:500;}
+      button.reset {margin-right:auto;color:#d94747;}
+      button.reset svg {width:20px;height:20px;display:block;stroke:currentColor;}
       button:hover:not(.primary) {background:var(--cw-soft);}
       button.primary:hover {filter:brightness(.88);}
       button:active {opacity:.72;}
       button,input {transition:background-color .15s ease,border-color .15s ease,opacity .15s ease;}
       button:focus-visible,input:focus-visible {outline:2px solid var(--cw-signal);outline-offset:2px;}
-      .hint {font-size:11px;color:var(--cw-muted);margin:12px 0 0;line-height:1.55;}
       @media(prefers-reduced-motion:reduce) {.panel{animation:none!important;}button,input{transition:none!important;}}
     `;
     const panel = document.createElement('div');
     panel.className='panel'; panel.setAttribute('role','dialog');
     panel.setAttribute('aria-modal','false');
     panel.setAttribute('aria-label','編輯乾淨模式標題');
-    const heading = document.createElement('h2');
-    heading.textContent = '編輯乾淨模式標題';
     const form = document.createElement('form');
     const fields = document.createElement('div'); fields.className='fields';
     const symbolLabel = document.createElement('label');
@@ -195,7 +194,7 @@
     symbol.value=state.symbol;
     symbolLabel.append(symbol);
     const titleLabel = document.createElement('label');
-    titleLabel.className='text-field'; titleLabel.textContent='頁面標題';
+    titleLabel.className='text-field'; titleLabel.textContent='Title';
     const text = document.createElement('input');
     text.type='text'; text.id='cw-title-text'; text.maxLength=MAX_TITLE;
     text.autocomplete='off'; text.spellcheck=false; text.value=titleText();
@@ -226,13 +225,29 @@
     text.addEventListener('input',updatePreview);
     updatePreview();
     const controls = document.createElement('div'); controls.className='buttons';
-    const button = (label, kind) => {
+    const button = (label, kind, accessibleLabel) => {
       const el = document.createElement('button');
-      el.type='button'; el.className=kind; el.textContent=label; return el;
+      el.type='button'; el.className=kind; el.textContent=label;
+      el.setAttribute('aria-label', accessibleLabel);
+      el.title=accessibleLabel;
+      return el;
     };
-    const reset=button('原始標題','reset');
-    const cancel=button('取消','');
-    const save=button('套用','primary'); save.type='submit';
+    const reset=button('', 'reset', '重設為原始標題');
+    const resetIcon=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    resetIcon.setAttribute('viewBox','0 0 24 24');
+    resetIcon.setAttribute('fill','none');
+    resetIcon.setAttribute('stroke-width','2');
+    resetIcon.setAttribute('stroke-linecap','round');
+    resetIcon.setAttribute('stroke-linejoin','round');
+    resetIcon.setAttribute('aria-hidden','true');
+    const resetArrow=document.createElementNS('http://www.w3.org/2000/svg','path');
+    resetArrow.setAttribute('d','M3 7v6h6');
+    const resetArc=document.createElementNS('http://www.w3.org/2000/svg','path');
+    resetArc.setAttribute('d','M3.05 13A9 9 0 1 0 5.64 5.64L3 8');
+    resetIcon.append(resetArrow,resetArc);
+    reset.append(resetIcon);
+    const cancel=button('❌', '', '取消編輯');
+    const save=button('⭕', 'primary', '套用標題'); save.type='submit';
     reset.addEventListener('click',()=>{
       state.custom=null;state.symbol=DEFAULT_SYMBOL;
       updateDocumentTitle(); notifyManager(); dismissEditor();
@@ -257,9 +272,9 @@
     });
     form.append(fields,presets,preview,controls);
     controls.append(reset,cancel,save);
-    const hint=document.createElement('p'); hint.className='hint';
-    hint.textContent='支援貼上單一 Emoji（包含組合表情、國旗）或 Unicode 符號；只修改目前分頁標題。';
-    panel.append(heading,form,hint);
+    // Keep the visible editor deliberately quiet: field labels carry the only
+    // explanatory text; reset/apply/cancel are compact icon-only controls.
+    panel.append(form);
     root.append(styles,panel);
     document.documentElement.append(host);
     editor=host;

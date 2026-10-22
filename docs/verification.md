@@ -4,11 +4,17 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 ## Current local verification — 2026-10-22
 
-- `npm test`: **PASS, 92/92** simulated Chrome API and Popup tests.
+- `npm test`: **PASS, 94/94** simulated Chrome API and Popup tests, including the 1.5-second mode-button hover timer and early-leave cancellation.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
-- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (62,903 bytes).
-- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover level-1 default collapse/hover expansion/menu persistence, level-2 persistent visibility and spacing, same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
+- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (63,340 bytes).
+- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover level-1 default collapse/hover expansion/menu persistence, level-2 persistent visibility and spacing, title-editor labels/icon controls, same-origin navigation, cross-origin prompt/fallback behavior, site-access allow/deny/cancel, YouTube layout regressions and popup interactions.
 - The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
+
+## Popup hover caption and compact title editor — 2026-10-22
+
+- The central mode button starts a 1,500ms timer on pointer entry. If the pointer leaves before the timer expires, the timer is canceled. After expiry, the button fades out and the same caption card used by the lower pips fades in; the lower pips remain the only preview-selection controls and do not apply the mode.
+- The title editor visibly retains only the `Icon / Emoji` and `Title` field labels, plus the live preview and Emoji presets. Reset is a red circular undo-arrow icon; Cancel is `❌`; Apply is `⭕`. All controls retain accessible names and tooltips.
+- `npm test`: **94/94 PASS**. Chrome Headless DOM smoke checks the title-editor labels, icon-only actions, reset color and accessible labels. Installed extension GUI still needs manual acceptance.
 
 ## Level 1 / Level 2 distinction — 2026-10-22
 

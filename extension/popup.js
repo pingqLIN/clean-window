@@ -375,6 +375,11 @@ void init();
 // Morphing window: hover/focus previews a level, click selects it.
 const stage = document.querySelector?.('#morph-stage');
 if (stage) {
+  let captionTimer = null;
+  const cancelCaptionTimer = () => {
+    if (captionTimer !== null) clearTimeout(captionTimer);
+    captionTimer = null;
+  };
   const selected = () => stage.dataset.selectedLevel || '1';
   stage.querySelectorAll?.('.morph-zone').forEach(zone => {
     const preview = () => {
@@ -413,7 +418,12 @@ if (stage) {
       }
     });
   });
-  stage.addEventListener('mouseleave', () => { stage.dataset.previewLevel = selected(); });
+  stage.addEventListener('mouseleave', () => {
+    cancelCaptionTimer();
+    delete stage.dataset.pips;
+    delete stage.dataset.captionSource;
+    stage.dataset.previewLevel = selected();
+  });
 
   // Mode caption (shown while hovering the pips) and the edge-tab hint follow the previewed level.
   const MODES = {
@@ -446,8 +456,17 @@ if (stage) {
   // Pips: hovering previews temporarily, clicking selects until the black button applies.
   const pipsBox = stage.querySelector?.('.level-pips');
   if (pipsBox) {
-    const enter = level => { stage.dataset.pips = 'on'; if (level) stage.dataset.previewLevel = level; };
-    const leave = () => { delete stage.dataset.pips; stage.dataset.previewLevel = selected(); };
+    const enter = level => {
+      cancelCaptionTimer();
+      stage.dataset.captionSource = 'pips';
+      stage.dataset.pips = 'on';
+      if (level) stage.dataset.previewLevel = level;
+    };
+    const leave = () => {
+      delete stage.dataset.pips;
+      delete stage.dataset.captionSource;
+      stage.dataset.previewLevel = selected();
+    };
     pipsBox.addEventListener('pointerenter', () => enter());
     pipsBox.addEventListener('pointerleave', leave);
     pipsBox.querySelectorAll?.('.pip').forEach(pip => {
@@ -475,6 +494,17 @@ if (stage) {
       raf = Math.abs(tgt - cur) > 0.002 ? requestAnimationFrame(tick) : 0;
     };
     const aim = value => { tgt = value; if (!still && !raf) raf = requestAnimationFrame(tick); };
+    // Holding the pointer over the central mode button for 1.5 seconds
+    // reveals the same caption card as hovering the lower mode pips.
+    wrap.addEventListener('pointerenter', () => {
+      cancelCaptionTimer();
+      if (stage.dataset.pips === 'on') return;
+      captionTimer = setTimeout(() => {
+        captionTimer = null;
+        stage.dataset.captionSource = 'button';
+        stage.dataset.pips = 'on';
+      }, 1500);
+    });
     wrap.addEventListener('pointermove', event => {
       const rect = wrap.getBoundingClientRect();
       const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
@@ -482,7 +512,11 @@ if (stage) {
       aim(Math.sign(d) * Math.max(0, (Math.abs(d) - 0.33) / 0.67));
       pill.style.setProperty('--mx', (x * 100).toFixed(0) + '%');
     });
-    wrap.addEventListener('pointerleave', () => { aim(0); stage.dataset.previewLevel = selected(); });
+    wrap.addEventListener('pointerleave', () => {
+      cancelCaptionTimer();
+      aim(0);
+      stage.dataset.previewLevel = selected();
+    });
   }
 }
 

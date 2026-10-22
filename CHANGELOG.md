@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — 2026-10-22 (Popup hover caption and compact title editor)
+
+- Added a 1.5-second hover delay on the popup's central mode button; after the delay, the button fades out to the same mode-caption card shown by the lower dots. Leaving early cancels the transition, and the dots remain available to preview/select without applying.
+- Simplified the title editor to show only the `Icon / Emoji` and `Title` field labels, retaining the live title preview and Emoji presets.
+- Replaced visible Reset/Cancel/Apply text with a red circular undo-arrow icon, `❌`, and `⭕`; icon-only controls keep accessible labels and tooltips.
+- Added deterministic timer tests and Chrome Headless checks for the hover transition and title-editor controls.
+
 ## Unreleased — 2026-10-22 (Level 1 collapsed toolbar)
 
 - Made level 1's two-row drawn toolbar collapse by default to a small top-center handle; hover or keyboard focus expands it.

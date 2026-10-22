@@ -261,12 +261,22 @@ try{
 
  const opened=await titleCommand('edit',{screenX:900,screenY:350});
  assert.equal(opened.ok,true);
- const editorVisual=await run('(() => {const r=document.querySelector("#clean-window-title-editor").shadowRoot;return {corner:getComputedStyle(r.querySelector(".panel")).borderTopLeftRadius,applyCorner:getComputedStyle(r.querySelector("button.primary")).borderTopLeftRadius}})()');
+ const editorVisual=await run('(() => {const r=document.querySelector("#clean-window-title-editor").shadowRoot;return {corner:getComputedStyle(r.querySelector(".panel")).borderTopLeftRadius,applyCorner:getComputedStyle(r.querySelector("button.primary")).borderTopLeftRadius,labels:[...r.querySelectorAll("form label")].map(label=>label.childNodes[0]?.textContent?.trim()),heading:!!r.querySelector("h2"),hint:!!r.querySelector(".hint"),resetText:r.querySelector("button.reset").textContent.trim(),resetStroke:getComputedStyle(r.querySelector("button.reset svg")).stroke,resetLabel:r.querySelector("button.reset").getAttribute("aria-label"),cancelText:r.querySelector(".buttons button:not(.primary):not(.reset)").textContent, cancelLabel:r.querySelector(".buttons button:not(.primary):not(.reset)").getAttribute("aria-label"),applyText:r.querySelector("button.primary").textContent,applyLabel:r.querySelector("button.primary").getAttribute("aria-label")}})()');
+ assert.deepEqual(editorVisual.labels,['Icon / Emoji','Title']);
+ assert.equal(editorVisual.heading,false);
+ assert.equal(editorVisual.hint,false);
+ assert.equal(editorVisual.resetText,'');
+ assert.equal(editorVisual.resetStroke,'rgb(217, 71, 71)');
+ assert.equal(editorVisual.resetLabel,'重設為原始標題');
+ assert.equal(editorVisual.cancelText,'❌');
+ assert.equal(editorVisual.cancelLabel,'取消編輯');
+ assert.equal(editorVisual.applyText,'⭕');
+ assert.equal(editorVisual.applyLabel,'套用標題');
  assert.equal(editorVisual.corner,'16px');
- assert.equal(editorVisual.applyCorner,'999px');
+ assert.equal(editorVisual.applyCorner,'50%');
  assert.equal(await run('document.querySelector("#clean-window-title-editor").dataset.sidecar'),'true');
  assert.equal(await run('getComputedStyle(document.querySelector("#clean-window-title-editor").shadowRoot.querySelector(".panel")).animationName'),'cw-title-sidecar-enter');
- console.log('PASS: title editor follows the popup rounded-panel and pill-action styling');
+ console.log('PASS: title editor keeps only field labels and compact accessible icon controls');
  const custom=await run(`(() => {
    const root=document.querySelector('#clean-window-title-editor').shadowRoot;
    const symbol=root.querySelector('#cw-title-symbol');
