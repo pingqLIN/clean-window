@@ -10,7 +10,7 @@
 
 Choose one of three simplification levels: a lightweight two-row browser toolbar, a drawn address bar only, or a bare popup. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
 
-**Status: source preview.** 68 automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
+**Status: source preview.** 77 automated API-simulation and popup-interaction tests pass. Real Chrome window appearance, keyboard operation, and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
 
 ## Quick Start
 
@@ -89,20 +89,23 @@ No broad host permissions, persistent content scripts, native host, analytics, o
 
 ## Development
 
-Node.js **20+** is declared in `package.json`. There are no npm dependencies, and no install or build step is required.
+Node.js **20+** is declared in `package.json`. There are no npm dependencies or install step. `extension/` is the canonical Runtime source; do not edit generated output manually.
 
 ```sh
 # From the repository root
 npm test
 npm run check
+npm run smoke:dom
+npm run build:runtime
 ```
 
-`npm test` runs 67 tests against deterministic Chrome API simulations and popup interactions. `npm run check` checks JavaScript syntax, MV3 metadata, version consistency, permissions, icons, and inline-handler restrictions. These checks do **not** prove actual browser behavior.
+`npm test` runs 77 tests against deterministic Chrome API simulations and popup interactions. `npm run build:runtime` creates `dist/runtime/` for Load unpacked and `dist/clean-window-v<version>.zip` with extension files at the archive root. Generated `dist/` output is ignored by Git. Automated checks do **not** prove actual browser behavior. See the [Runtime / Development separation checklist](docs/runtime-development-checklist.md).
 
 | Resource | Purpose |
 | --- | --- |
 | [Verification record](docs/verification.md) | Passed checks, blocked browser tests, and remaining acceptance work |
 | [Architecture](docs/architecture.md) | Popup, worker, controller, and browser responsibility boundaries |
+| [Runtime / Development checklist](docs/runtime-development-checklist.md) | Runtime packaging, file separation and release acceptance |
 | [Contributing](CONTRIBUTING.md) | Local checks, scope, and safe bug reports |
 | [Changelog](CHANGELOG.md) | Version history |
 | [Issues](https://github.com/pingqLIN/clean-window/issues) | Reproducible bugs and feature requests; do not post sensitive browser data |

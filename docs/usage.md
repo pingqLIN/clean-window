@@ -4,7 +4,7 @@
 
 ## Install and first check
 
-Load the repository's `extension/` folder through `chrome://extensions/` → Developer mode → Load unpacked. Do not load the repository root. No build is needed. Keep that folder in place. Save important work before trying window operations.
+To test the source checkout directly, load its `extension/` folder through `chrome://extensions/` → Developer mode → Load unpacked. For a generated Runtime build, run `npm run build:runtime` and load `dist/runtime/`, or extract `dist/clean-window-v<version>.zip` and load the extracted folder whose root contains `manifest.json`. Do not load the repository root. The extension itself needs no build or Node.js at runtime; Node.js 20+ is needed only to generate the package. Keep the selected folder in place. Save important work before trying window operations.
 
 1. Open test windows A and B, with two tabs in A. Record B's appearance, size, position, and tab contents.
 2. In A, select level 1 and use `Alt + Shift + W`. Confirm the two-row toolbar and managed-window list appear. Restore and select level 2 to confirm the URL bar remains but the dock is gone.

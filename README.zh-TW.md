@@ -10,7 +10,7 @@
 
 以單一三級滑桿選擇「輕量瀏覽器工具列」、「自繪網址欄」或「純精簡 Popup」；全螢幕為獨立操作。不變更其他視窗的介面設定。操作綁定指定視窗與分頁，不修改 Chrome 全域外觀設定。
 
-**狀態：原始碼預覽版。** 68 項模擬 Chrome API 與 Popup 互動的自動化測試通過；真實 Chrome 視窗外觀、快捷鍵及 Windows 瀏覽器操作仍**尚未驗收**。擴充介面目前使用繁體中文，文件提供英文與繁體中文。頁首圖片是概念插畫，不是實機截圖。
+**狀態：原始碼預覽版。** 77 項模擬 Chrome API 與 Popup 互動的自動化測試通過；真實 Chrome 視窗外觀、快捷鍵及 Windows 瀏覽器操作仍**尚未驗收**。擴充介面目前使用繁體中文，文件提供英文與繁體中文。頁首圖片是概念插畫，不是實機截圖。
 
 ## 快速開始
 
@@ -90,20 +90,23 @@
 
 ## 開發
 
-`package.json` 宣告 Node.js **20+**。沒有 npm 相依套件，不需要安裝或建置步驟。
+`package.json` 宣告 Node.js **20+**。沒有 npm 相依套件，也不需要安裝相依套件。`extension/` 是 Runtime 唯一原始碼；不要手動修改自動產生的產物。
 
 ```sh
 # From the repository root
 npm test
 npm run check
+npm run smoke:dom
+npm run build:runtime
 ```
 
-`npm test` 透過可重現的 Chrome API 模擬與 Popup 互動測試執行 68 項測試；`npm run check` 檢查 JavaScript 語法、MV3 結構、版本一致性、權限、圖示及 inline handler 限制。這些結果**不能取代實際瀏覽器驗收**。
+`npm test` 執行 77 項可重現的 Chrome API 模擬與 Popup 互動測試。`npm run build:runtime` 會產生可載入的 `dist/runtime/`，以及檔案直接位於 ZIP 根目錄的 `dist/clean-window-v<version>.zip`。`dist/` 由 Git 忽略。自動化結果**不能取代實際瀏覽器驗收**。詳見[Runtime／Development 分離檢核表](docs/runtime-development-checklist.zh-TW.md)。
 
 | 文件 | 用途 |
 | --- | --- |
 | [驗證紀錄](docs/verification.md) | 已通過項目、瀏覽器測試阻塞與剩餘驗收 |
 | [架構](docs/architecture.md) | 面板、背景工作者、控制器與瀏覽器的責任邊界 |
+| [Runtime／Development 檢核表](docs/runtime-development-checklist.zh-TW.md) | 產物打包、檔案分層與發布驗收 |
 | [貢獻說明](CONTRIBUTING.md) | 本機檢查、修改範圍及安全回報方式 |
 | [版本紀錄](CHANGELOG.md) | 版本變更 |
 | [Issues](https://github.com/pingqLIN/clean-window/issues) | 可重現的錯誤及功能需求；請勿張貼敏感瀏覽資料 |

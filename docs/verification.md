@@ -2,6 +2,14 @@
 
 Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source preview**.
 
+## Current local verification — 2026-10-22
+
+- `npm test`: **PASS, 77/77** simulated Chrome API and Popup tests.
+- `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
+- `npm run build:runtime`: **PASS**; 17 files copied into `dist/runtime/`, and the ZIP was verified against the generated files with decompression and CRC checks.
+- `npm run smoke:dom`: **PASS**; 16/16 Chrome Headless DOM checks, plus popup managed-list/title-editor interaction checks.
+- The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
+
 ## Three-level update — developed 2026-10-12, committed 2026-10-17
 
 The three selectable popup modes are drawn address+extension dock, address only and bare popup. The extension dock offers only Clean Window Restore and Chrome extension-management shortcuts. Previous DOM focus-masking experiment is retired. Verified on the local Windows device: 46/46 simulated-API and popup interaction tests PASS; JavaScript/MV3 static checks PASS; 3/3 isolated Chrome Dev Headless DOM checks PASS; Git diff whitespace checks PASS. Live Chrome extension installation, native popup visual appearance, and extension-dock actions remain NOT YET GUI-VERIFIED.
@@ -28,7 +36,7 @@ Isolated Chrome Headless DOM checks cover pointer clicks, right/left viewport al
 
 Implementation adds an 86px two-row toolbar for level 1, while level 2 remains a 48px address bar and level 3 remains a bare popup. The level-1 toolbar provides authenticated session-scoped window management, Restore, bookmark permission entry, local recent bookmarks, and Chrome history/download/extension-management shortcuts. The extension popup has a collapsible managed-window list. Bookmark access is optional, explicitly granted on a separate extension page. No broad host, `tabs`, `management`, or downloads/history permissions were introduced. Session storage caches a display title only for managed popups and revalidates tab-window relationships.
 
-Current local checks: **68/67** simulated API/popup tests PASS; **15/15** isolated Chrome Dev Headless DOM checks PASS; `npm run check` PASS. Actual installed MV3 extension interaction, permission prompt, Chrome native popup appearance, and source-window recovery still require GUI acceptance.
+At the 2026-10-18 checkpoint, **68/68** simulated API/popup tests and **15/15** isolated Chrome Dev Headless DOM checks passed, along with `npm run check`. Actual installed MV3 extension interaction, permission prompt, Chrome native popup appearance, and source-window recovery still required GUI acceptance.
 
 ## Evidence levels
 
@@ -45,7 +53,7 @@ The original extension runtime files were preserved for publication. Public docu
 
 ## Automated coverage
 
-The 68 current tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, and cleanup isolation.
+The current 77 automated tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, and cleanup isolation.
 
 ## Re-run the accepted checks
 

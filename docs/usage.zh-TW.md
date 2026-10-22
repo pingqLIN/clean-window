@@ -4,7 +4,7 @@
 
 只處理你指定的 Chrome 視窗或分頁，不更動 Chrome 全域外觀設定。
 
-**狀態：程式與 68 項自動化測試完成；尚未通過 Chrome GUI／使用者 Windows 實機驗收。**
+**狀態：77 項自動化測試通過；尚未完成 Chrome GUI／使用者 Windows 實機驗收。**
 本次雲端測試環境限制擴充載入與全螢幕，未修改或繞過其政策。
 
 ## 三級精簡操作
@@ -55,9 +55,9 @@ Alt + Shift + R 可還原；Alt + Shift + F 仍是獨立的全螢幕快捷鍵，
 
 ## 安裝（不需要 Node、Python、伺服器或管理員權限）
 
-1. 解壓縮 ZIP 到固定資料夾。請保留解壓縮後的資料夾，不要移動或刪除。
+1. 若使用原始碼 ZIP，解壓縮到固定資料夾；若使用 Runtime ZIP，解壓後的根目錄就應直接看得到 `manifest.json`。請保留選定的資料夾，不要移動或刪除。
 2. 在 Chrome 開啟 `chrome://extensions/`，開啟「開發人員模式」。
-3. 按「載入未封裝項目」，選擇解壓後的 **`clean-window\extension`** 資料夾；此層必須看得到 `manifest.json`。不要選 ZIP，也不要選上層專案根目錄。
+3. 按「載入未封裝項目」，選擇**直接包含 `manifest.json` 的資料夾**：原始碼 ZIP 選 `clean-window\extension`；本機建置選 `dist/runtime/`；Runtime ZIP 則選解壓後的根目錄。不要選 ZIP 檔本身，也不要選上層專案根目錄。
 4. 在右上角擴充功能選單，把「Clean Window｜乾淨視窗」釘選。切到要處理的視窗，點圖示選擇模式。
 
 安裝完成後請保留 extension 資料夾，不要移動／刪除。企業管理的 Chrome 可能不允許開發人員模式或未封裝擴充；本套件不繞過管理政策。
