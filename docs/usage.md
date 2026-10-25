@@ -59,7 +59,7 @@ Single-click the unmarked gray page-edge handle to open the title editor; drag t
 
 When a clean popup is created on an eligible HTTP(S) page, its document title initially becomes `◈ Original Page Title`. Press `Alt + Shift + J`, or use **Clean Window · 編輯乾淨模式標題** on the page context menu, to pick a built-in Unicode Symbol and edit the text. The editor has Cancel, Apply and Reset-to-original actions. Exiting clean mode restores the most recent native website title. Single-page apps that change their own title are tracked. The override exists only in page memory; it is not saved or transmitted.
 
-This changes the webpage's `document.title`, not its native favicon or Chrome identity/security UI. Native Windows popup titlebar rendering is not yet GUI-verified. On restricted pages or after cross-origin navigation, the feature may be unavailable; bare popup mode still works.
+This changes the webpage's `document.title`, not its native favicon or Chrome identity/security UI. Chrome Stable native popup titlebar rendering and standard window controls have been verified on a local fixture in an isolated profile; physical multi-monitor/DPI transitions remain unverified. On restricted pages or after cross-origin navigation, the feature may be unavailable; bare popup mode still works.
 
 ## Cross-origin navigation and re-enabling
 
@@ -84,6 +84,8 @@ Chrome's native fullscreen exit can also leave fullscreen. A later restore comma
 Required permissions are `storage`, `contextMenus`, `activeTab` and `scripting`. `bookmarks` and HTTP(S) host access are optional. Host patterns are declared as optional and only requested for the target hostname after the user explicitly submits a cross-origin URL in the drawn address bar. The pending destination URL is kept in `chrome.storage.session` only while the access choice is open, then removed after navigation, cancellation or relevant window closure; an expired record is removed the next time it is accessed. No URL is written to `storage.local` or sync storage, and no browsing data is sent externally.
 
 The default commands are `Alt + Shift + Y`, `Alt + Shift + F`, `Alt + Shift + U`, and `Alt + Shift + J`. OS language-switch shortcuts or other extensions may conflict; the popup displays what Chrome registered rather than promising that defaults are available.
+
+For optional Windows GUI acceptance, build Runtime with `npm run build:runtime`, install the Python packages `playwright`, `pywinauto`, and `pywin32`, then run `python tests/windows-chrome-gui-smoke.py`. The test loads `dist/runtime/` in an isolated temporary Chrome Stable profile and sends OS-level synthetic keyboard input to verify all four commands, fullscreen entry/exit, title editing, restore, and preservation of a synthetic unsaved form. It uses only a loopback fixture, deletes the temporary profile on exit, does not change browser policy, and is not included in CI. This is not a physical-keyboard hardware test; if unpacked extensions are blocked by policy, stop instead of bypassing it.
 
 Incognito operation requires Chrome's per-extension **Allow in incognito** setting. The manifest uses split mode, and restoration does not merge incognito and normal windows. This behavior is covered by simulated tests, not by an accepted Windows incognito browser run.
 

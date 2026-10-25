@@ -5,8 +5,9 @@
 - Made missing or unverifiable restoration journals explicit: Restore warns and creates a normal window without guessing an unrelated destination. Session restoration metadata remains non-persistent.
 - Added bounded repair for websites that remove the drawn toolbar host. It observes only the document root's direct child list, retries twice, restores the original layout if removals persist, and can be reapplied explicitly without duplicate page padding.
 - Clarified that the drawn URL field accepts complete HTTP(S) URLs only; plain search text and unsafe schemes are rejected locally rather than sent to a search provider.
-- Replaced default `Alt+Shift+W`, `Alt+Shift+R` and `Alt+Shift+T` with `Alt+Shift+Y`, `Alt+Shift+U` and `Alt+Shift+J` after the isolated headed-browser test showed the prior defaults were not registered. Fullscreen remains `Alt+Shift+F`. Static checks enforce unique defaults; Chrome for Testing and Chrome Stable both report all four commands registered. A later isolated Chrome Stable test confirmed native popup/titlebar rendering, level-1 toolbar injection, and same-tab restore with unsaved page state preserved. Physical keyboard invocation remains unverified.
-- Expanded the headed-browser test to cover shortcut registration and to distinguish browser-command dispatch from renderer-level keyboard simulation. No browser policy was changed and no personal Chrome profile was used.
+- Replaced default `Alt+Shift+W`, `Alt+Shift+R` and `Alt+Shift+T` with `Alt+Shift+Y`, `Alt+Shift+U` and `Alt+Shift+J` after isolated headed-browser testing showed the prior defaults were not registered. Fullscreen remains `Alt+Shift+F`; static checks enforce unique defaults.
+- Added `tests/windows-chrome-gui-smoke.py`, an optional Windows-only GUI acceptance harness. In isolated Chrome Stable 156.0.8078.48, all four commands were triggered through OS-level keyboard input: clean Popup toggle, title editor, restore, and fullscreen enter/exit. The same tab, session token, unsaved form text and sibling tab were preserved. Physical keyboard hardware is not separately tested.
+- The harness loads `dist/runtime/` through Chrome's official extension UI, uses a temporary profile and local fixture, and cleans up after the run. No browser policy was changed and no personal Chrome profile was used.
 
 ## Unreleased — 2026-10-22 (Final three-mode contract)
 

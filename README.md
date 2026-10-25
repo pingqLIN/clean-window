@@ -8,11 +8,11 @@
 
 [Quick Start](#quick-start) · [Three clean-window levels](#three-clean-window-levels) · [Shortcuts](#shortcuts) · [Limits](#limits) · [Development](#development) · [繁體中文](README.zh-TW.md)
 
-Choose one of three simplification levels: a lightweight two-row browser toolbar that starts collapsed, a persistent drawn address bar only, or a URL-only bar that stays hidden until the top-center handle is hovered or focused. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
+Choose one of three simplification levels: a permanently visible lightweight two-row browser toolbar, a persistent drawn address bar only, or a URL-only bar that stays hidden until the top-center handle is hovered or focused. Fullscreen remains a separate action; other windows are not changed. Actions target a specific window and tab instead of changing Chrome's global appearance settings.
 
 **Featured demo — YouTube Focus View:** level 2 keeps titles, comments and recommendations visible while sizing the player to the available viewport; level 3 fills the content area with the player and hides other site content. The video keeps its original aspect ratio without cropping. Preview levels from the edge control, then restore with one action.
 
-**Status: source preview.** 95 automated API-simulation and popup-interaction tests pass. Headless DOM checks cover all three levels, cross-origin access choices, bounded toolbar recovery and URL validation. A separate headed Chrome for Testing run passed 10 browser checks with 2 skipped (native desktop capture and physical keyboard invocation). Chrome Stable native popup/titlebar rendering and restore on a local fixture are verified; physical keyboard shortcut invocation, real-site state retention and multi-monitor/DPI transitions remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
+**Status: source preview.** 95 automated API-simulation and popup-interaction tests pass. Headless DOM checks cover all three levels, cross-origin access choices, bounded toolbar recovery and URL validation. Headed Chrome for Testing passed 10 checks with 2 skipped. A separate Windows GUI smoke test on Chrome Stable verified the native popup/titlebar and triggered all four shortcuts through OS-level keyboard input, including title editing, same-tab restore and fullscreen enter/exit. Physical hardware keypresses, real-site state retention and multi-monitor/DPI transitions remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
 
 ## Quick Start
 
@@ -102,24 +102,24 @@ npm run smoke:dom
 npm run build:runtime
 ```
 
-`npm test` runs 92 tests against deterministic Chrome API simulations and popup interactions. `npm run build:runtime` creates `dist/runtime/` for Load unpacked and `dist/clean-window-v<version>.zip` with extension files at the archive root. Generated `dist/` output is ignored by Git. Automated checks do **not** prove actual browser behavior. See the [Runtime / Development separation checklist](docs/runtime-development-checklist.md).
+`npm test` runs 95 tests against deterministic Chrome API simulations and popup interactions. `npm run build:runtime` creates `dist/runtime/` for Load unpacked and `dist/clean-window-v<version>.zip` with extension files at the archive root. Generated `dist/` output is ignored by Git. Automated checks do **not** prove actual browser behavior. See the [Runtime / Development separation checklist](docs/runtime-development-checklist.md).
 
 | Resource | Purpose |
 | --- | --- |
-| [Verification record](docs/verification.md) | Passed checks, blocked browser tests, and remaining acceptance work |
+| [Verification record](docs/verification.md) | Verified results, remaining browser acceptance, and reproducible test steps |
 | [Architecture](docs/architecture.md) | Popup, worker, controller, and browser responsibility boundaries |
 | [Runtime / Development checklist](docs/runtime-development-checklist.md) | Runtime packaging, file separation and release acceptance |
 | [Contributing](CONTRIBUTING.md) | Local checks, scope, and safe bug reports |
 | [Changelog](CHANGELOG.md) | Version history |
 | [Issues](https://github.com/pingqLIN/clean-window/issues) | Reproducible bugs and feature requests; do not post sensitive browser data |
 
-The GitHub Actions workflow is configured to run the same tests and static checks on Linux and Windows. **Hosted CI has not executed:** the first attempt was blocked before runner startup. Its badge reports workflow status, not the local-test results. The optional [headed Chromium test](tests/browser-smoke.py) is Linux-oriented, uses an isolated temporary profile, and requires extra tools; see the verification record before running it. It is not part of extension installation.
+GitHub Actions runs the same tests and static checks on Linux and Windows; run #14 passed on baseline commit `63c7697`. The optional [headed Chromium test](tests/browser-smoke.py) is Linux-oriented, uses an isolated temporary profile, and requires extra tools. The optional [Windows Chrome GUI test](tests/windows-chrome-gui-smoke.py) verifies shortcuts through OS-level synthetic input in an isolated profile. Neither is part of extension installation or required CI; see the verification record before running them.
 
 ## AI-assisted development
 
 Implementation, tests, documentation, and visual assets were prepared with AI assistance. The publication and documentation pass used **GPT-6 Astra Pro**; the hero uses original AI-generated artwork rather than a third-party mascot or product screenshot.
 
-> Automated tests and source review are not an independent security audit or a guarantee of correctness. Browser acceptance remains outstanding. Test with non-sensitive pages first.
+> Automated tests and source review are not an independent security audit or a guarantee of correctness. Signed-in AI sites, real-site forms/media, incognito, and physical multi-monitor/DPI acceptance remain outstanding. Test with non-sensitive pages first.
 
 ## License
 

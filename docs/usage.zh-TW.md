@@ -4,8 +4,7 @@
 
 只處理你指定的 Chrome 視窗或分頁，不更動 Chrome 全域外觀設定。
 
-**狀態：95 項自動化測試通過；Headless DOM 已測試三模式、跨來源授權、工具列自我修復及網址驗證；獨立 headed Chrome for Testing 另有 10 項瀏覽器檢查通過、2 項略過。Chrome Stable 原生 Popup／標題列及本機測試頁還原已驗收；實體快捷鍵觸發、真實網站狀態保留及多螢幕／DPI 仍待驗收。**
-Chrome Stable 不接受命令列的未封裝擴充載入參數，因此 headed 自動化測試使用 Playwright 管理的 Chrome for Testing；另以 Chrome Stable 的官方擴充管理頁面，在獨立暫存設定檔完成 Runtime 原生 Popup／標題列與還原驗收。未修改瀏覽器政策，也未使用日常 Chrome 個人設定檔。
+**狀態：95 項自動化測試通過；Headless DOM 已測試三模式、跨來源授權、工具列自我修復及網址驗證；headed Chrome for Testing 通過 10 項檢查、2 項略過。**另以獨立 Windows GUI 測試在 Chrome Stable 中載入 Runtime，使用 OS 層級鍵盤輸入成功觸發四組快捷鍵，驗證標題編輯、同分頁還原及全螢幕進出。實體鍵盤硬體輸入、真實網站狀態保留及多螢幕／DPI 仍待驗收。測試使用暫存 Profile，未修改瀏覽器政策，也未使用日常 Chrome 個人設定檔。
 
 ## 三級精簡操作
 
@@ -125,7 +124,9 @@ npm test
 npm run check
 ```
 
-`tests/browser-smoke.py` 是開發用實機測試腳本，不是擴充執行的一部分，需 Playwright、Pillow 與可載入擴充的 Chromium。Linux 須另有 Xvfb、Openbox；腳本使用暫存 Profile、僅 loopback 測試頁，遇到已知管理政策限制就以 BLOCKED 停止，不修改政策。
+`tests/browser-smoke.py` 是 Linux 開發用測試腳本，需 Python、Playwright、Pillow、相容 Chromium、Xvfb 與 Openbox；使用暫存 Profile 和本機合成頁，不屬於擴充執行的一部分，也不納入必要 CI。
+
+`tests/windows-chrome-gui-smoke.py` 是選用的 Windows GUI 驗收工具，需安裝 Chrome Stable、Python、`playwright`、`pywinauto` 與 `pywin32`。先執行 `npm run build:runtime`，再執行 `python tests/windows-chrome-gui-smoke.py`。它會建立隔離暫存 Profile，透過 Chrome 官方擴充管理介面載入 `dist/runtime/`，只開啟本機合成測試頁，並以 OS 層級模擬鍵盤輸入驗證四組快捷鍵、標題編輯、全螢幕與還原。測試不使用日常 Chrome 個人設定檔、不修改瀏覽器政策，也不造訪真實網站。原始證據寫入 Git 忽略的 `evidence/`，結束時刪除暫存 Profile。這不是實體鍵盤硬體測試，也不納入 CI。若瀏覽器政策禁止載入未封裝擴充，應停止，不要繞過政策。
 
 完整結果見[驗證紀錄](verification.md)。本機測試輸出位於被 Git 忽略的 `evidence/`，不納入公開原始碼。
 

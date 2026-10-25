@@ -84,27 +84,27 @@ The ZIP writer uses Node.js built-ins and a stable file order / fixed ZIP timest
 
 ### Runtime artifact
 
-- [ ] `npm run build:runtime` succeeds on the target machine.
-- [ ] `dist/runtime/manifest.json` exists at the Runtime folder root.
-- [ ] The ZIP opens successfully and contains `manifest.json` at the archive root, not under an extra `extension/` directory.
-- [ ] The ZIP contains only files originating from `extension/`; no tests, docs, Git metadata, package metadata or local evidence.
-- [ ] `package.json` and `extension/manifest.json` versions match.
-- [ ] Load `dist/runtime/` through `chrome://extensions/` → Developer mode → Load unpacked.
+- [x] `npm run build:runtime` succeeds on the target machine (Windows).
+- [x] `dist/runtime/manifest.json` exists at the Runtime folder root.
+- [x] The ZIP opens successfully and contains `manifest.json` at the archive root, not under an extra `extension/` directory.
+- [x] The ZIP contains only files originating from `extension/`; no tests, docs, Git metadata, package metadata or local evidence.
+- [x] `package.json` and `extension/manifest.json` versions match.
+- [x] Load `dist/runtime/` through `chrome://extensions/` → Developer mode → Load unpacked in isolated Chrome Stable.
 - [ ] Check the extension icon, popup, L1/L2/L3 switching and the `Alt + Shift + U` recovery path.
 - [ ] Keep a second ordinary Chrome window open and verify it is not changed.
 - [ ] Do not describe a source-preview package as a Chrome Web Store release.
 
 ### Development workspace
 
-- [ ] `npm test` passes.
-- [ ] `npm run check` passes.
-- [ ] `npm run smoke:dom` passes, with its scope recorded accurately.
-- [ ] CI builds the Runtime artifact on both Windows and Ubuntu.
-- [ ] Generated `dist/` output remains untracked.
-- [ ] Update English and Traditional Chinese documentation together when commands, limitations or versions change.
+- [x] `npm test` passes (95/95).
+- [x] `npm run check` passes.
+- [x] `npm run smoke:dom` passes, with its scope recorded accurately.
+- [x] CI builds the Runtime artifact on both Windows and Ubuntu (GitHub Actions run #14).
+- [x] Generated `dist/` output remains untracked.
+- [x] Update English and Traditional Chinese documentation together when commands, limitations or versions change.
 
 ## Known release limits
 
-- Automated and Headless DOM tests do not replace acceptance in an installed extension on Windows Chrome. Native popup/titlebar rendering, physical keyboard shortcuts, real-site state retention and multi-monitor/DPI transitions remain separate acceptance items.
+- Automated and Headless DOM tests do not replace acceptance in an installed extension on Windows Chrome. Native popup/titlebar rendering and OS-level shortcut dispatch are verified in an isolated Chrome Stable profile; physical keyboard hardware, real-site state retention and multi-monitor/DPI transitions remain separate acceptance items.
 - The project currently has no `LICENSE` file. Do not claim that public visibility makes it open source or implies permission to reuse the code.
 - A successful Runtime build verifies packaging and file integrity, not full browser behavior, security audit status or store-release readiness.

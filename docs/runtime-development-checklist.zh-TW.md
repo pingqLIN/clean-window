@@ -82,27 +82,27 @@ ZIP 打包器使用 Node.js 內建模組，固定檔案排序與 ZIP 時間戳�
 
 ## Runtime 產物驗收
 
-- [ ] `npm run build:runtime` 在目標電腦成功。
-- [ ] `dist/runtime/manifest.json` 位於 Runtime 資料夾根目錄。
-- [ ] ZIP 可正常開啟，且 `manifest.json` 位於 ZIP 根目錄，而不是多包一層 `extension/`。
-- [ ] ZIP 只包含 `extension/` 的執行檔案，不含 tests、docs、Git、package metadata 或本機證據。
-- [ ] `package.json` 與 `extension/manifest.json` 版本一致。
-- [ ] 透過 `chrome://extensions/` → 開發人員模式 → 載入未封裝項目，載入 `dist/runtime/`。
+- [x] `npm run build:runtime` 在目標 Windows 電腦成功。
+- [x] `dist/runtime/manifest.json` 位於 Runtime 資料夾根目錄。
+- [x] ZIP 可正常開啟，且 `manifest.json` 位於 ZIP 根目錄，而不是多包一層 `extension/`。
+- [x] ZIP 只包含 `extension/` 的執行檔案，不含 tests、docs、Git、package metadata 或本機證據。
+- [x] `package.json` 與 `extension/manifest.json` 版本一致。
+- [x] 已在隔離 Chrome Stable 透過 `chrome://extensions/` → 開發人員模式 → 載入未封裝項目，載入 `dist/runtime/`。
 - [ ] 檢查擴充圖示、Popup、L1／L2／L3 切換及 `Alt + Shift + U` 還原路徑。
 - [ ] 同時保留另一個一般 Chrome 視窗，確認它沒有被修改。
 - [ ] 未完成實機驗收前，不宣稱已是 Chrome Web Store 正式版。
 
 ## Development 工作區驗收
 
-- [ ] `npm test` 通過。
-- [ ] `npm run check` 通過。
-- [ ] `npm run smoke:dom` 通過，並準確記錄測試涵蓋範圍。
-- [ ] CI 在 Windows 與 Ubuntu 均可產生 Runtime 產物。
-- [ ] `dist/` 產物不進入 Git。
-- [ ] 指令、限制或版本變動時，同步更新英文與繁體中文文件。
+- [x] `npm test` 通過（95/95）。
+- [x] `npm run check` 通過。
+- [x] `npm run smoke:dom` 通過，並準確記錄測試涵蓋範圍。
+- [x] GitHub Actions 在 Windows 與 Ubuntu 均可產生 Runtime 產物（Run #14）。
+- [x] `dist/` 產物不進入 Git。
+- [x] 指令、限制或版本變動時，同步更新英文與繁體中文文件。
 
 ## 已知發布限制
 
-- 自動化與 Headless DOM 測試不能取代 Windows Chrome 已安裝擴充的實機驗收。原生 Popup／標題列、實體快捷鍵、真實網站狀態保留與多螢幕／DPI 切換仍是獨立驗收項目。
+- 自動化與 Headless DOM 測試不能取代 Windows Chrome 已安裝擴充的實機驗收。原生 Popup／標題列及 OS 層級快捷鍵觸發已在隔離 Chrome Stable 中驗證；實體鍵盤硬體輸入、真實網站狀態保留與多螢幕／DPI 切換仍是獨立驗收項目。
 - 專案目前沒有 `LICENSE`。不可將公開可見誤稱為開源，亦不可推定程式碼已授權重用。
 - Runtime 打包成功只證明產物結構與檔案完整性，不代表瀏覽器行為已全面驗收、已完成安全稽核或已可上架。
