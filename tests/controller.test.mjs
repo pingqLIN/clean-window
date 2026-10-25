@@ -65,9 +65,20 @@ test('restore does not use a closed original window nor any replacement window',
  await f.ctl.run('restore',{tabId:11,windowId:f.tabs.get(11).windowId});
  assert.equal(f.calls.filter(c=>c[0]==='moveTab').length,0);
 });
-test('recordless popup can be explicitly restored after extension reload',async()=>{
+test('recordless popup recovery warns and never merges into an unrelated window',async()=>{
  const f=setup();f.wins.get(1).type='popup';f.tabs.delete(12);
- await f.ctl.run('restore',target);assert.equal(f.wins.get(f.tabs.get(11).windowId).type,'normal');
+ const result=await f.ctl.run('restore',target);
+ const restoredWindowId=f.tabs.get(11).windowId;
+ assert.equal(f.wins.get(restoredWindowId).type,'normal');
+ assert.notEqual(restoredWindowId,2);
+ assert.equal(f.wins.has(2),true);
+ assert.match(result.warning,/無法驗證原始還原紀錄/);
+});
+test('restoration journal remains session-scoped and is not copied into persistent local storage',async()=>{
+ const f=setup();
+ await f.ctl.run('toggle-clean',target);
+ assert.ok(f.db['clean:11'],'active restoration record is available to the current session');
+ assert.deepEqual(f.preferences,{cleanLevel:2},'persistent storage contains the level preference only');
 });
 test('normal restore is no-op, does not relocate a tab',async()=>{
  const f=setup();await f.ctl.run('restore',target);assert.equal(f.calls.length,0);

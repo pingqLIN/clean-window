@@ -67,6 +67,9 @@ export function createController(api) {
     if (!isId(restored?.id)) throw new Error('Chrome 未回傳還原視窗的識別碼。');
     let destination = restored.id;
     const warnings = [];
+    if (!record) {
+      warnings.push('無法驗證原始還原紀錄；已將分頁安全移至新的普通視窗，未嘗試合併至其他視窗。');
+    }
     if (record) {
       let origin;
       try { origin = await api.windows.get(record.originWindowId); } catch { /* Closed origin is normal. */ }

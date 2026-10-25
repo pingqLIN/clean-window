@@ -72,7 +72,7 @@ The page context menu also provides these actions. Assign conflicting shortcuts 
 | --- | --- |
 | One tab versus a whole window | All three levels move only the active tab into a popup; an independent fullscreen shortcut keeps all tabs in place. |
 | Groups and Split View | Popup mode declines grouped or split-view tabs to avoid dismantling their structure. Use fullscreen instead. |
-| Last tab and restoration | Moving the last tab can close its empty source window. A restarted browser or reloaded extension may lose session restoration metadata. |
+| Last tab and restoration | Moving the last tab can close its empty source window. A restarted browser or reloaded extension may lose session restoration metadata; if the origin cannot be verified, Restore warns and creates a normal window without guessing another destination. |
 | Page state | The extension moves the existing tab and does not intentionally navigate or reload it. Real-site forms, media, and resize behavior have not been acceptance-tested. |
 | Browser UI | All three levels use Chrome Popup frames, with a native OS titlebar. Drawn bars do not claim Chrome origin/security verification. |
 | Compatibility | The manifest declares Chrome **102+** and Manifest V3. This is an API floor, not a tested browser-version matrix. Other browsers and operating systems have not been accepted. |

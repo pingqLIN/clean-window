@@ -2,15 +2,15 @@
 
 Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source preview**.
 
-## Current local verification — 2026-10-22
+## Current local verification — 2026-10-25
 
-Final three-mode contract is isolated on `fix/final-mode-behavior-20261022`. Runtime rebuild and publication status will be recorded after final verification.
+Recovery fallback hardening is isolated on `fix/recovery-fallback-20261025`.
 
-- `npm test`: **PASS, 94/94** simulated Chrome API and Popup tests, including the final level-1/2/3 mapping, no-toolbar level-3 fallback, and page UI reconciliation.
-- `npm run check`: **PASS**, including JavaScript/MV3 static checks and Runtime source/version validation.
-- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was verified against the generated files (63,643 bytes).
-- `npm run smoke:dom`: **PASS**; Chrome Headless DOM checks cover the permanently visible level-1 toolbar and 86px ordinary-page reservation, level-2 collapsed URL bar with hover/focus reveal and no reserved space, level-3 removal of all page-top toolbar UI, same-origin/cross-origin navigation, site-access allow/deny/cancel, YouTube mode-specific layouts and popup interactions.
-- The evidence is from local Windows execution. The updated GitHub Actions workflow has not yet been confirmed on this branch. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete.
+- `npm test`: **PASS, 95/95** simulated Chrome API and Popup tests. New coverage verifies that a missing/unverifiable session journal emits a clear restore warning, never merges the tab into an unrelated window, and does not copy recovery metadata into persistent local storage.
+- `npm run check`: **PASS**, including JavaScript/MV3 static checks, required/optional permission boundaries and Runtime source/version validation.
+- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was generated and verified (63,671 bytes).
+- `npm run smoke:dom`: **PASS**; includes the three toolbar levels, cross-origin allow/deny/cancel flows, YouTube layouts and interactions, and AI workspace viewport compatibility.
+- `git diff --check`: **PASS**. Evidence is from local Windows execution. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete; GitHub Actions has not yet been confirmed for this branch.
 
 ## Final three-mode contract — 2026-10-22
 
