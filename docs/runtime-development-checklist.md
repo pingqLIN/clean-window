@@ -90,7 +90,7 @@ The ZIP writer uses Node.js built-ins and a stable file order / fixed ZIP timest
 - [ ] The ZIP contains only files originating from `extension/`; no tests, docs, Git metadata, package metadata or local evidence.
 - [ ] `package.json` and `extension/manifest.json` versions match.
 - [ ] Load `dist/runtime/` through `chrome://extensions/` → Developer mode → Load unpacked.
-- [ ] Check the extension icon, popup, L1/L2/L3 switching and the `Alt + Shift + R` recovery path.
+- [ ] Check the extension icon, popup, L1/L2/L3 switching and the `Alt + Shift + U` recovery path.
 - [ ] Keep a second ordinary Chrome window open and verify it is not changed.
 - [ ] Do not describe a source-preview package as a Chrome Web Store release.
 

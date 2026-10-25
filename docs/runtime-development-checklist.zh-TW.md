@@ -88,7 +88,7 @@ ZIP 打包器使用 Node.js 內建模組，固定檔案排序與 ZIP 時間戳�
 - [ ] ZIP 只包含 `extension/` 的執行檔案，不含 tests、docs、Git、package metadata 或本機證據。
 - [ ] `package.json` 與 `extension/manifest.json` 版本一致。
 - [ ] 透過 `chrome://extensions/` → 開發人員模式 → 載入未封裝項目，載入 `dist/runtime/`。
-- [ ] 檢查擴充圖示、Popup、L1／L2／L3 切換及 `Alt + Shift + R` 還原路徑。
+- [ ] 檢查擴充圖示、Popup、L1／L2／L3 切換及 `Alt + Shift + U` 還原路徑。
 - [ ] 同時保留另一個一般 Chrome 視窗，確認它沒有被修改。
 - [ ] 未完成實機驗收前，不宣稱已是 Chrome Web Store 正式版。
 

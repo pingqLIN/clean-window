@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — 2026-10-26 (Recovery, URL bar and shortcut hardening)
+
+- Made missing or unverifiable restoration journals explicit: Restore warns and creates a normal window without guessing an unrelated destination. Session restoration metadata remains non-persistent.
+- Added bounded repair for websites that remove the drawn toolbar host. It observes only the document root's direct child list, retries twice, restores the original layout if removals persist, and can be reapplied explicitly without duplicate page padding.
+- Clarified that the drawn URL field accepts complete HTTP(S) URLs only; plain search text and unsafe schemes are rejected locally rather than sent to a search provider.
+- Replaced default `Alt+Shift+W`, `Alt+Shift+R` and `Alt+Shift+T` with `Alt+Shift+Y`, `Alt+Shift+U` and `Alt+Shift+J` after the isolated headed-browser test showed the prior defaults were not registered. Fullscreen remains `Alt+Shift+F`. Static checks enforce unique defaults; Chrome for Testing reports all four commands registered. Physical keyboard invocation and Chrome Stable native popup/titlebar rendering remain unverified.
+- Expanded the headed-browser test to cover shortcut registration and to distinguish browser-command dispatch from renderer-level keyboard simulation. No browser policy was changed and no personal Chrome profile was used.
+
 ## Unreleased — 2026-10-22 (Final three-mode contract)
 
 - MODE1 is a permanently expanded 86px two-row URL + extension toolbar. It reserves space on ordinary pages; AI chat workspaces keep their app-owned root layout.

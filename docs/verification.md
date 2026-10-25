@@ -4,14 +4,14 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 ## Current local verification — 2026-10-26
 
-Recovery fallback is merged to `main` at `f1c6249`; headed-browser acceptance tooling is merged at `4cac05b`; bounded page-UI repair and URL-only validation are on `fix/urlbar-dom-compat-20261026`.
+Latest change set adds shortcut-default hardening; recovery fallback, headed-browser acceptance tooling, bounded page-UI repair and URL-only validation are already merged to `main` at `878ef6a`.
 
 - `npm test`: **PASS, 95/95** simulated Chrome API and Popup tests. Coverage includes missing/unverifiable session journals, safe restore fallback, and keeping recovery metadata out of persistent local storage.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks, required/optional permission boundaries and Runtime source/version validation.
-- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was generated and verified (64,242 bytes).
+- `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was generated and verified (64,243 bytes).
 - `npm run smoke:dom`: **PASS**; the drawn-bar suite now checks bounded toolbar-host repair (two automatic retries, then clean fallback), no duplicate layout padding, explicit reapply, level-2 overlay repair, and rejection of plain search text/unsafe schemes without navigation. Existing cross-origin allow/deny/cancel flows, YouTube layouts, SPA/fullscreen transitions and AI workspace viewport checks also pass.
-- `tests/browser-smoke.py`: **PASS, 9 headed-browser checks; SKIP, 3** in Playwright-managed Chrome for Testing 156.0.8078.4 with an isolated temporary profile. Verified MV3 service worker/action panel load, same-tab/page-state preservation, isolation of a second window, restore, fullscreen bounds, maximized-state restoration, metadata-free fallback and stale-target rejection.
-- Two shortcut checks were skipped because the browser/OS did not register suggested `toggle-clean` and `restore` shortcuts; `toggle-fullscreen` was registered. Explicit-target command handling passed, but physical shortcut invocation remains unverified. Native desktop screenshot capture was skipped on Windows because Chrome API bounds can differ from physical pixels under DPI scaling; this also avoids capturing unrelated desktop content.
+- `tests/browser-smoke.py`: **PASS, 10 headed-browser checks; SKIP, 2** in Playwright-managed Chrome for Testing 156.0.8078.4 with an isolated temporary profile. The latest run loaded the generated `dist/runtime/` directory (not the source tree). Verified MV3 service worker/action panel load, all four default shortcuts registered through `chrome.commands.getAll()` (`Alt+Shift+Y`, `Alt+Shift+F`, `Alt+Shift+U`, `Alt+Shift+J`), same-tab/page-state preservation, isolation of a second window, restore, fullscreen bounds, maximized-state restoration, metadata-free fallback and stale-target rejection.
+- The prior defaults `Alt+Shift+W`, `Alt+Shift+R` and `Alt+Shift+T` were not registered by the isolated Chrome for Testing build. Defaults are now `Alt+Shift+Y`, `Alt+Shift+U` and `Alt+Shift+J`; all four commands, including unchanged fullscreen `Alt+Shift+F`, were observed as registered. Physical keyboard invocation remains unverified because Playwright's page-level keyboard events cannot reliably synthesize browser-chrome Commands API input; the explicit-target extension command path passed. Native desktop screenshot capture was skipped on Windows because Chrome API bounds can differ from physical pixels under DPI scaling; this also avoids capturing unrelated desktop content.
 - Chrome Stable 156.0.8078.48 ignored `--disable-extensions-except`, so the headed extension test used Playwright's separate Chrome for Testing build instead. No browser policy was modified and no personal Chrome profile was used. Chrome Stable native popup/titlebar acceptance, real-site state retention and physical multi-monitor/DPI transitions remain incomplete. `git diff --check`: **PASS**.
 
 ## Final three-mode contract — 2026-10-22
@@ -81,7 +81,7 @@ The original extension runtime files were preserved for publication. Public docu
 
 ## Automated coverage
 
-The current 94 automated tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, cleanup isolation, level-2 cross-origin URL-bar permission gating, level-3 no-toolbar fallback, pending-navigation cleanup and temporary reapplication.
+The current 95 automated tests cover target-only effects, same-tab moves, origin restoration, missing origin and last-tab fallback, maximized/fullscreen round trips, stale and changing targets, operation locking, grouped/Split View guards, storage/API failures, usable fallback windows, worker reconstruction, interrupted journaling, incognito separation, message-source validation, cleanup isolation, level-2 cross-origin URL-bar permission gating, level-3 no-toolbar fallback, pending-navigation cleanup and temporary reapplication.
 
 ## Re-run the accepted checks
 

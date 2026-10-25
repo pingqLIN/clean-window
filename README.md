@@ -12,13 +12,13 @@ Choose one of three simplification levels: a lightweight two-row browser toolbar
 
 **Featured demo — YouTube Focus View:** level 2 keeps titles, comments and recommendations visible while sizing the player to the available viewport; level 3 fills the content area with the player and hides other site content. The video keeps its original aspect ratio without cropping. Preview levels from the edge control, then restore with one action.
 
-**Status: source preview.** 94 automated API-simulation and popup-interaction tests pass. Chrome Dev Headless DOM checks cover same-origin navigation, per-site cross-origin access choices, denial/cancel fallbacks, YouTube layouts and popup interactions. Full live MV3 installation, native popup appearance, keyboard operation and Windows browser acceptance remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
+**Status: source preview.** 95 automated API-simulation and popup-interaction tests pass. Headless DOM checks cover all three levels, cross-origin access choices, bounded toolbar recovery and URL validation. A separate headed Chrome for Testing run passed 10 browser checks with 2 skipped (native desktop capture and physical keyboard invocation). Chrome Stable native popup/titlebar rendering, physical keyboard shortcuts and multi-monitor/DPI transitions remain **unverified**. The extension interface is currently in Traditional Chinese; documentation is available in English and Traditional Chinese. The hero is concept artwork, not a runtime screenshot.
 
 ## Quick Start
 
 No Node.js, Python, server, or administrator privileges are needed to load the extension.
 
-> **Before testing:** save important page work. Remember **`Alt + Shift + R`** to restore a clean window; its toolbar is hidden. The window's **X closes the tab**, rather than restoring it. Managed browsers may prohibit unpacked extensions; this project does not bypass policies.
+> **Before testing:** save important page work. Remember **`Alt + Shift + U`** to restore a clean window; its toolbar is hidden. The window's **X closes the tab**, rather than restoring it. Managed browsers may prohibit unpacked extensions; this project does not bypass policies.
 
 1. Download the [v0.1.0 source-preview ZIP](https://github.com/pingqLIN/clean-window/releases/download/v0.1.0/clean-window-v0.1.0.zip) and extract it into a permanent folder. Alternatively, use **Code → Download ZIP** on this repository.
 2. Open `chrome://extensions/` and enable **Developer mode**.
@@ -43,13 +43,13 @@ The drawn bar is NOT Chrome's native omnibox or a trustworthy origin/security in
 
 **Drawn UI theme:** Level 1 has a `☾`/`☀` toggle in its always-visible URL strip; level 2 has the same toggle when its collapsed URL bar is revealed. Level 3 has no URL strip and therefore no page-top theme toggle. Theme selection is stored locally and does not change Chrome's native theme or website colors.
 
-**In-page control:** The primary Apply button now appears above the level picker. A blank neutral-gray tab attaches to the screen edge on eligible pages, with a hover/focus instruction tooltip. Hover or keyboard focus expands the vertical three-stop rail, with labels shown only when a stop is hovered/focused. Dragging the tab snaps it left/right and changes height, saved locally. Switching levels updates the existing popup without moving the tab. Restricted or cross-origin pages may lose the control; use `Alt + Shift + R` to restore.
+**In-page control:** The primary Apply button now appears above the level picker. A blank neutral-gray tab attaches to the screen edge on eligible pages, with a hover/focus instruction tooltip. Hover or keyboard focus expands the vertical three-stop rail, with labels shown only when a stop is hovered/focused. Dragging the tab snaps it left/right and changes height, saved locally. Switching levels updates the existing popup without moving the tab. Restricted or cross-origin pages may lose the control; use `Alt + Shift + U` to restore.
 
-The former DOM masking experiment and levels 4–6 are removed from the selector. Separate fullscreen and restore shortcuts remain for compatibility.
+The former DOM masking experiment and levels 4–6 are removed from the selector. Fullscreen and restore remain independent commands with their own shortcuts.
 
 **Emoji icon and quick edit:** Single-click the blank gray edge tab to open the editor; drag it to move it. The editor accepts a single Unicode grapheme, including composed Emoji, keycap digits `1️⃣2️⃣3️⃣` and flags. Added presets: `🖋️🌍🚩🔥🔍💡🛠️🔏`. The native Chrome titlebar is not interceptable by an extension.
 
-**Editable clean-mode title:** A clean popup initially displays the standard Unicode symbol `◈` followed by the original webpage title. Press `Alt + Shift + T`, or use the page context menu, to select another built-in Symbol glyph, edit the text, or reset it. Normal-window restoration restores the native webpage title. This adjusts `document.title`, **not** Chrome's native favicon/security identity. It is limited to eligible HTTP(S) pages; the headless DOM behavior has passed, but actual Windows popup titlebar rendering needs GUI acceptance.
+**Editable clean-mode title:** A clean popup initially displays the standard Unicode symbol `◈` followed by the original webpage title. Press `Alt + Shift + J`, or use the page context menu, to select another built-in Symbol glyph, edit the text, or reset it. Normal-window restoration restores the native webpage title. This adjusts `document.title`, **not** Chrome's native favicon/security identity. It is limited to eligible HTTP(S) pages; the headless DOM behavior has passed, but actual Windows popup titlebar rendering needs GUI acceptance.
 
 **YouTube watch pages:** level 1 preserves the website layout and moves it below the persistent two-row toolbar. Level 2 does not reserve space while its URL bar is collapsed; when revealed, the player is fitted below the visible bar using the video aspect ratio while titles, comments and recommendations remain scrollable. Level 3 has no page-top toolbar and fills the content viewport with the player on a black background, hides other website content and disables page scrolling. Video keeps its original aspect ratio without cropping; mismatched window proportions produce letterboxing. Restore removes all mode-specific styles. See the [usage guide](docs/usage.md#youtube-watch-pages).
 
@@ -59,10 +59,10 @@ The former DOM masking experiment and levels 4–6 are removed from the selector
 
 | Action | Default shortcut |
 | --- | --- |
-| Toggle active tab between clean and normal window | `Alt + Shift + W` |
+| Toggle active tab between clean and normal window | `Alt + Shift + Y` |
 | Toggle fullscreen for the target window | `Alt + Shift + F` |
-| Restore the current window | **`Alt + Shift + R`** |
-| Edit clean-mode Symbol and title | `Alt + Shift + T` |
+| Restore the current window | **`Alt + Shift + U`** |
+| Edit clean-mode Symbol and title | `Alt + Shift + J` |
 
 The page context menu also provides these actions. Assign conflicting shortcuts at `chrome://extensions/shortcuts`; the panel shows the combinations Chrome actually registered. Some pages suppress the normal context menu.
 
