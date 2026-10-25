@@ -4,7 +4,7 @@ Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source prev
 
 ## Current local verification — 2026-10-26
 
-Latest change set adds shortcut-default hardening; recovery fallback, headed-browser acceptance tooling, bounded page-UI repair and URL-only validation are already merged to `main` at `878ef6a`.
+Current acceptance update adds isolated Chrome Stable native popup/titlebar and restore evidence. Recovery fallback, headed-browser tooling, bounded page-UI repair, URL-only validation and shortcut-default hardening are already merged to `main` through `8cf37b0`.
 
 - `npm test`: **PASS, 95/95** simulated Chrome API and Popup tests. Coverage includes missing/unverifiable session journals, safe restore fallback, and keeping recovery metadata out of persistent local storage.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks, required/optional permission boundaries and Runtime source/version validation.
@@ -12,7 +12,9 @@ Latest change set adds shortcut-default hardening; recovery fallback, headed-bro
 - `npm run smoke:dom`: **PASS**; the drawn-bar suite now checks bounded toolbar-host repair (two automatic retries, then clean fallback), no duplicate layout padding, explicit reapply, level-2 overlay repair, and rejection of plain search text/unsafe schemes without navigation. Existing cross-origin allow/deny/cancel flows, YouTube layouts, SPA/fullscreen transitions and AI workspace viewport checks also pass.
 - `tests/browser-smoke.py`: **PASS, 10 headed-browser checks; SKIP, 2** in Playwright-managed Chrome for Testing 156.0.8078.4 with an isolated temporary profile. The latest run loaded the generated `dist/runtime/` directory (not the source tree). Verified MV3 service worker/action panel load, all four default shortcuts registered through `chrome.commands.getAll()` (`Alt+Shift+Y`, `Alt+Shift+F`, `Alt+Shift+U`, `Alt+Shift+J`), same-tab/page-state preservation, isolation of a second window, restore, fullscreen bounds, maximized-state restoration, metadata-free fallback and stale-target rejection.
 - The prior defaults `Alt+Shift+W`, `Alt+Shift+R` and `Alt+Shift+T` were not registered by the isolated Chrome for Testing build. Defaults are now `Alt+Shift+Y`, `Alt+Shift+U` and `Alt+Shift+J`; all four commands, including unchanged fullscreen `Alt+Shift+F`, were observed as registered. Physical keyboard invocation remains unverified because Playwright's page-level keyboard events cannot reliably synthesize browser-chrome Commands API input; the explicit-target extension command path passed. Native desktop screenshot capture was skipped on Windows because Chrome API bounds can differ from physical pixels under DPI scaling; this also avoids capturing unrelated desktop content.
-- Chrome Stable 156.0.8078.48 ignored `--disable-extensions-except`, so the headed extension test used Playwright's separate Chrome for Testing build instead. No browser policy was modified and no personal Chrome profile was used. Chrome Stable native popup/titlebar acceptance, real-site state retention and physical multi-monitor/DPI transitions remain incomplete. `git diff --check`: **PASS**.
+- Chrome Stable 156.0.8078.48 ignored `--disable-extensions-except`; the runtime was therefore loaded through the official `chrome://extensions` → Developer mode → Load unpacked UI in an isolated temporary profile. Verified Clean Window 0.1.0 enabled, all four default shortcuts registered, the actual toolbar action popup opened, and `toggle-clean` created a real Chrome Stable `type: popup` window. The level-1 toolbar injected; the original tab ID, page session token, unsaved textarea contents and sibling tab were preserved. Restore returned the same tab to its original normal window. Windows UI Automation confirmed native minimize/maximize/close titlebar buttons, and the captured screenshot is included below. No browser policy was modified and no personal Chrome profile was used. Physical keyboard invocation, real-site state retention beyond the local fixture, and physical multi-monitor/DPI transitions remain incomplete. `git diff --check`: **PASS**.
+
+![Chrome Stable 156.0.8078.48 — Clean Window 0.1.0 native popup, titlebar controls, level-1 toolbar and preserved unsaved content](verification-assets/chrome-stable-clean-popup-20261026.png)
 
 ## Final three-mode contract — 2026-10-22
 
@@ -70,11 +72,11 @@ At the 2026-10-18 checkpoint, **68/68** simulated API/popup tests and **15/15** 
 
 | Check | Result | Scope |
 | --- | --- | --- |
-| `npm test` | PASS, 30/30 | Re-run on Linux / Node.js 22.16.0 and Windows / Node.js 24.14.1 during publication preparation; simulated Chrome APIs |
-| `npm run check` | PASS | JavaScript syntax, MV3 metadata, matching versions, minimal permissions, icons and inline-handler check |
-| GitHub CI | BLOCKED before runner startup | [First run](https://github.com/pingqLIN/clean-window/actions/runs/35786947119): zero hosted checks executed. Local Linux/Windows results are separate. |
-| Headed Chromium acceptance | BLOCKED in the original development environment | Browser startup handshake and existing extension/fullscreen management restrictions; policies were not changed |
-| Windows Chrome GUI acceptance | NOT RUN | No claim about successful extension installation, native toolbar appearance or physical keyboard behavior |
+| `npm test` | PASS, 95/95 | Windows / Node.js 24.4.1; simulated Chrome APIs and Popup interactions |
+| `npm run check` | PASS | JavaScript syntax, MV3 metadata, matching versions, minimal permissions, unique default shortcuts, icons and inline-handler checks |
+| GitHub CI | PASS, run #13 | [Latest code run](https://github.com/pingqLIN/clean-window/actions/runs/40214820654) for commit `8cf37b0`; local results remain separate from hosted checks |
+| Headed Chromium acceptance | PASS, 10 checks / 2 skipped | Playwright-managed Chrome for Testing 156.0.8078.4; isolated temporary profile. Skips: native desktop screenshot and physical keyboard invocation |
+| Windows Chrome GUI acceptance | PASS, isolated Chrome Stable | Manually loaded `dist/runtime/` through the official extension UI; verified native Popup/titlebar, level-1 toolbar injection, same-tab restore, unsaved page-state preservation and sibling-tab isolation. Physical keyboard and multi-monitor/DPI remain unverified |
 | Hero image | Concept art only | Not evidence of Chrome rendering or successful installation |
 
 The original extension runtime files were preserved for publication. Public documentation was reorganized, private-path-bearing development logs and internal delivery plans were excluded, and CI plus original banner artwork were added.

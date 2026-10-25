@@ -4,8 +4,8 @@
 
 只處理你指定的 Chrome 視窗或分頁，不更動 Chrome 全域外觀設定。
 
-**狀態：95 項自動化測試通過；Headless DOM 已測試三模式、跨來源授權、工具列自我修復及網址驗證；獨立 headed Chrome for Testing 另有 10 項瀏覽器檢查通過、2 項略過。Chrome Stable 原生 Popup／標題列、實體快捷鍵及多螢幕仍待驗收。**
-Chrome Stable 不接受此測試所需的未封裝擴充載入參數，因此 headed 測試使用 Playwright 管理的 Chrome for Testing 與獨立暫存設定檔；未修改瀏覽器政策，也未使用日常 Chrome 個人設定檔。
+**狀態：95 項自動化測試通過；Headless DOM 已測試三模式、跨來源授權、工具列自我修復及網址驗證；獨立 headed Chrome for Testing 另有 10 項瀏覽器檢查通過、2 項略過。Chrome Stable 原生 Popup／標題列及本機測試頁還原已驗收；實體快捷鍵觸發、真實網站狀態保留及多螢幕／DPI 仍待驗收。**
+Chrome Stable 不接受命令列的未封裝擴充載入參數，因此 headed 自動化測試使用 Playwright 管理的 Chrome for Testing；另以 Chrome Stable 的官方擴充管理頁面，在獨立暫存設定檔完成 Runtime 原生 Popup／標題列與還原驗收。未修改瀏覽器政策，也未使用日常 Chrome 個人設定檔。
 
 ## 三級精簡操作
 
