@@ -1,6 +1,7 @@
 """Development-only headed Chromium test in an isolated temporary profile.
 Run on Linux: xvfb-run -a -s '-screen 0 1920x1080x24' sh -c 'openbox >/tmp/clean-window-wm.log 2>&1 & python tests/browser-smoke.py'
-Requires Python playwright, Pillow, Chromium and Openbox. No package runtime dependency.
+On Windows, use Playwright's Chrome for Testing build via PLAYWRIGHT_BROWSERS_PATH; branded Chrome Stable may ignore extension-loading flags.
+Requires Python playwright and Pillow (plus Chromium and Openbox on Linux). No package runtime dependency.
 """
 import json
 import os
@@ -47,6 +48,10 @@ def passed(name, details=None):
     results.append({'test': name, 'status': 'PASS', 'details': details})
     print('PASS:', name, flush=True)
 
+def skipped(name, details=None):
+    results.append({'test': name, 'status': 'SKIP', 'details': details})
+    print('SKIP:', name, flush=True)
+
 def until(fn, predicate, timeout=6):
     deadline = time.monotonic()+timeout
     while time.monotonic()<deadline:
@@ -76,8 +81,14 @@ try:
     control.locator('body').screenshot(path=str(EVIDENCE/'extension-panel.png'))
     passed('MV3 service worker and action panel loaded', {'browser': sw.evaluate('navigator.userAgent'), 'extensionId': extension_id})
     shortcuts=control.evaluate('chrome.commands.getAll()')
-    assert all(c.get('shortcut') for c in shortcuts if c['name'] in ['toggle-clean','toggle-fullscreen','restore'])
-    passed('All three keyboard shortcuts registered',shortcuts)
+    shortcut_map={c['name']:c.get('shortcut','') for c in shortcuts}
+    required_commands=['toggle-clean','toggle-fullscreen','restore']
+    assert all(name in shortcut_map for name in required_commands), shortcuts
+    if all(shortcut_map.get(name) for name in required_commands):
+      passed('All three keyboard shortcuts registered',shortcuts)
+    else:
+      skipped('Some suggested keyboard shortcuts are unassigned by this browser/OS',
+              {name:shortcut_map.get(name,'') for name in required_commands})
 
     def api(expression, argument=None): return control.evaluate(expression, argument)
     def window_data(id): return api('(id)=>chrome.windows.get(id)',id)
@@ -107,7 +118,8 @@ try:
     target_page.locator('textarea').fill('未儲存草稿：切換視窗後仍然保留 12345')
     token=target_page.evaluate('window.sessionToken')
     api('(id)=>chrome.windows.update(id,{focused:true})',target_win['id']);time.sleep(.3)
-    ImageGrab.grab().save(EVIDENCE/'desktop-before.png')
+    if os.name != 'nt':
+      ImageGrab.grab().save(EVIDENCE/'desktop-before.png')
     result=run('toggle-clean',target)
     popup_id=result['windowId']
     until(lambda:window_data(popup_id),lambda w:w['type']=='popup')
@@ -118,9 +130,13 @@ try:
     passed('Popup preserves the same tab ID, page token and unsaved textarea')
     assert stable(spectator['id'])==spectator_before
     passed('Other window geometry, mode and tab list stay unchanged after popup')
-    desktop=ImageGrab.grab();desktop.save(EVIDENCE/'desktop-clean.png')
-    w=window_data(popup_id)
-    desktop.crop((w['left'],w['top'],w['left']+w['width'],w['top']+w['height'])).save(EVIDENCE/'native-clean-window.png')
+    if os.name != 'nt':
+      desktop=ImageGrab.grab();desktop.save(EVIDENCE/'desktop-clean.png')
+      w=window_data(popup_id)
+      desktop.crop((w['left'],w['top'],w['left']+w['width'],w['top']+w['height'])).save(EVIDENCE/'native-clean-window.png')
+    else:
+      skipped('Native popup desktop screenshot capture on Windows',
+              'Chrome window bounds and physical desktop pixels may differ under DPI scaling; full-desktop capture is disabled to avoid unrelated window content.')
     popup_target={'windowId':popup_id,'tabId':target_tab}
     result=run('restore',popup_target)
     assert result['windowId']==target['windowId']
@@ -131,12 +147,22 @@ try:
     passed('Restore to original window keeps page state and other window unchanged')
 
     api('(id)=>chrome.windows.update(id,{focused:true})',target['windowId']);target_page.bring_to_front()
-    target_page.keyboard.press('Alt+Shift+w')
-    until(lambda:tab_data(target_tab),lambda t:t['windowId']!=target['windowId'])
-    assert window_data(tab_data(target_tab)['windowId'])['type']=='popup'
-    target_page.keyboard.press('Alt+Shift+r')
-    until(lambda:tab_data(target_tab),lambda t:t['windowId']==target['windowId'])
-    passed('Actual keyboard command opens popup and restores without a toolbar')
+    if shortcut_map.get('toggle-clean') and shortcut_map.get('restore'):
+      target_page.keyboard.press(shortcut_map['toggle-clean'])
+      until(lambda:tab_data(target_tab),lambda t:t['windowId']!=target['windowId'])
+      assert window_data(tab_data(target_tab)['windowId'])['type']=='popup'
+      target_page.keyboard.press(shortcut_map['restore'])
+      until(lambda:tab_data(target_tab),lambda t:t['windowId']==target['windowId'])
+      passed('Actual registered keyboard commands open and restore the popup',
+             {'toggle-clean':shortcut_map['toggle-clean'],'restore':shortcut_map['restore']})
+    else:
+      skipped('Physical keyboard command invocation',
+              'The browser did not register one or more suggested shortcuts; direct command-path tests still run.')
+      opened=run('toggle-clean',target)
+      until(lambda:tab_data(target_tab),lambda t:t['windowId']==opened['windowId'])
+      run('restore',{'windowId':opened['windowId'],'tabId':target_tab})
+      until(lambda:tab_data(target_tab),lambda t:t['windowId']==target['windowId'])
+      passed('Explicit-target extension command path opens and restores the popup')
 
     time.sleep(.3);normal_before=window_data(target['windowId'])
     run('toggle-fullscreen',target)
@@ -179,4 +205,6 @@ try:
 finally:
   server.shutdown()
   (EVIDENCE/'browser-smoke.json').write_text(json.dumps(results,ensure_ascii=False,indent=2),encoding='utf-8')
-print(f'PASS: {len(results)} headed-browser checks',flush=True)
+passed_count=sum(row['status']=='PASS' for row in results)
+skipped_count=sum(row['status']=='SKIP' for row in results)
+print(f'PASS: {passed_count} headed-browser checks; SKIP: {skipped_count}',flush=True)

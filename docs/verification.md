@@ -2,15 +2,17 @@
 
 Publication baseline: **2026-09-23 (Asia/Taipei)**. Version: **0.1.0 source preview**.
 
-## Current local verification — 2026-10-25
+## Current local verification — 2026-10-26
 
-Recovery fallback hardening is isolated on `fix/recovery-fallback-20261025`.
+Recovery fallback is merged to `main` at `f1c6249`; headed-browser acceptance tooling is isolated on `test/chrome-live-acceptance-20261025`.
 
-- `npm test`: **PASS, 95/95** simulated Chrome API and Popup tests. New coverage verifies that a missing/unverifiable session journal emits a clear restore warning, never merges the tab into an unrelated window, and does not copy recovery metadata into persistent local storage.
+- `npm test`: **PASS, 95/95** simulated Chrome API and Popup tests. Coverage includes missing/unverifiable session journals, safe restore fallback, and keeping recovery metadata out of persistent local storage.
 - `npm run check`: **PASS**, including JavaScript/MV3 static checks, required/optional permission boundaries and Runtime source/version validation.
 - `npm run build:runtime`: **PASS**; 20 files copied into `dist/runtime/`, and `dist/clean-window-v0.1.0.zip` was generated and verified (63,671 bytes).
 - `npm run smoke:dom`: **PASS**; includes the three toolbar levels, cross-origin allow/deny/cancel flows, YouTube layouts and interactions, and AI workspace viewport compatibility.
-- `git diff --check`: **PASS**. Evidence is from local Windows execution. Installed-extension GUI acceptance, native popup/titlebar appearance, physical keyboard shortcuts, real-site state retention and physical multi-monitor/DPI transitions remain incomplete; GitHub Actions has not yet been confirmed for this branch.
+- `tests/browser-smoke.py`: **PASS, 9 headed-browser checks; SKIP, 3** in Playwright-managed Chrome for Testing 156.0.8078.4 with an isolated temporary profile. Verified MV3 service worker/action panel load, same-tab/page-state preservation, isolation of a second window, restore, fullscreen bounds, maximized-state restoration, metadata-free fallback and stale-target rejection.
+- Two shortcut checks were skipped because the browser/OS did not register suggested `toggle-clean` and `restore` shortcuts; `toggle-fullscreen` was registered. Explicit-target command handling passed, but physical shortcut invocation remains unverified. Native desktop screenshot capture was skipped on Windows because Chrome API bounds can differ from physical pixels under DPI scaling; this also avoids capturing unrelated desktop content.
+- Chrome Stable 156.0.8078.48 ignored `--disable-extensions-except`, so the headed extension test used Playwright's separate Chrome for Testing build instead. No browser policy was modified and no personal Chrome profile was used. Chrome Stable native popup/titlebar acceptance, real-site state retention and physical multi-monitor/DPI transitions remain incomplete. `git diff --check`: **PASS**.
 
 ## Final three-mode contract — 2026-10-22
 
