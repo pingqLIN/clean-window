@@ -12,7 +12,7 @@
 
 **主打示範｜YouTube 專注觀看：**第 2 級保留標題、留言與推薦內容，依可視高度調整播放器；第 3 級讓播放器填滿內容區並隱藏其他網站內容，影片維持原比例、不裁切。可透過側邊控制器預覽切換，再一鍵還原。
 
-**狀態：原始碼預覽版。** 95 項模擬 Chrome API 與 Popup 互動的自動化測試通過；Headless DOM 已涵蓋三級模式、跨來源授權、工具列有限度自動修復及網址驗證。獨立 headed Chrome for Testing 通過 10 項檢查，另 2 項略過。Windows GUI 實測已在隔離 Chrome Stable 中確認原生 Popup／標題列，並透過 OS 層級鍵盤輸入觸發四組快捷鍵，驗證標題編輯、同分頁還原及全螢幕進出。實體鍵盤硬體輸入、真實網站狀態保留及多螢幕／DPI 切換仍**尚未驗收**。擴充介面目前使用繁體中文，文件提供英文與繁體中文。頁首圖片是概念插畫，不是實機截圖。
+**狀態：原始碼預覽版。** 95 項模擬 Chrome API 與 Popup 互動的自動化測試通過；Headless DOM 已涵蓋三級模式、跨來源授權、工具列有限度自動修復及網址驗證。headed Chrome for Testing 通過 10 項檢查，另 2 項略過。Windows GUI 實測已在隔離 Chrome Stable 中確認原生 Popup／標題列，並以 OS 層級鍵盤輸入觸發四組快捷鍵，驗證標題編輯、同分頁還原及全螢幕進出。另一項選用測試也在未登入的隔離 Profile 中，通過 Gemini、Claude、ChatGPT 三個公開入口頁的三級模式與還原檢查，根節點 padding 及可見導覽區特徵維持不變。登入後的側欄／輸入／附件、實體鍵盤硬體、真實表單／媒體及多螢幕／DPI 仍**尚未驗收**。擴充介面目前使用繁體中文，文件提供英文與繁體中文。頁首圖片是概念插畫，不是實機截圖。
 
 ## 快速開始
 
@@ -114,7 +114,7 @@ npm run build:runtime
 | [版本紀錄](CHANGELOG.md) | 版本變更 |
 | [Issues](https://github.com/pingqLIN/clean-window/issues) | 可重現的錯誤及功能需求；請勿張貼敏感瀏覽資料 |
 
-GitHub Actions 會在 Linux 與 Windows 執行相同測試及靜態檢查；Run #14 已在基準 commit `63c7697` 通過。選用的 [Chromium GUI 測試](tests/browser-smoke.py) 以 Linux 為目標；[Windows Chrome GUI 測試](tests/windows-chrome-gui-smoke.py) 則在隔離 Profile 以 OS 層級模擬鍵盤輸入驗證快捷鍵。兩者都不是擴充安裝的必要步驟，也不屬於必要 CI；執行前請先閱讀驗證紀錄。
+GitHub Actions 會在 Linux 與 Windows 執行相同測試及靜態檢查；Run #15 已在 commit `11d18e9` 通過。選用的 [Chromium GUI 測試](tests/browser-smoke.py) 以 Linux 為目標；[Windows Chrome GUI 測試](tests/windows-chrome-gui-smoke.py) 以 OS 層級模擬鍵盤輸入驗證快捷鍵；[Windows AI 網站測試](tests/windows-ai-site-smoke.py) 則在未登入的隔離 Profile 檢查 Gemini、Claude、ChatGPT 公開入口頁。這些 GUI／網路測試不是擴充安裝的必要步驟，也不屬於必要 CI；執行前請先閱讀驗證紀錄。
 
 ## AI 輔助開發
 

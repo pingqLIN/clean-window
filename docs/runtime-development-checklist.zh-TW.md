@@ -97,12 +97,12 @@ ZIP 打包器使用 Node.js 內建模組，固定檔案排序與 ZIP 時間戳�
 - [x] `npm test` 通過（95/95）。
 - [x] `npm run check` 通過。
 - [x] `npm run smoke:dom` 通過，並準確記錄測試涵蓋範圍。
-- [x] GitHub Actions 在 Windows 與 Ubuntu 均可產生 Runtime 產物（Run #14）。
+- [x] GitHub Actions 在 Windows 與 Ubuntu 均可產生 Runtime 產物（Run #15）。
 - [x] `dist/` 產物不進入 Git。
 - [x] 指令、限制或版本變動時，同步更新英文與繁體中文文件。
 
 ## 已知發布限制
 
-- 自動化與 Headless DOM 測試不能取代 Windows Chrome 已安裝擴充的實機驗收。原生 Popup／標題列及 OS 層級快捷鍵觸發已在隔離 Chrome Stable 中驗證；實體鍵盤硬體輸入、真實網站狀態保留與多螢幕／DPI 切換仍是獨立驗收項目。
+- 自動化與 Headless DOM 測試不能取代 Windows Chrome 已安裝擴充的實機驗收。原生 Popup／標題列、OS 層級快捷鍵及未登入 AI 網站版面已在隔離 Chrome Stable 中驗證；登入後頁面狀態、實體鍵盤硬體輸入、無痕模式與多螢幕／DPI 切換仍是獨立驗收項目。
 - 專案目前沒有 `LICENSE`。不可將公開可見誤稱為開源，亦不可推定程式碼已授權重用。
 - Runtime 打包成功只證明產物結構與檔案完整性，不代表瀏覽器行為已全面驗收、已完成安全稽核或已可上架。

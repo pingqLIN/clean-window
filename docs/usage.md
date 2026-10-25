@@ -87,6 +87,8 @@ The default commands are `Alt + Shift + Y`, `Alt + Shift + F`, `Alt + Shift + U`
 
 For optional Windows GUI acceptance, build Runtime with `npm run build:runtime`, install the Python packages `playwright`, `pywinauto`, and `pywin32`, then run `python tests/windows-chrome-gui-smoke.py`. The test loads `dist/runtime/` in an isolated temporary Chrome Stable profile and sends OS-level synthetic keyboard input to verify all four commands, fullscreen entry/exit, title editing, restore, and preservation of a synthetic unsaved form. It uses only a loopback fixture, deletes the temporary profile on exit, does not change browser policy, and is not included in CI. This is not a physical-keyboard hardware test; if unpacked extensions are blocked by policy, stop instead of bypassing it.
 
+For an optional signed-out AI-site layout smoke test, run `python tests/windows-ai-site-smoke.py` with the same Python packages and an internet connection. It loads Runtime in another isolated Chrome Stable profile, visits the public Gemini, Claude and ChatGPT entry/login pages, and verifies levels 1–3 plus restore, unchanged root padding, unchanged visible navigation-region signatures, and no document reload. It does not sign in, submit content, or validate signed-in conversation lists, composers, attachments, or account menus. This network-dependent test is not part of CI.
+
 Incognito operation requires Chrome's per-extension **Allow in incognito** setting. The manifest uses split mode, and restoration does not merge incognito and normal windows. This behavior is covered by simulated tests, not by an accepted Windows incognito browser run.
 
 ## Remove or update

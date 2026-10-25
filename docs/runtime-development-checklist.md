@@ -99,12 +99,12 @@ The ZIP writer uses Node.js built-ins and a stable file order / fixed ZIP timest
 - [x] `npm test` passes (95/95).
 - [x] `npm run check` passes.
 - [x] `npm run smoke:dom` passes, with its scope recorded accurately.
-- [x] CI builds the Runtime artifact on both Windows and Ubuntu (GitHub Actions run #14).
+- [x] CI builds the Runtime artifact on both Windows and Ubuntu (GitHub Actions run #15).
 - [x] Generated `dist/` output remains untracked.
 - [x] Update English and Traditional Chinese documentation together when commands, limitations or versions change.
 
 ## Known release limits
 
-- Automated and Headless DOM tests do not replace acceptance in an installed extension on Windows Chrome. Native popup/titlebar rendering and OS-level shortcut dispatch are verified in an isolated Chrome Stable profile; physical keyboard hardware, real-site state retention and multi-monitor/DPI transitions remain separate acceptance items.
+- Automated and Headless DOM tests do not replace acceptance in an installed extension on Windows Chrome. Native popup/titlebar rendering, OS-level shortcut dispatch and signed-out AI-site layout are verified in isolated Chrome Stable profiles; signed-in page state, physical keyboard hardware, incognito and multi-monitor/DPI transitions remain separate acceptance items.
 - The project currently has no `LICENSE` file. Do not claim that public visibility makes it open source or implies permission to reuse the code.
 - A successful Runtime build verifies packaging and file integrity, not full browser behavior, security audit status or store-release readiness.

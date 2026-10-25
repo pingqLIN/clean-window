@@ -8,6 +8,7 @@
 - Replaced default `Alt+Shift+W`, `Alt+Shift+R` and `Alt+Shift+T` with `Alt+Shift+Y`, `Alt+Shift+U` and `Alt+Shift+J` after isolated headed-browser testing showed the prior defaults were not registered. Fullscreen remains `Alt+Shift+F`; static checks enforce unique defaults.
 - Added `tests/windows-chrome-gui-smoke.py`, an optional Windows-only GUI acceptance harness. In isolated Chrome Stable 156.0.8078.48, all four commands were triggered through OS-level keyboard input: clean Popup toggle, title editor, restore, and fullscreen enter/exit. The same tab, session token, unsaved form text and sibling tab were preserved. Physical keyboard hardware is not separately tested.
 - The harness loads `dist/runtime/` through Chrome's official extension UI, uses a temporary profile and local fixture, and cleans up after the run. No browser policy was changed and no personal Chrome profile was used.
+- Added `tests/windows-ai-site-smoke.py`, an optional network-dependent smoke test for public signed-out Gemini, Claude and ChatGPT entry/login pages. All three passed levels 1–3 and restore; root padding, visible navigation-region signatures and document time origin remained stable. The test does not cover signed-in conversations, composers, attachments or account menus.
 
 ## Unreleased — 2026-10-22 (Final three-mode contract)
 

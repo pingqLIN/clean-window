@@ -128,6 +128,8 @@ npm run check
 
 `tests/windows-chrome-gui-smoke.py` 是選用的 Windows GUI 驗收工具，需安裝 Chrome Stable、Python、`playwright`、`pywinauto` 與 `pywin32`。先執行 `npm run build:runtime`，再執行 `python tests/windows-chrome-gui-smoke.py`。它會建立隔離暫存 Profile，透過 Chrome 官方擴充管理介面載入 `dist/runtime/`，只開啟本機合成測試頁，並以 OS 層級模擬鍵盤輸入驗證四組快捷鍵、標題編輯、全螢幕與還原。測試不使用日常 Chrome 個人設定檔、不修改瀏覽器政策，也不造訪真實網站。原始證據寫入 Git 忽略的 `evidence/`，結束時刪除暫存 Profile。這不是實體鍵盤硬體測試，也不納入 CI。若瀏覽器政策禁止載入未封裝擴充，應停止，不要繞過政策。
 
+`tests/windows-ai-site-smoke.py` 是選用的公開 AI 網站版面測試，需同一組 Python 套件及網路連線。它在另一個隔離 Chrome Stable Profile 載入 Runtime，開啟未登入的 Gemini、Claude、ChatGPT 公開入口／登入頁，測試第一至三級與還原，並比對根節點 padding、可見導覽區特徵及文件是否重新載入。它不登入、不送出內容，也無法驗證登入後的對話清單、輸入框、附件或帳戶選單。此網路測試不納入 CI。
+
 完整結果見[驗證紀錄](verification.md)。本機測試輸出位於被 Git 忽略的 `evidence/`，不納入公開原始碼。
 
 ## 官方技術依據
