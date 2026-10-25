@@ -4,7 +4,8 @@
   if (globalThis.__cleanWindowPageUI) return;
   const BAR_ID = 'clean-window-address-ui';
   const BAR_HEIGHT = 48;
-  let bar, address, originalPadding, originalPriority, updateTimer;
+  let bar, address, originalPadding, originalPriority, updateTimer, barObserver;
+  let repairAttempts = 0, repairScheduled = false;
 
   function isWebPage() {
     return /^https?:$/.test(location.protocol) && !!document.documentElement;
@@ -29,13 +30,17 @@
       throw new Error('網址無效，或包含不支援的帳號密碼。');
     }
     if (!url.hostname.includes('.') && url.hostname !== 'localhost' && !url.hostname.includes(':')) {
-      throw new Error('請輸入完整網站網域。');
+      throw new Error('請輸入完整網站網域；此欄位只接受網址，不支援搜尋文字。');
     }
     return url.href;
   }
   function stopBar(withFade = false) {
     if (updateTimer) clearInterval(updateTimer);
     updateTimer = null;
+    barObserver?.disconnect();
+    barObserver = null;
+    repairAttempts = 0;
+    repairScheduled = false;
     const oldBar = bar;
     if (oldBar?.isConnected) {
       const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
@@ -55,10 +60,42 @@
     }
     originalPadding = null;
   }
+  function repairDetachedBar(currentBar) {
+    if (bar !== currentBar || currentBar?.isConnected || repairScheduled) return;
+    repairScheduled = true;
+    queueMicrotask(() => {
+      repairScheduled = false;
+      if (bar !== currentBar || currentBar.isConnected) return;
+      // Repair only a small number of hostile removals. Repeated removals
+      // disable the drawn bar cleanly; the edge control can explicitly reapply it.
+      if (repairAttempts >= 2) {
+        stopBar();
+        return;
+      }
+      const html = document.documentElement;
+      if (!html?.isConnected) {
+        stopBar();
+        return;
+      }
+      repairAttempts += 1;
+      html.appendChild(currentBar);
+    });
+  }
   function startBar(withDock = false, hiddenByDefault = false) {
     if (!isWebPage()) throw new Error('自繪網址欄僅支援一般 HTTP(S) 網頁。');
     if (bar?.isConnected && bar.dataset.cwDock === String(withDock)
         && bar.dataset.cwHidden === String(hiddenByDefault)) return;
+    if (bar && !bar.isConnected) {
+      if (bar.dataset.cwDock === String(withDock)
+          && bar.dataset.cwHidden === String(hiddenByDefault)) {
+        // An explicit reapply is allowed to recover even after automatic retries were exhausted.
+        repairAttempts = 0;
+        repairScheduled = false;
+        document.documentElement.appendChild(bar);
+        return;
+      }
+      stopBar();
+    }
     if (bar?.isConnected) stopBar();
     const html = document.documentElement;
     const workspace = isWorkspaceLayout();
@@ -225,8 +262,9 @@
     const form=document.createElement('form');
     address=document.createElement('input');
     address.type='text'; address.inputMode='url';address.autocomplete='off';
-    address.spellcheck=false;address.setAttribute('aria-label','自繪網址欄，非 Chrome 原生網址列');
-    address.title='僅供網址導覽；Chrome 網站身分與安全狀態請在普通視窗檢查';
+    address.spellcheck=false;address.setAttribute('aria-label','自繪網址欄，只接受 HTTP(S) 網址、不支援搜尋文字；非 Chrome 原生網址列');
+    address.title='僅供網址導覽，不支援搜尋文字；Chrome 網站身分與安全狀態請在普通視窗檢查';
+    address.addEventListener('input', event => event.currentTarget.setCustomValidity(''));
     address.value=location.href;
     form.append(address);
     let navigationBusy = false;
@@ -234,7 +272,8 @@
       event.preventDefault();event.stopPropagation();
       let target;
       try { target = addressURL(address.value); }
-      catch(error) {address.setCustomValidity(error.message); address.reportValidity();address.setCustomValidity('');return;}
+      catch(error) {address.setCustomValidity(error.message); address.reportValidity();return;}
+      address.setCustomValidity('');
       // Same-origin navigation keeps activeTab access and needs no extra prompt.
       if (new URL(target).origin === location.origin) { location.assign(target); return; }
       if (navigationBusy) return;
@@ -414,6 +453,14 @@
 
     html.appendChild(bar);
     const currentBar=bar;
+    repairAttempts = 0;
+    repairScheduled = false;
+    if (typeof MutationObserver === 'function') {
+      // The toolbar is a direct child of <html>; observing only that child list
+      // avoids scanning the busy subtree of chat workspaces and document editors.
+      barObserver = new MutationObserver(() => repairDetachedBar(currentBar));
+      barObserver.observe(html, { childList: true });
+    }
     void chrome.storage.local.get('cleanWindowUiTheme').then(saved=>{
       if (bar!==currentBar || manualTheme) return;
       if (saved.cleanWindowUiTheme==='light' || saved.cleanWindowUiTheme==='dark') {
@@ -421,7 +468,8 @@
       }
     }).catch(()=>{});
     updateTimer=setInterval(()=>{
-      if (!bar?.isConnected) {stopBar(); return;}
+      if (!bar) { clearInterval(updateTimer); updateTimer=null; return; }
+      if (!bar.isConnected) { repairDetachedBar(bar); return; }
       if (address && shadow.activeElement !== address && address.value !== location.href) address.value=location.href;
     },750);
   }

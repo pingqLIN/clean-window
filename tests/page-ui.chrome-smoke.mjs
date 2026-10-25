@@ -120,6 +120,26 @@ try{
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwMenuOpen'),undefined,'closing the menu clears its open state');
  assert.equal(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 1 stays visible when its menu closes and the pointer is outside');
  console.log('PASS: level 1 keeps its full two-row toolbar visible, including menu actions');
+ // A site may remove direct children from <html>. Repair the same toolbar host
+ // twice without changing the reserved layout, then stop cleanly if removals persist.
+ await run('globalThis.__cwRepairBar=document.getElementById("clean-window-address-ui");!!globalThis.__cwRepairBar');
+ await run('globalThis.__cwRepairBar.remove();true');
+ await sleep(35);
+ assert.equal(await run('document.getElementById("clean-window-address-ui")===globalThis.__cwRepairBar'),true,'one hostile removal reattaches the same host');
+ assert.equal(await run('getComputedStyle(document.documentElement).paddingTop'),'86px','first repair does not double the layout reservation');
+ await run('globalThis.__cwRepairBar.remove();true');
+ await sleep(35);
+ assert.equal(await run('document.getElementById("clean-window-address-ui")===globalThis.__cwRepairBar'),true,'second hostile removal is repaired');
+ assert.equal(await run('getComputedStyle(document.documentElement).paddingTop'),'86px','second repair still does not double the layout reservation');
+ await run('globalThis.__cwRepairBar.remove();true');
+ await sleep(35);
+ assert.equal(await run('!document.getElementById("clean-window-address-ui")'),true,'repeated removal exhausts the bounded repair budget');
+ assert.equal(await run('document.documentElement.style.paddingTop'),'','bounded failure restores the original layout');
+ const reapply=await invoke('address-dock');
+ assert.equal(reapply.ok,true);
+ assert.equal(await run('!!document.getElementById("clean-window-address-ui")'),true,'explicit reapply can recover after automatic retries are exhausted');
+ assert.equal(await run('getComputedStyle(document.documentElement).paddingTop'),'86px','explicit reapply creates one layout reservation');
+ console.log('PASS: bounded DOM self-repair prevents duplicate padding and has a clean fallback');
  const switched=await invoke('address-hidden');
  assert.equal(switched.ok,true);
  assert.equal(await run('document.getElementById("clean-window-address-ui").dataset.cwDock'),'false');
@@ -162,6 +182,20 @@ try{
  await sleep(240);
  assert.notEqual(await run('getComputedStyle(document.getElementById("clean-window-address-ui")).transform'),'none','level 2 collapses again after blur');
  console.log('PASS: collapsed URL-only mode without extension dock');
+ await run('globalThis.__cwHiddenRepairBar=document.getElementById("clean-window-address-ui");globalThis.__cwHiddenRepairBar.remove();true');
+ await sleep(35);
+ assert.equal(await run('document.getElementById("clean-window-address-ui")===globalThis.__cwHiddenRepairBar'),true,'level 2 repairs a removed URL-only host');
+ assert.equal(await run('document.documentElement.style.paddingTop'),'','level 2 repair never reserves page space');
+ console.log('PASS: level 2 host repair preserves the overlay layout');
+ const beforeInvalidURL=await run('location.href');
+ await run(`(() => {const root=document.getElementById('clean-window-address-ui').shadowRoot;const input=root.querySelector('input');input.value='google';root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));return true;})()`);
+ assert.equal(await run('location.href'),beforeInvalidURL,'plain search text must not navigate');
+ assert.match(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector("input").validationMessage'),/不支援搜尋文字/);
+ assert.equal(await run('globalThis.__navigationRequests.length'),0,'plain search text is not sent to any search provider');
+ await run(`(() => {const root=document.getElementById('clean-window-address-ui').shadowRoot;const input=root.querySelector('input');input.value='javascript:alert(1)';root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));return true;})()`);
+ assert.equal(await run('location.href'),beforeInvalidURL,'unsafe schemes must not navigate');
+ assert.match(await run('document.getElementById("clean-window-address-ui").shadowRoot.querySelector("input").validationMessage'),/HTTP\(S\)/);
+ console.log('PASS: URL-only field rejects search text and unsafe schemes without navigation');
  await run(`(() => {const root=document.getElementById('clean-window-address-ui').shadowRoot;const input=root.querySelector('input');input.value=location.origin+'/#cw-same-origin';root.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));return true;})()`);
  await sleep(25);
  assert.equal(await run('location.hash'),'#cw-same-origin','same-origin URL-bar navigation proceeds without a permission prompt');
